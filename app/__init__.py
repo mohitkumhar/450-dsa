@@ -100,7 +100,7 @@ def create_app(config_class=None):
         "SESSION_COOKIE_SECURE",
         default=app.config["SESSION_COOKIE_SECURE"],
     )
-    
+
     cache.init_app(app)
     Swagger(
         app,
@@ -165,7 +165,7 @@ def create_app(config_class=None):
         db.cohort.create_index("join_code", unique=True)
         db.cohort_membership.create_index([("cohort_id", 1), ("user_id", 1)], unique=True)
         db.cohort_membership.create_index("user_id")
-        
+
         # Lightweight schema backfill for legacy user documents.
         db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
     except Exception as exc:
@@ -341,7 +341,7 @@ def create_app(config_class=None):
         return response
 
     app.register_blueprint(auth_bp)
-    app.register_blueprint(faq_bp)  
+    app.register_blueprint(faq_bp)
     app.register_blueprint(tracker_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(leaderboard_bp)
@@ -385,10 +385,7 @@ def create_app(config_class=None):
         response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
 
-
-
     return app
-
 
 # GSSoC Flask Global Error Handler registration
 # Catch 404, 500, and rate-limit HTTP exceptions cleanly.
