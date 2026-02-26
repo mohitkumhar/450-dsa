@@ -267,22 +267,22 @@ def get_merged_daily_counts(user_doc):
         merged = {}
         for _platform, counts in calendars.items():
             if isinstance(counts, dict):
-                for date, count in counts.items():
+                for day_key, count in counts.items():
                     safe = coerce_non_negative_number(count)
                     if safe > 0:
-                        merged[date] = merged.get(date, 0) + safe
+                        merged[day_key] = merged.get(day_key, 0) + safe
 
-        for date, count in legacy_fallback.items():
+        for day_key, count in legacy_fallback.items():
             safe = coerce_non_negative_number(count)
             if safe > 0:
-                merged[date] = max(merged.get(date, 0), safe)
+                merged[day_key] = max(merged.get(day_key, 0), safe)
 
         legacy = _get_field(user_doc, "external_daily_counts", {})
         if isinstance(legacy, dict):
-            for date, count in legacy.items():
+            for day_key, count in legacy.items():
                 safe = coerce_non_negative_number(count)
                 if safe > 0:
-                    merged[date] = max(merged.get(date, 0), safe)
+                    merged[day_key] = max(merged.get(day_key, 0), safe)
 
         if merged:
             return merged
