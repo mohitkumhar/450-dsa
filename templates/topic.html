@@ -18,12 +18,14 @@
             </tr>
         </thead>
         <tbody>
-            {% for q in topic.questions %}
+            {% for q in questions %}
+            {% set q_id_str = q.id | string %}
+            {% set p = progress_dict.get(q_id_str) %}
             <tr>
                 <td>
                     <div class="custom-control custom-checkbox text-center">
-                        <input type="checkbox" class="custom-control-input status-checkbox" id="check_{{ q.id }}" data-id="{{ q.id }}" {% if q.done %}checked{% endif %}>
-                        <label class="custom-control-label" for="check_{{ q.id }}"></label>
+                        <input type="checkbox" class="custom-control-input status-checkbox" id="check_{{ q_id_str }}" data-id="{{ q_id_str }}" {% if p and p.done %}checked{% endif %} {% if not current_user.is_authenticated %}disabled{% endif %}>
+                        <label class="custom-control-label" for="check_{{ q_id_str }}"></label>
                     </div>
                 </td>
                 <td>
@@ -32,14 +34,14 @@
                     </a>
                 </td>
                 <td>
-                    <i class="bi {% if q.bookmark %}bi-bookmark-fill text-warning{% else %}bi-bookmark text-muted{% endif %} bookmark-btn" 
+                    <i class="bi {% if p and p.bookmark %}bi-bookmark-fill text-warning{% else %}bi-bookmark text-muted{% endif %} bookmark-btn" 
                        style="cursor: pointer; font-size: 1.2rem;" 
-                       data-id="{{ q.id }}"
-                       data-bookmarked="{{ 'true' if q.bookmark else 'false' }}"></i>
+                       data-id="{{ q_id_str }}"
+                       data-bookmarked="{{ 'true' if p and p.bookmark else 'false' }}"></i>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-info notes-btn" data-id="{{ q.id }}" data-notes="{{ q.notes }}" data-toggle="modal" data-target="#notesModal">
-                        <i class="bi bi-journal-text"></i> {% if q.notes %}View/Edit{% else %}Add{% endif %}
+                    <button class="btn btn-sm btn-outline-info notes-btn" data-id="{{ q_id_str }}" data-notes="{{ p.notes if p and p.notes else '' }}" data-toggle="modal" data-target="#notesModal">
+                        <i class="bi bi-journal-text"></i> {% if p and p.notes %}View/Edit{% else %}Add{% endif %}
                     </button>
                 </td>
             </tr>
@@ -75,8 +77,16 @@
 {% block scripts %}
 <script>
     $(document).ready(function() {
+        const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+
         // Handle checkbox change
-        $('.status-checkbox').change(function() {
+        $('.status-checkbox').change(function(e) {
+            if (!isAuthenticated) {
+                e.preventDefault();
+                $(this).prop('checked', !$(this).prop('checked')); // Revert visual state
+                window.location.href = "{{ url_for('login') }}";
+                return;
+            }
             const qId = $(this).data('id');
             const isDone = $(this).is(':checked');
             
@@ -86,7 +96,12 @@
         });
 
         // Handle bookmark click
-        $('.bookmark-btn').click(function() {
+        $('.bookmark-btn').click(function(e) {
+            if (!isAuthenticated) {
+                e.preventDefault();
+                window.location.href = "{{ url_for('login') }}";
+                return;
+            }
             const qId = $(this).data('id');
             const isBookmarked = $(this).data('bookmarked') === 'true';
             const newStatus = !isBookmarked;
@@ -104,7 +119,13 @@
         });
 
         // Handle notes modal
-        $('.notes-btn').click(function() {
+        $('.notes-btn').click(function(e) {
+            if (!isAuthenticated) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = "{{ url_for('login') }}";
+                return;
+            }
             const qId = $(this).data('id');
             const notes = $(this).data('notes');
             

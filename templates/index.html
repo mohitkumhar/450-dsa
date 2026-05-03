@@ -20,8 +20,9 @@
         <div class="card h-100 shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">{{ topic.name }}</h5>
-                {% set t_done = topic.done_questions %}
-                {% set t_total = topic.total_questions %}
+                {% set t_id_str = topic.id | string %}
+                {% set t_done = topic_progress[t_id_str]['done'] %}
+                {% set t_total = topic_progress[t_id_str]['total'] %}
                 {% set t_percent = 0 %}
                 {% if t_total > 0 %}
                     {% set t_percent = (t_done / t_total * 100) | round(1) %}
@@ -30,7 +31,7 @@
                 <div class="progress mb-3" style="height: 10px;">
                     <div class="progress-bar {% if t_percent == 100 %}bg-success{% else %}bg-info{% endif %}" role="progressbar" style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <a href="{{ url_for('topic', topic_id=topic.id) }}" class="btn btn-outline-primary btn-block">
+                <a href="{{ url_for('topic', topic_id=topic.id|string) }}" class="btn btn-outline-primary btn-block">
                     {% if t_percent == 100 %}Review{% elif t_percent > 0 %}Continue{% else %}Start{% endif %}
                 </a>
             </div>

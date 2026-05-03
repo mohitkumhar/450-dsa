@@ -1,3 +1,9 @@
 Flask==2.3.2
-Flask-SQLAlchemy==3.0.5
+mongoengine==0.29.3
+Flask-Login
+Authlib
+requests
+python-dotenv
+email-validator
+Flask-Bcrypt
 # pyjson5==1.6.2
