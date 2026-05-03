@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col text-center">
+        <h2>Your Progress</h2>
+        <div class="progress" style="height: 25px; font-size: 1rem;">
+            {% set percentage = 0 %}
+            {% if total_questions > 0 %}
+                {% set percentage = (done_questions / total_questions * 100) | round(1) %}
+            {% endif %}
+            <div class="progress-bar bg-success" role="progressbar" style="width: {{ percentage }}%;" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100">{{ done_questions }} / {{ total_questions }} ({{ percentage }}%)</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% for topic in topics %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ topic.name }}</h5>
+                {% set t_done = topic.done_questions %}
+                {% set t_total = topic.total_questions %}
+                {% set t_percent = 0 %}
+                {% if t_total > 0 %}
+                    {% set t_percent = (t_done / t_total * 100) | round(1) %}
+                {% endif %}
+                <p class="card-text mb-2 text-muted">{{ t_done }} / {{ t_total }} questions completed</p>
+                <div class="progress mb-3" style="height: 10px;">
+                    <div class="progress-bar {% if t_percent == 100 %}bg-success{% else %}bg-info{% endif %}" role="progressbar" style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <a href="{{ url_for('topic', topic_id=topic.id) }}" class="btn btn-outline-primary btn-block">
+                    {% if t_percent == 100 %}Review{% elif t_percent > 0 %}Continue{% else %}Start{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

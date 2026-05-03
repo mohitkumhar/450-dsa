@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Topics</a>
+</div>
+
+<h2>{{ topic.name }} Questions</h2>
+
+<div class="table-responsive">
+    <table class="table table-hover mt-4">
+        <thead class="thead-light">
+            <tr>
+                <th scope="col" style="width: 5%">Status</th>
+                <th scope="col" style="width: 65%">Problem</th>
+                <th scope="col" style="width: 15%">Actions</th>
+                <th scope="col" style="width: 15%">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in topic.questions %}
+            <tr>
+                <td>
+                    <div class="custom-control custom-checkbox text-center">
+                        <input type="checkbox" class="custom-control-input status-checkbox" id="check_{{ q.id }}" data-id="{{ q.id }}" {% if q.done %}checked{% endif %}>
+                        <label class="custom-control-label" for="check_{{ q.id }}"></label>
+                    </div>
+                </td>
+                <td>
+                    <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" style="font-weight: 500; text-decoration: none; color: inherit;">
+                        {{ q.problem }}
+                    </a>
+                </td>
+                <td>
+                    <i class="bi {% if q.bookmark %}bi-bookmark-fill text-warning{% else %}bi-bookmark text-muted{% endif %} bookmark-btn" 
+                       style="cursor: pointer; font-size: 1.2rem;" 
+                       data-id="{{ q.id }}"
+                       data-bookmarked="{{ 'true' if q.bookmark else 'false' }}"></i>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info notes-btn" data-id="{{ q.id }}" data-notes="{{ q.notes }}" data-toggle="modal" data-target="#notesModal">
+                        <i class="bi bi-journal-text"></i> {% if q.notes %}View/Edit{% else %}Add{% endif %}
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Notes Modal -->
+<div class="modal fade" id="notesModal" tabindex="-1" role="dialog" aria-labelledby="notesModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="notesModalLabel">Notes</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <textarea id="notesTextarea" class="form-control" rows="5"></textarea>
+        <input type="hidden" id="currentQuestionId">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="saveNotesBtn">Save Notes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Handle checkbox change
+        $('.status-checkbox').change(function() {
+            const qId = $(this).data('id');
+            const isDone = $(this).is(':checked');
+            
+            updateQuestion(qId, { done: isDone }, function() {
+                // optional: show a toast or update local progress bar
+            });
+        });
+
+        // Handle bookmark click
+        $('.bookmark-btn').click(function() {
+            const qId = $(this).data('id');
+            const isBookmarked = $(this).data('bookmarked') === 'true';
+            const newStatus = !isBookmarked;
+            
+            const btn = $(this);
+            
+            updateQuestion(qId, { bookmark: newStatus }, function() {
+                btn.data('bookmarked', newStatus ? 'true' : 'false');
+                if (newStatus) {
+                    btn.removeClass('bi-bookmark text-muted').addClass('bi-bookmark-fill text-warning');
+                } else {
+                    btn.removeClass('bi-bookmark-fill text-warning').addClass('bi-bookmark text-muted');
+                }
+            });
+        });
+
+        // Handle notes modal
+        $('.notes-btn').click(function() {
+            const qId = $(this).data('id');
+            const notes = $(this).data('notes');
+            
+            $('#currentQuestionId').val(qId);
+            $('#notesTextarea').val(notes);
+        });
+
+        // Save notes
+        $('#saveNotesBtn').click(function() {
+            const qId = $('#currentQuestionId').val();
+            const notes = $('#notesTextarea').val();
+            
+            updateQuestion(qId, { notes: notes }, function() {
+                $('#notesModal').modal('hide');
+                const btn = $('.notes-btn[data-id="' + qId + '"]');
+                btn.data('notes', notes);
+                if (notes.trim() !== '') {
+                    btn.html('<i class="bi bi-journal-text"></i> View/Edit');
+                } else {
+                    btn.html('<i class="bi bi-journal-text"></i> Add');
+                }
+            });
+        });
+
+        function updateQuestion(id, data, callback) {
+            $.ajax({
+                url: '/update_question/' + id,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    if (response.success) {
+                        callback();
+                    }
+                },
+                error: function() {
+                    alert('Error updating question');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
