@@ -35,6 +35,9 @@
                         <span class="nav-link text-light">Welcome, {{ current_user.name }}</span>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('bookmarks') }}">Bookmarks</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
                     </li>
                     {% else %}

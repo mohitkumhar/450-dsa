@@ -272,5 +272,16 @@ def update_question(question_id):
     
     return jsonify({"success": True})
 
+@app.route('/bookmarks')
+@login_required
+def bookmarks():
+    user = current_user
+    bookmarked_q_ids = [q_id for q_id, p in user.progress.items() if p.bookmark]
+    
+    questions = Question.objects(id__in=bookmarked_q_ids)
+    progress_dict = user.progress
+    
+    return render_template('bookmarks.html', questions=questions, progress_dict=progress_dict)
+
 if __name__ == '__main__':
     app.run(debug=True)

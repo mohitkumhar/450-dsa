@@ -2,18 +2,20 @@
 
 {% block content %}
 <div class="mb-4">
-    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Topics</a>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
 </div>
 
-<h2>{{ topic.name }} Questions</h2>
+<h2>My Bookmarked Questions</h2>
 
+{% if questions %}
 <div class="table-responsive">
     <table class="table table-hover mt-4">
         <thead class="thead-light">
             <tr>
                 <th scope="col" style="width: 5%">#</th>
                 <th scope="col" style="width: 5%">Status</th>
-                <th scope="col" style="width: 60%">Problem</th>
+                <th scope="col" style="width: 20%">Topic</th>
+                <th scope="col" style="width: 40%">Problem</th>
                 <th scope="col" style="width: 15%">Actions</th>
                 <th scope="col" style="width: 15%">Notes</th>
             </tr>
@@ -29,6 +31,9 @@
                         <input type="checkbox" class="custom-control-input status-checkbox" id="check_{{ q_id_str }}" data-id="{{ q_id_str }}" {% if p and p.done %}checked{% endif %}>
                         <label class="custom-control-label" for="check_{{ q_id_str }}"></label>
                     </div>
+                </td>
+                <td>
+                    <span class="badge badge-secondary">{{ q.topic.name }}</span>
                 </td>
                 <td>
                     <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" style="font-weight: 500; text-decoration: none; color: inherit;">
@@ -51,6 +56,11 @@
         </tbody>
     </table>
 </div>
+{% else %}
+<div class="alert alert-info mt-4">
+    You haven't bookmarked any questions yet. Go to the topics and bookmark some questions to see them here!
+</div>
+{% endif %}
 
 <!-- Notes Modal -->
 <div class="modal fade" id="notesModal" tabindex="-1" role="dialog" aria-labelledby="notesModalLabel" aria-hidden="true">
@@ -85,16 +95,14 @@
         $('.status-checkbox').change(function(e) {
             if (!isAuthenticated) {
                 e.preventDefault();
-                $(this).prop('checked', !$(this).prop('checked')); // Revert visual state
+                $(this).prop('checked', !$(this).prop('checked'));
                 window.location.href = "{{ url_for('login') }}";
                 return;
             }
             const qId = $(this).data('id');
             const isDone = $(this).is(':checked');
             
-            updateQuestion(qId, { done: isDone }, function() {
-                // optional: show a toast or update local progress bar
-            });
+            updateQuestion(qId, { done: isDone }, function() {});
         });
 
         // Handle bookmark click
@@ -116,6 +124,8 @@
                     btn.removeClass('bi-bookmark text-muted').addClass('bi-bookmark-fill text-warning');
                 } else {
                     btn.removeClass('bi-bookmark-fill text-warning').addClass('bi-bookmark text-muted');
+                    // Optional: remove row from table if unbookmarked
+                    btn.closest('tr').fadeOut(300, function() { $(this).remove(); });
                 }
             });
         });
