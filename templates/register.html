@@ -1,49 +1,71 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card mt-5 shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">Register</h3>
-                
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
-                    {% for category, message in messages %}
-                      <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                  {% endif %}
-                {% endwith %}
+<style>
+.auth-wrap { min-height: calc(100vh - 56px - 120px); display: flex; align-items: center; justify-content: center; }
+.auth-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
+.auth-logo { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; color: white; margin: 0 auto 24px; }
+.auth-card h2 { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--text-primary); }
+.auth-card p.subtitle { text-align: center; color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 28px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.form-control { width: 100%; padding: 11px 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; transition: all 0.2s; outline: none; }
+.form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.form-control::placeholder { color: var(--text-muted); }
+.btn-primary-full { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 0.95rem; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-top: 6px; }
+.btn-primary-full:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--text-muted); font-size: 0.8rem; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+.oauth-btn { width: 100%; padding: 11px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: all 0.2s; margin-bottom: 10px; }
+.oauth-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.auth-footer { text-align: center; margin-top: 24px; font-size: 0.84rem; color: var(--text-secondary); }
+.auth-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.auth-footer a:hover { text-decoration: underline; }
+.flash-inline { padding: 10px 14px; border-radius: 8px; font-size: 0.83rem; margin-bottom: 14px; }
+.flash-inline.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+.flash-inline.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
+</style>
+<div class="auth-wrap">
+    <div class="auth-card">
+        <div class="auth-logo">D</div>
+        <h2>Create Account</h2>
+        <p class="subtitle">Start tracking your DSA progress today</p>
 
-                <form method="POST" action="{{ url_for('register') }}">
-                    <div class="form-group">
-                        <label for="name">Name</label>
-                        <input type="text" class="form-control" id="name" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email address</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Register</button>
-                </form>
-                
-                <hr class="my-4">
-                
-                <a href="{{ url_for('login_github') }}" class="btn btn-dark btn-block mb-2">
-                    <i class="bi bi-github"></i> Register with GitHub
-                </a>
-                <a href="{{ url_for('login_google') }}" class="btn btn-danger btn-block">
-                    <i class="bi bi-google"></i> Register with Google
-                </a>
-                
-                <div class="mt-4 text-center">
-                    <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
-                </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-inline {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="form-group">
+                <label class="form-label" for="name">Full Name</label>
+                <input type="text" class="form-control" id="name" name="name" placeholder="Mohit Kumhar" required>
             </div>
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn-primary-full">Create Account</button>
+        </form>
+
+        <div class="divider">or register with</div>
+
+        <a href="{{ url_for('login_github') }}" class="oauth-btn">
+            <i class="bi bi-github" style="font-size:1.1rem;"></i> GitHub
+        </a>
+        <a href="{{ url_for('login_google') }}" class="oauth-btn">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.5 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.9 6.1C12.8 13.1 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.9 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.4 10.7l8.5-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.7 2.3-7.7 2.3-6.1 0-11.2-3.6-13.1-9.2L2.4 35.7C6.3 43.3 14.5 48 24 48z"/></svg>
+            Google
+        </a>
+
+        <div class="auth-footer">
+            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
         </div>
     </div>
 </div>

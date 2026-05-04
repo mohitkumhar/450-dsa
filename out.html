@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>450 DSA Tracker</title>
+    <meta name="description" content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #111111;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #1e1e1e;
+            --bg-card-hover: #252525;
+            --border-color: #2a2a2a;
+            --border-subtle: #222222;
+            --accent: #ff6b00;
+            --accent-hover: #ff8c38;
+            --accent-dim: rgba(255, 107, 0, 0.15);
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --easy: #00b8a3;
+            --medium: #ffc01e;
+            --hard: #ff375f;
+            --sidebar-width: 64px;
+            --topbar-height: 56px;
+            --transition: all 0.2s ease;
+            --radius: 10px;
+            --radius-lg: 16px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Left Sidebar ─── */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .sidebar-logo {
+            width: 40px;
+            height: 40px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+            letter-spacing: -1px;
+        }
+
+        .sidebar-logo:hover { background: var(--accent-hover); color: white; text-decoration: none; }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            width: 100%;
+        }
+
+        .sidebar-link {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 1.25rem;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .sidebar-link:hover, .sidebar-link.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .sidebar-link .tooltip-label {
+            position: absolute;
+            left: calc(100% + 12px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateX(-5px);
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            z-index: 999;
+        }
+
+        .sidebar-link:hover .tooltip-label {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .sidebar-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+        }
+
+        /* ─── Top Bar ─── */
+        .topbar {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--topbar-height);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 900;
+            gap: 12px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar-brand {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .topbar-brand:hover { color: var(--accent); text-decoration: none; }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pill-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .pill-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+        .pill-btn.accent { background: var(--accent); border-color: var(--accent); color: white; }
+        .pill-btn.accent:hover { background: var(--accent-hover); color: white; }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1rem;
+        }
+
+        .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .user-avatar-sm {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #ff375f);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: white;
+            cursor: pointer;
+            border: 2px solid var(--border-color);
+            transition: var(--transition);
+            text-decoration: none;
+            flex-shrink: 0;
+        }
+
+        .user-avatar-sm:hover { border-color: var(--accent); color: white; text-decoration: none; }
+
+        /* ─── Main Content ─── */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--topbar-height);
+            min-height: calc(100vh - var(--topbar-height) - 130px);
+            padding: 24px;
+        }
+
+        /* ─── Cards ─── */
+        .card-dark {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 18px;
+            transition: var(--transition);
+        }
+
+        .card-dark:hover { border-color: #333; }
+
+        /* ─── Flash Messages ─── */
+        .flash-messages {
+            position: fixed;
+            top: calc(var(--topbar-height) + 12px);
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 360px;
+        }
+
+        .flash-alert {
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.3s ease;
+            cursor: pointer;
+        }
+
+        .flash-alert.success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
+        .flash-alert.danger  { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #f87171; }
+        .flash-alert.warning { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+        .flash-alert.info    { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ─── Footer ─── */
+        .site-footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 24px 20px;
+            margin-left: var(--sidebar-width);
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px 24px;
+            margin-bottom: 16px;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.82rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover { color: var(--accent); }
+
+        .footer-socials {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .footer-socials a {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .footer-socials a:hover { border-color: var(--accent); color: var(--accent); }
+
+        .footer-copy {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+        }
+
+        /* ─── Scrollbars ─── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* ─── Mobile Responsive ─── */
+        @media (max-width: 768px) {
+            .sidebar {
+                bottom: 0;
+                top: auto;
+                width: 100%;
+                height: 56px;
+                flex-direction: row;
+                justify-content: space-around;
+                padding: 0 10px;
+                border-right: none;
+                border-top: 1px solid var(--border-color);
+            }
+            .sidebar-logo { display: none; }
+            .sidebar-nav { flex-direction: row; flex: 1; justify-content: space-around; }
+            .sidebar-bottom { flex-direction: row; padding-bottom: 0; }
+            .sidebar-link .tooltip-label { display: none; }
+            .topbar { left: 0; }
+            .main-wrapper { margin-left: 0; margin-top: var(--topbar-height); padding: 14px; padding-bottom: 72px; }
+            .site-footer { margin-left: 0; padding-bottom: 72px; }
+            .pill-btn span { display: none; }
+        }
+
+        @media (max-width: 480px) {
+            .topbar { padding: 0 12px; }
+            .pill-btn { padding: 5px 10px; }
+        }
+
+        
+    </style>
+    
+<script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
+
+    <!-- Prevent flash of wrong theme -->
+    <script>
+        if(localStorage.getItem('theme') === 'light') {
+            document.documentElement.style.setProperty('--bg-primary','#f0f2f5');
+            document.documentElement.style.setProperty('--bg-secondary','#ffffff');
+            document.documentElement.style.setProperty('--bg-card','#ffffff');
+            document.documentElement.style.setProperty('--text-primary','#111111');
+            document.documentElement.style.setProperty('--text-secondary','#555555');
+            document.documentElement.style.setProperty('--border-color','#e0e0e0');
+        }
+    </script>
+</head>
+<body>
+
+<!-- ─── Left Sidebar ─── -->
+<aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <a href="/" class="sidebar-logo" title="450 DSA">D</a>
+    <nav class="sidebar-nav">
+        <a href="/" class="sidebar-link " id="nav-home">
+            <i class="bi bi-house-fill"></i>
+            <span class="tooltip-label">Home</span>
+        </a>
+        
+        <a href="/profile" class="sidebar-link active" id="nav-profile">
+            <i class="bi bi-person-circle"></i>
+            <span class="tooltip-label">Profile</span>
+        </a>
+        <a href="/bookmarks" class="sidebar-link " id="nav-bookmarks">
+            <i class="bi bi-bookmark-fill"></i>
+            <span class="tooltip-label">Bookmarks</span>
+        </a>
+        
+        <a href="#" class="sidebar-link" id="nav-search">
+            <i class="bi bi-search"></i>
+            <span class="tooltip-label">Search</span>
+        </a>
+        <a href="#" class="sidebar-link" id="nav-stats">
+            <i class="bi bi-bar-chart-fill"></i>
+            <span class="tooltip-label">Stats</span>
+        </a>
+        <a href="#" class="sidebar-link" id="nav-leaderboard">
+            <i class="bi bi-trophy-fill"></i>
+            <span class="tooltip-label">Leaderboard</span>
+        </a>
+    </nav>
+    <div class="sidebar-bottom">
+        
+        <a href="/logout" class="sidebar-link" title="Logout" id="nav-logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span class="tooltip-label">Logout</span>
+        </a>
+        
+    </div>
+</aside>
+
+<!-- ─── Top Bar ─── -->
+<header class="topbar">
+    <div class="topbar-left">
+        <a href="/" class="topbar-brand">450 DSA Cracker</a>
+    </div>
+    <div class="topbar-right">
+        <a href="#" class="pill-btn" id="monthly-rewind-btn">
+            <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
+            <span>Monthly Rewind</span>
+        </a>
+        <a href="#" class="pill-btn accent" id="company-kit-btn">
+            <i class="bi bi-briefcase-fill"></i>
+            <span>Company Wise Kit</span>
+        </a>
+        <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+            <i class="bi bi-moon-fill" id="theme-icon"></i>
+        </button>
+        
+        <a href="/profile" class="user-avatar-sm" title="Test">
+            T
+        </a>
+        
+    </div>
+</header>
+
+<!-- ─── Flash Messages ─── -->
+
+
+
+
+<!-- ─── Main Content ─── -->
+<main class="main-wrapper">
+    
+<style>
+.prof-layout{display:grid;grid-template-columns:240px 1fr 260px;gap:16px;align-items:start}
+.prof-sidebar,.prof-main,.prof-right{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px}
+.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color)}
+.prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
+.prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
+.card-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:12px}
+.card-btn:hover{background:var(--accent-hover);color:#fff;text-decoration:none}
+.prof-bio{text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px}
+.social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;padding:10px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+.social-icon{color:var(--text-muted);font-size:1.1rem;text-decoration:none;transition:color 0.2s}
+.social-icon:hover{color:var(--accent)}
+.meta-row{display:flex;align-items:center;gap:6px;font-size:0.79rem;color:var(--text-secondary);margin-bottom:6px}
+.sec-title{font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.platform-row{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:8px;margin-bottom:4px;font-size:0.82rem}
+.platform-row:hover{background:var(--bg-secondary)}
+.check-ok{color:var(--success);font-size:0.9rem}
+.link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
+.link-out:hover{color:var(--accent)}
+.add-btn{width:100%;padding:7px;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-top:4px}
+.add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
+.rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
+.rank-label{font-size:0.75rem;color:var(--text-secondary)}
+.view-lb-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;margin-top:10px;text-decoration:none}
+.view-lb-btn:hover{background:var(--accent-hover);color:#fff;text-decoration:none}
+.meta-footer{font-size:0.72rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.meta-footer span{display:flex;justify-content:space-between}
+/* stat cards */
+.stat-row{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px}
+.stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px}
+.stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+/* heatmap */
+.heatmap-grid{display:grid;grid-template-rows:repeat(7,10px);grid-auto-flow:column;gap:2px;overflow-x:auto;padding-bottom:4px}
+.hm-cell{width:10px;height:10px;border-radius:2px;background:var(--bg-secondary)}
+.hm-cell[data-l="1"]{background:#0e4429}.hm-cell[data-l="2"]{background:#006d32}.hm-cell[data-l="3"]{background:#26a641}.hm-cell[data-l="4"]{background:#39d353}
+.hm-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.72rem;color:var(--text-secondary)}
+/* contest row */
+.contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
+.empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
+.awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative}
+.award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
+.award-badge .a-lbl{font-size:.6rem;color:var(--text-muted);margin-top:4px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:14px 20px;font-size:.85rem;z-index:9998;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.big-num{font-size:2.8rem;font-weight:900;line-height:1}
+.sub-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+/* topic bars */
+.t-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.78rem}
+.t-bar-name{width:110px;text-align:right;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-bar-wrap{flex:1;height:20px;background:var(--bg-secondary);border-radius:4px;overflow:hidden}
+.t-bar-fill{height:100%;background:#1e5eff;border-radius:4px;display:flex;align-items:center;padding-left:6px;color:#fff;font-weight:700;font-size:0.72rem}
+/* right panel */
+.section-title{font-size:0.88rem;font-weight:700;text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
+.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px}
+.donut-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900}
+.legend-item{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;background:var(--bg-secondary);margin-bottom:5px;font-size:0.8rem}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.rating-wrap{display:flex;align-items:center;gap:14px;padding:10px 0}
+.shield-icon{font-size:3.5rem;color:#444}
+.rating-num{font-size:2rem;font-weight:900;line-height:1}
+.rating-sub{font-size:0.75rem;color:var(--text-secondary)}
+/* modal */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-bx{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:28px;width:90%;max-width:420px}
+.modal-bx h3{font-size:1rem;font-weight:700;margin-bottom:16px}
+.m-lbl{font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:5px}
+.m-inp{width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;margin-bottom:12px}
+.m-inp:focus{border-color:var(--accent)}
+.m-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+.m-cancel{padding:8px 16px;border:1px solid var(--border-color);border-radius:8px;background:none;color:var(--text-secondary);font-size:0.83rem;cursor:pointer;font-family:inherit}
+.m-save{padding:8px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s}
+.m-save:hover:not(:disabled){background:var(--accent-hover)}
+.m-save:disabled{opacity:0.7;cursor:not-allowed}
+.m-note{font-size:0.72rem;color:var(--text-muted);margin-top:-8px;margin-bottom:10px}
+@keyframes btn-spin{to{transform:rotate(360deg)}}
+.btn-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:btn-spin .7s linear infinite;flex-shrink:0}
+/* responsive */
+@media(max-width:1100px){.prof-layout{grid-template-columns:200px 1fr 220px}}
+@media(max-width:860px){.prof-layout{grid-template-columns:1fr}.prof-right{order:-1}.stat-row{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:520px){.stat-row{grid-template-columns:1fr 1fr}.contest-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="prof-layout">
+
+<!-- ── LEFT SIDEBAR ── -->
+<div class="prof-sidebar">
+  <div class="card" style="text-align:center">
+    <div class="avatar-ring" id="avatarRing">
+      
+        T
+      
+    </div>
+    <div class="prof-name">Test</div>
+    <div class="prof-handle">
+      @test
+      <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem"></i>
+    </div>
+    <button class="card-btn" onclick="showCodelioCard()">Get your Codolio Card</button>
+    <div class="prof-bio">Software Engineer | Problem Solver | DSA Enthusiast</div>
+    <div class="social-row">
+      <a href="mailto:test@test.com" class="social-icon" title="Email"><i class="bi bi-envelope"></i></a>
+      
+      
+      
+      
+      
+    </div>
+    
+    <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)"></i> India</div>
+    <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)"></i> Computer Science</div>
+    
+    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'"><i class="bi bi-pencil-square"></i> Edit Profile</button>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">About</div>
+    <div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px">
+      450 DSA Progress: <strong style="color:var(--text-primary)">0 / 448 (0.0%)</strong>
+    </div>
+    <div class="sec-title">Problem Solving Stats</div>
+    <div class="platform-row">
+      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px"></i>LeetCode</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>
+      </span>
+    </div>
+    <div class="platform-row">
+      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px"></i>GeeksForGeeks</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>
+      </span>
+    </div>
+    <div class="platform-row">
+      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px"></i>HackerRank</span>
+      <a href="https://hackerrank.com" target="_blank" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>
+    </div>
+    <button class="add-btn" onclick="openSyncModal()"><i class="bi bi-plus"></i> Add Platform</button>
+    <div class="sec-title" style="margin-top:14px">Development Stats</div>
+    <div class="platform-row">
+      <span><i class="bi bi-github" style="margin-right:6px"></i>GitHub</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>
+      </span>
+    </div>
+  </div>
+
+  <div class="rank-card">
+    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Leaderboard</div>
+    <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem"></i>
+      <span class="rank-num">0</span>
+    </div>
+    <a href="https://codolio.com/leaderboard" target="_blank" class="view-lb-btn">View Leaderboard</a>
+    <div class="meta-footer">
+      <span><span>Profile Views:</span><span>1</span></span>
+      <span><span>Profile Visibility:</span><span>Public</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── MIDDLE / MAIN ── -->
+<div class="prof-main">
+
+  <!-- Stat cards + Heatmap -->
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-lbl">Total Questions</div>
+      <div class="stat-num">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-lbl">Total Active Days</div>
+      <div class="stat-num">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="hm-meta">
+        <span>Submissions <strong>0</strong></span>
+        <span>Active Days <strong>0</strong></span>
+        <select style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit">
+          <option>Current</option>
+        </select>
+      </div>
+      <div class="heatmap-grid" id="heatmap"></div>
+    </div>
+  </div>
+
+  <!-- Contests + Rating chart -->
+  <div class="contest-grid">
+    <div class="card">
+      <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
+      <div class="big-num" style="text-align:center">0</div>
+      <div style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
+        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode</span>
+        <strong>0</strong>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <div>
+          <div class="stat-lbl">Rating</div>
+          <div style="font-size:1.6rem;font-weight:900">0</div>
+        </div>
+        <div style="text-align:right;font-size:.75rem;color:var(--text-secondary)">
+          <div>Rank: 0</div>
+          <div style="color:var(--warning)">Top 0%</div>
+        </div>
+      </div>
+      <div style="height:130px;margin-top:4px"><canvas id="progressChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Awards -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-weight:700">Awards</span>
+      <span style="font-size:.75rem;color:var(--text-muted)">from LeetCode &amp; HackerRank</span>
+    </div>
+    <div class="awards-grid" id="awardsGrid">
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit">Connect Now</button></div>
+      
+    </div>
+  </div>
+
+  <!-- DSA Topic Analysis -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="font-weight:700">DSA Topic Analysis</span>
+      <i class="bi bi-info-circle" style="color:var(--text-muted)"></i>
+    </div>
+    
+    <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:.85rem">
+      <i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px"></i>
+      Start solving questions to see topic analysis
+    </div>
+    
+  </div>
+</div>
+
+<!-- ── RIGHT PANEL ── -->
+<div class="prof-right">
+  <div class="card">
+    <div class="section-title">Problems Solved</div>
+
+    <!-- Fundamentals -->
+    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">Fundamentals</div>
+    <div class="donut-wrap">
+      <canvas id="platformsChart"></canvas>
+      <div class="donut-inner">0</div>
+    </div>
+    <div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#ffb800"></span><span style="color:#ffb800;font-weight:700">GFG</span></span>
+        <strong>0</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#00bd6c"></span><span style="color:#00bd6c;font-weight:700">HackerRank</span></span>
+        <strong>0</strong>
+      </div>
+    </div>
+
+    <hr style="border-color:var(--border-color);margin:16px 0">
+
+    <!-- DSA difficulty -->
+    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
+    <div class="donut-wrap">
+      <canvas id="difficultyChart"></canvas>
+      <div class="donut-inner">0</div>
+    </div>
+    <div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#00b8a3"></span><span style="color:#00b8a3;font-weight:700">Easy</span></span>
+        <strong>0</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#ffc01e"></span><span style="color:#ffc01e;font-weight:700">Medium</span></span>
+        <strong>0</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#ff375f"></span><span style="color:#ff375f;font-weight:700">Hard</span></span>
+        <strong>0</strong>
+      </div>
+    </div>
+
+    <hr style="border-color:var(--border-color);margin:16px 0">
+
+    <!-- Contest Rankings -->
+    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:4px">Contest Rankings</div>
+    <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">LEETCODE</div>
+    <div class="rating-wrap">
+      <i class="bi bi-shield-shaded shield-icon"></i>
+      <div>
+        <div class="rating-num">0</div>
+        <div class="rating-sub">(max: 0)</div>
+        <div class="rating-sub">Rank: 0</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Sync Modal -->
+<div class="modal-ov" id="syncModal">
+  <div class="modal-bx" style="max-width:480px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h3 style="margin-bottom:0"><i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles</h3>
+      <button onclick="closeSyncModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
+    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
+    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="">
+    <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
+    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="">
+    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
+    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="">
+    <div class="m-note">⚠️ GFG sync is experimental and may take a few seconds.</div>
+    <div class="m-actions">
+      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
+      <button class="m-save" id="btnSync"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Codolio Card Modal -->
+<div class="modal-ov" id="cardModal">
+  <div class="modal-bx" style="max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <span style="font-weight:700;font-size:1rem">Your Profile Card</span>
+      <button onclick="document.getElementById('cardModal').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
+      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">T</div>
+      <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">Test</div>
+      <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@test</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">0</div><div style="font-size:.65rem;color:var(--text-secondary)">Questions</div></div>
+        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">0</div><div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div></div>
+        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">0</div><div style="font-size:.65rem;color:var(--text-secondary)">DSA Done</div></div>
+      </div>
+      <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • 2026</div>
+    </div>
+    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-ov" id="editProfileModal">
+  <div class="modal-bx" style="max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
+    <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color)">
+      <h3 style="margin:0"><i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile</h3>
+      <button onclick="closeEditProfile()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
+    <!-- Photo Upload -->
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="position:relative;display:inline-block">
+        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
+          T
+        </div>
+        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+          <i class="bi bi-camera"></i> Upload Photo
+        </label>
+        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+      </div>
+      <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
+    </div>
+    <!-- Basic Info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="Test"></div>
+      <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value=""></div>
+    </div>
+    <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself..."></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value=""></div>
+      <div><label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label><input class="m-inp" id="ep_college" placeholder="e.g. IIT Delhi" value=""></div>
+    </div>
+    <!-- Social Links -->
+    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">Social Links</div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value=""></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value=""></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value=""></div>
+    <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value=""><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
+    </div><!-- end scrollable body -->
+    <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
+      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
+      <button class="m-save" id="btnSaveProfile"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast" style=""></div>
+
+<!-- Sync Loading Overlay -->
+<div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+  <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
+  <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
+  <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
+  <div style="display:flex;gap:8px;margin-top:4px" id="syncSteps">
+    <span id="ss_lc" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; LeetCode</span>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <span id="ss_gh" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GitHub</span>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <span id="ss_gfg" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GFG</span>
+  </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+
+</main>
+
+<!-- ─── Footer ─── -->
+<footer class="site-footer">
+    <div class="footer-links">
+        <a href="#">FAQ</a>
+        <a href="#">Contact Us</a>
+        <a href="#">Privacy</a>
+        <a href="#">Timeline</a>
+        <a href="#">Terms</a>
+        <a href="#">Refund Policy</a>
+    </div>
+    <div class="footer-socials">
+        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
+        <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+    </div>
+    <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
+</footer>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+    // Theme Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const root = document.documentElement;
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            root.style.setProperty('--bg-primary', '#f0f2f5');
+            root.style.setProperty('--bg-secondary', '#ffffff');
+            root.style.setProperty('--bg-card', '#ffffff');
+            root.style.setProperty('--bg-card-hover', '#f5f5f5');
+            root.style.setProperty('--border-color', '#e0e0e0');
+            root.style.setProperty('--border-subtle', '#ececec');
+            root.style.setProperty('--text-primary', '#111111');
+            root.style.setProperty('--text-secondary', '#555555');
+            root.style.setProperty('--text-muted', '#999999');
+            themeIcon.className = 'bi bi-sun-fill';
+        } else {
+            root.style.setProperty('--bg-primary', '#111111');
+            root.style.setProperty('--bg-secondary', '#1a1a1a');
+            root.style.setProperty('--bg-card', '#1e1e1e');
+            root.style.setProperty('--bg-card-hover', '#252525');
+            root.style.setProperty('--border-color', '#2a2a2a');
+            root.style.setProperty('--border-subtle', '#222222');
+            root.style.setProperty('--text-primary', '#f0f0f0');
+            root.style.setProperty('--text-secondary', '#a0a0a0');
+            root.style.setProperty('--text-muted', '#666666');
+            themeIcon.className = 'bi bi-moon-fill';
+        }
+    }
+
+    const saved = localStorage.getItem('theme') || 'dark';
+    applyTheme(saved);
+
+    themeToggle.addEventListener('click', () => {
+        const curr = localStorage.getItem('theme') || 'dark';
+        const next = curr === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', next);
+        applyTheme(next);
+    });
+
+    // Auto-dismiss flash messages
+    setTimeout(() => {
+        const fc = document.getElementById('flash-container');
+        if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
+    }, 4000);
+</script>
+
+<script>
+// ── Event Listeners (registered first so Chart.js failure can't break them) ──
+document.getElementById('btnSaveProfile').addEventListener('click',function(){
+  const btn=this;
+  const contentEl=document.getElementById('saveProfileContent');
+  const payload={
+    name: document.getElementById('ep_name').value,
+    bio: document.getElementById('ep_bio').value,
+    headline: document.getElementById('ep_headline').value,
+    location: document.getElementById('ep_location').value,
+    college: document.getElementById('ep_college').value,
+    linkedin_url: document.getElementById('ep_linkedin').value,
+    twitter_url: document.getElementById('ep_twitter').value,
+    website_url: document.getElementById('ep_website').value,
+    resume_url: document.getElementById('ep_resume').value,
+  };
+  btn.disabled=true;
+  contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
+  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>r.json())
+    .then(res=>{
+      if(res.success){
+        contentEl.innerHTML='<i class="bi bi-check-lg"></i> Saved!';
+        showToast('✅ Profile saved!');
+        setTimeout(()=>window.location.reload(),900);
+      } else {
+        showToast('❌ Error: '+(res.error||'unknown'));
+        btn.disabled=false;
+        contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+      }
+    }).catch(e=>{
+      showToast('❌ Network error');
+      btn.disabled=false;
+      contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+    });
+});
+
+document.getElementById('btnSync').addEventListener('click',function(){
+  const btn=this;
+  const syncContent=document.getElementById('syncBtnContent');
+  const lc=document.getElementById('lc_username').value.trim();
+  const gh=document.getElementById('gh_username').value.trim();
+  const gfg=document.getElementById('gfg_username').value.trim();
+  if(!lc && !gh && !gfg){showToast('\u26a0\ufe0f Enter at least one username');return;}
+
+  // Disable button & show spinner
+  btn.disabled=true;
+  syncContent.innerHTML='<span class="btn-spinner"></span> Syncing...';
+
+  // Show loading overlay
+  const overlay=document.getElementById('syncOverlay');
+  overlay.style.display='flex';
+  document.getElementById('syncOverlayMsg').textContent='Syncing your profiles...';
+
+  // Animate step indicators
+  const steps=['ss_lc','ss_gh','ss_gfg'];
+  const labels=['LeetCode','GitHub','GFG'];
+  let si=0;
+  const stepTimer=setInterval(()=>{
+    if(si>0) document.getElementById(steps[si-1]).style.color='rgba(0,200,100,.8)';
+    if(si<steps.length){
+      document.getElementById(steps[si]).style.color='#fff';
+      document.getElementById('syncOverlayMsg').textContent='Syncing '+labels[si]+'...';
+      si++;
+    }else clearInterval(stepTimer);
+  }, 6000);
+
+  // Fetch with 90s timeout
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),90000);
+
+  fetch('/sync_platforms',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg}),
+    signal:ctrl.signal
+  })
+  .then(r=>{clearTimeout(timer);return r.json();})
+  .then(res=>{
+    clearInterval(stepTimer);
+    overlay.style.display='none';
+    if(res.success){
+      syncContent.innerHTML='<i class="bi bi-check-lg"></i> Synced!';
+      showToast('\u2705 Synced successfully! Reloading...');
+      setTimeout(()=>window.location.reload(),1200);
+    }else{
+      btn.disabled=false;
+      syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+      showToast('\u274c Sync failed: '+(res.error||'unknown'));
+    }
+  })
+  .catch(err=>{
+    clearInterval(stepTimer);
+    overlay.style.display='none';
+    btn.disabled=false;
+    syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+    if(err.name==='AbortError'){
+      showToast('\u23f0 Sync timed out. Try again.');
+    }else{
+      showToast('\u274c Network error. Check connection.');
+    }
+    console.error('Sync error:',err);
+  });
+});
+
+// ── Chart & Visualization Code ──
+const dailyCounts = {};
+const heatmap = document.getElementById('heatmap');
+const today = new Date();
+const days = 168;
+let start = new Date(); start.setDate(today.getDate() - days + 1);
+for(let i=0;i<days;i++){
+  let d=new Date(start); d.setDate(d.getDate()+i);
+  let ds=d.toISOString().split('T')[0];
+  let c=dailyCounts[ds]||0, l=0;
+  if(c>0&&c<=2)l=1; else if(c>2&&c<=5)l=2; else if(c>5&&c<=10)l=3; else if(c>10)l=4;
+  let el=document.createElement('div');
+  el.className='hm-cell'; el.dataset.l=l; el.title=ds+': '+c+' submissions';
+  heatmap.appendChild(el);
+}
+
+const ratingHistory = [];
+const cumData = [];
+const chartCanvas = document.getElementById('progressChart');
+const chartData = ratingHistory.length > 0 ? ratingHistory : cumData;
+if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
+  new Chart(chartCanvas,{
+    type:'line',
+    data:{labels:chartData.map(d=>d.x),datasets:[{data:chartData.map(d=>d.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length>0?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0].label,label:ctx=>ratingHistory.length>0?'Rating: '+ctx.raw:'Solved: '+ctx.raw}}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}
+  });
+} else if(chartCanvas && typeof Chart !== 'undefined') {
+  // Show empty state inside canvas area
+  const ctx = chartCanvas.getContext('2d');
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(0,0,chartCanvas.width,chartCanvas.height);
+  ctx.fillStyle = '#555';
+  ctx.font = '13px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Sync LeetCode to see rating chart', chartCanvas.width/2, chartCanvas.height/2 - 8);
+}
+
+const pData = {"Coding Ninjas": 0, "GFG": 0, "HackerRank": 0, "LeetCode": 0, "Other": 0};
+try{new Chart(document.getElementById('platformsChart'),{
+  type:'doughnut',
+  data:{labels:['LeetCode','GFG','HackerRank','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['HackerRank'],pData['Other']],backgroundColor:['#ffb800','#22c55e','#00bd6c','#6c757d'],borderWidth:0,cutout:'78%'}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+});}catch(e){console.warn('Chart.js load failed:',e);}
+
+try{new Chart(document.getElementById('difficultyChart'),{
+  type:'doughnut',
+  data:{labels:['Easy','Medium','Hard'],datasets:[{data:[0,0,0],backgroundColor:['#00b8a3','#ffc01e','#ff375f'],borderWidth:0,cutout:'78%'}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+});}catch(e){console.warn('Difficulty chart error:',e);}
+
+function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
+function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
+function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
+function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
+
+['syncModal','cardModal','editProfileModal'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
+});
+
+function handlePhotoUpload(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  if(file.size>2*1024*1024){showToast('❌ Image too large (max 2MB)');return;}
+  const preview=document.getElementById('editAvatarPreview');
+  const mainAvatar=document.getElementById('avatarRing');
+  const fd=new FormData();
+  fd.append('photo',file);
+  showToast('⏳ Uploading photo...');
+  fetch('/upload_photo',{method:'POST',body:fd})
+    .then(r=>r.json())
+    .then(res=>{
+      if(res.success){
+        // Safe DOM - create img element without innerHTML
+        const makeImg=()=>{const i=document.createElement('img');i.src=res.photo_url;i.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%';return i;};
+        preview.textContent='';
+        preview.appendChild(makeImg());
+        if(mainAvatar){mainAvatar.textContent='';const i2=makeImg();i2.style.borderRadius='50%';mainAvatar.appendChild(i2);}
+        showToast('✅ Photo updated!');
+      } else showToast('❌ '+res.error);
+    }).catch(()=>showToast('❌ Upload failed'));
+}
+</script>
+
+</body>
+</html>

@@ -1,183 +1,154 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="mb-4">
-    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
-</div>
+<style>
+.back-btn{display:inline-flex;align-items:center;gap:8px;color:var(--text-secondary);text-decoration:none;font-size:.85rem;font-weight:600;margin-bottom:20px;padding:7px 14px;border:1px solid var(--border-color);border-radius:8px;transition:all .2s}
+.back-btn:hover{border-color:var(--accent);color:var(--accent);text-decoration:none}
+.page-title{font-size:1.6rem;font-weight:800;margin-bottom:6px}
+.page-sub{color:var(--text-secondary);font-size:.88rem;margin-bottom:24px}
+.empty-state{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:60px 24px;text-align:center}
+.empty-state i{font-size:3rem;color:var(--text-muted);margin-bottom:16px;display:block}
+.empty-state p{color:var(--text-secondary);margin-bottom:20px}
+.empty-state a{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;background:var(--accent);border-radius:10px;color:#fff;text-decoration:none;font-weight:700;font-size:.88rem}
+.empty-state a:hover{background:var(--accent-hover);color:#fff}
+.q-wrap{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;overflow:hidden}
+.q-table{width:100%;border-collapse:collapse}
+.q-table thead th{background:var(--bg-secondary);color:var(--text-secondary);font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:12px 16px;text-align:left;border-bottom:1px solid var(--border-color)}
+.q-table tbody tr{border-bottom:1px solid var(--border-subtle);transition:background .15s}
+.q-table tbody tr:last-child{border-bottom:none}
+.q-table tbody tr:hover{background:var(--bg-secondary)}
+.q-table tbody td{padding:12px 16px;font-size:.87rem;vertical-align:middle}
+.q-num{color:var(--text-muted);font-weight:600;font-size:.78rem}
+.q-checkbox{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+.topic-tag{display:inline-flex;align-items:center;padding:2px 10px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.2);color:#818cf8;border-radius:20px;font-size:.73rem;font-weight:700;text-decoration:none}
+.q-name{font-weight:600;color:var(--text-primary);margin-bottom:4px}
+.q-links{display:flex;gap:6px;flex-wrap:wrap}
+.q-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:.73rem;font-weight:700;text-decoration:none;transition:all .2s}
+.q-badge:hover{opacity:.85;text-decoration:none}
+.badge-lc{background:rgba(255,184,0,.15);color:#ffb800;border:1px solid rgba(255,184,0,.25)}
+.badge-gfg{background:rgba(34,197,94,.15);color:var(--success);border:1px solid rgba(34,197,94,.25)}
+.badge-link{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.25)}
+.action-icon{background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;font-size:1.1rem;color:var(--warning);transition:all .2s}
+.action-icon:hover{background:var(--bg-secondary)}
+.notes-btn-sm{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;padding:5px 10px;font-size:.77rem;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .2s;font-family:inherit}
+.notes-btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.notes-btn-sm.has-notes{border-color:var(--info);color:var(--info)}
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-bx{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:28px;width:90%;max-width:480px}
+.modal-bx h3{font-size:1.1rem;font-weight:700;margin-bottom:16px}
+.modal-textarea{width:100%;padding:12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-size:.88rem;font-family:inherit;resize:vertical;min-height:120px;outline:none}
+.modal-textarea:focus{border-color:var(--accent)}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.btn-cancel{padding:9px 18px;border-radius:8px;border:1px solid var(--border-color);background:none;color:var(--text-secondary);font-size:.85rem;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-save{padding:9px 18px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-save:hover{background:var(--accent-hover)}
+@media(max-width:640px){.q-table thead th:nth-child(1),.q-table tbody td:nth-child(1){display:none}.q-table thead th:nth-child(3),.q-table tbody td:nth-child(3){display:none}}
+</style>
 
-<h2>My Bookmarked Questions</h2>
+<a href="{{ url_for('index') }}" class="back-btn"><i class="bi bi-arrow-left"></i> Back to Topics</a>
+<div class="page-title">Bookmarks</div>
+<div class="page-sub">Your saved questions for quick review</div>
 
 {% if questions %}
-<div class="table-responsive">
-    <table class="table table-hover mt-4">
-        <thead class="thead-light">
-            <tr>
-                <th scope="col" style="width: 5%">#</th>
-                <th scope="col" style="width: 5%">Status</th>
-                <th scope="col" style="width: 20%">Topic</th>
-                <th scope="col" style="width: 40%">Problem</th>
-                <th scope="col" style="width: 15%">Actions</th>
-                <th scope="col" style="width: 15%">Notes</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for q in questions %}
-            {% set q_id_str = q.id | string %}
-            {% set p = progress_dict.get(q_id_str) %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>
-                    <div class="custom-control custom-checkbox text-center">
-                        <input type="checkbox" class="custom-control-input status-checkbox" id="check_{{ q_id_str }}" data-id="{{ q_id_str }}" {% if p and p.done %}checked{% endif %}>
-                        <label class="custom-control-label" for="check_{{ q_id_str }}"></label>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge badge-secondary">{{ q.topic.name }}</span>
-                </td>
-                <td>
-                    <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" style="font-weight: 500; text-decoration: none; color: inherit;">
-                        {{ q.problem }}
-                    </a>
-                </td>
-                <td>
-                    <i class="bi {% if p and p.bookmark %}bi-bookmark-fill text-warning{% else %}bi-bookmark text-muted{% endif %} bookmark-btn" 
-                       style="cursor: pointer; font-size: 1.2rem;" 
-                       data-id="{{ q_id_str }}"
-                       data-bookmarked="{{ 'true' if p and p.bookmark else 'false' }}"></i>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-info notes-btn" data-id="{{ q_id_str }}" data-notes="{{ p.notes if p and p.notes else '' }}" data-toggle="modal" data-target="#notesModal">
-                        <i class="bi bi-journal-text"></i> {% if p and p.notes %}View/Edit{% else %}Add{% endif %}
-                    </button>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="q-wrap">
+  <table class="q-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Done</th>
+        <th>Topic</th>
+        <th>Problem</th>
+        <th>Save</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in questions %}
+      {% set q_id_str = q.id | string %}
+      {% set p = progress_dict.get(q_id_str) %}
+      <tr id="brow-{{ q_id_str }}">
+        <td class="q-num">{{ loop.index }}</td>
+        <td><input type="checkbox" class="q-checkbox status-checkbox" data-id="{{ q_id_str }}" {% if p and p.done %}checked{% endif %}></td>
+        <td><span class="topic-tag">{{ q.topic.name }}</span></td>
+        <td>
+          <div class="q-name">{{ q.problem }}</div>
+          <div class="q-links">
+            {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
+            {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer" class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url2|platform_name }}</a>{% endif %}
+          </div>
+        </td>
+        <td>
+          <button class="action-icon bookmark-btn" data-id="{{ q_id_str }}" data-bookmarked="true" title="Remove bookmark">
+            <i class="bi bi-bookmark-fill"></i>
+          </button>
+        </td>
+        <td>
+          <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn" data-id="{{ q_id_str }}" data-notes="{{ p.notes if p and p.notes else '' }}">
+            <i class="bi bi-journal-text"></i> {% if p and p.notes %}Edit{% else %}Add{% endif %}
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% else %}
-<div class="alert alert-info mt-4">
-    You haven't bookmarked any questions yet. Go to the topics and bookmark some questions to see them here!
+<div class="empty-state">
+  <i class="bi bi-bookmark"></i>
+  <p>You haven't bookmarked any questions yet.<br>Go to a topic and click the bookmark icon to save questions here.</p>
+  <a href="{{ url_for('index') }}"><i class="bi bi-arrow-right-circle"></i> Browse Topics</a>
 </div>
 {% endif %}
 
-<!-- Notes Modal -->
-<div class="modal fade" id="notesModal" tabindex="-1" role="dialog" aria-labelledby="notesModalLabel" aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="notesModalLabel">Notes</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <textarea id="notesTextarea" class="form-control" rows="5"></textarea>
-        <input type="hidden" id="currentQuestionId">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="saveNotesBtn">Save Notes</button>
-      </div>
+<div class="modal-ov" id="notesModal">
+  <div class="modal-bx">
+    <h3><i class="bi bi-journal-text"></i> Notes</h3>
+    <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..."></textarea>
+    <input type="hidden" id="currentQuestionId">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-save" id="saveNotesBtn">Save Notes</button>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    $(document).ready(function() {
-        const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
-
-        // Handle checkbox change
-        $('.status-checkbox').change(function(e) {
-            if (!isAuthenticated) {
-                e.preventDefault();
-                $(this).prop('checked', !$(this).prop('checked'));
-                window.location.href = "{{ url_for('login') }}";
-                return;
-            }
-            const qId = $(this).data('id');
-            const isDone = $(this).is(':checked');
-            
-            updateQuestion(qId, { done: isDone }, function() {});
-        });
-
-        // Handle bookmark click
-        $('.bookmark-btn').click(function(e) {
-            if (!isAuthenticated) {
-                e.preventDefault();
-                window.location.href = "{{ url_for('login') }}";
-                return;
-            }
-            const qId = $(this).data('id');
-            const isBookmarked = $(this).data('bookmarked') === 'true';
-            const newStatus = !isBookmarked;
-            
-            const btn = $(this);
-            
-            updateQuestion(qId, { bookmark: newStatus }, function() {
-                btn.data('bookmarked', newStatus ? 'true' : 'false');
-                if (newStatus) {
-                    btn.removeClass('bi-bookmark text-muted').addClass('bi-bookmark-fill text-warning');
-                } else {
-                    btn.removeClass('bi-bookmark-fill text-warning').addClass('bi-bookmark text-muted');
-                    // Optional: remove row from table if unbookmarked
-                    btn.closest('tr').fadeOut(300, function() { $(this).remove(); });
-                }
-            });
-        });
-
-        // Handle notes modal
-        $('.notes-btn').click(function(e) {
-            if (!isAuthenticated) {
-                e.preventDefault();
-                e.stopPropagation();
-                window.location.href = "{{ url_for('login') }}";
-                return;
-            }
-            const qId = $(this).data('id');
-            const notes = $(this).data('notes');
-            
-            $('#currentQuestionId').val(qId);
-            $('#notesTextarea').val(notes);
-        });
-
-        // Save notes
-        $('#saveNotesBtn').click(function() {
-            const qId = $('#currentQuestionId').val();
-            const notes = $('#notesTextarea').val();
-            
-            updateQuestion(qId, { notes: notes }, function() {
-                $('#notesModal').modal('hide');
-                const btn = $('.notes-btn[data-id="' + qId + '"]');
-                btn.data('notes', notes);
-                if (notes.trim() !== '') {
-                    btn.html('<i class="bi bi-journal-text"></i> View/Edit');
-                } else {
-                    btn.html('<i class="bi bi-journal-text"></i> Add');
-                }
-            });
-        });
-
-        function updateQuestion(id, data, callback) {
-            $.ajax({
-                url: '/update_question/' + id,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                success: function(response) {
-                    if (response.success) {
-                        callback();
-                    }
-                },
-                error: function() {
-                    alert('Error updating question');
-                }
-            });
-        }
+function updateQuestion(id,data,callback){
+  fetch('/update_question/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(r=>r.json()).then(res=>{if(res.success)callback();})
+    .catch(()=>alert('Error updating.'));
+}
+document.querySelectorAll('.status-checkbox').forEach(cb=>{
+  cb.addEventListener('change',function(){updateQuestion(this.dataset.id,{done:this.checked},()=>{});});
+});
+document.querySelectorAll('.bookmark-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    updateQuestion(this.dataset.id,{bookmark:false},()=>{
+      const row=document.getElementById('brow-'+this.dataset.id);
+      if(row){row.style.transition='opacity .3s';row.style.opacity='0';setTimeout(()=>row.remove(),300);}
     });
+  });
+});
+const modal=document.getElementById('notesModal');
+document.querySelectorAll('.notes-btn').forEach(btn=>{
+  btn.addEventListener('click',function(){
+    document.getElementById('currentQuestionId').value=this.dataset.id;
+    document.getElementById('notesTextarea').value=this.dataset.notes||'';
+    modal.classList.add('open');
+  });
+});
+document.getElementById('modalCancel').addEventListener('click',()=>modal.classList.remove('open'));
+modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open');});
+document.getElementById('saveNotesBtn').addEventListener('click',function(){
+  const qId=document.getElementById('currentQuestionId').value;
+  const notes=document.getElementById('notesTextarea').value;
+  updateQuestion(qId,{notes:notes},()=>{
+    modal.classList.remove('open');
+    const btn=document.querySelector(`.notes-btn[data-id="${qId}"]`);
+    if(btn){btn.dataset.notes=notes;btn.classList.toggle('has-notes',notes.trim()!=='');btn.innerHTML=`<i class="bi bi-journal-text"></i> ${notes.trim()?'Edit':'Add'}`;}
+  });
+});
 </script>
 {% endblock %}

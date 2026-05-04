@@ -1,42 +1,190 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="row mb-4">
-    <div class="col text-center">
-        <h2>Your Progress</h2>
-        <div class="progress" style="height: 25px; font-size: 1rem;">
-            {% set percentage = 0 %}
-            {% if total_questions > 0 %}
-                {% set percentage = (done_questions / total_questions * 100) | round(1) %}
-            {% endif %}
-            <div class="progress-bar bg-success" role="progressbar" style="width: {{ percentage }}%;" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100">{{ done_questions }} / {{ total_questions }} ({{ percentage }}%)</div>
-        </div>
+<style>
+/* ── Index Page ── */
+.page-header { margin-bottom: 24px; }
+.page-header h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); }
+.page-header p { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+
+.overall-progress-bar-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.progress-info { flex: 1; min-width: 180px; }
+.progress-info .label { font-size: 0.82rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 4px; }
+.progress-info .numbers { font-size: 1.3rem; font-weight: 800; color: var(--text-primary); }
+.progress-info .pct { color: var(--accent); font-size: 0.88rem; font-weight: 600; margin-top: 2px; }
+
+.progress-track {
+    flex: 2;
+    min-width: 200px;
+    height: 10px;
+    background: var(--bg-secondary);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #ff375f);
+    border-radius: 999px;
+    transition: width 0.6s ease;
+}
+
+/* Topic grid */
+.topics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.topic-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: block;
+    color: var(--text-primary);
+}
+
+.topic-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255,107,0,0.1);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.topic-card-name {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+}
+
+.topic-card-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+}
+
+.topic-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.topic-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.topic-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+}
+
+.topic-fill.done   { background: var(--success); }
+.topic-fill.partial { background: var(--accent); }
+.topic-fill.empty  { background: var(--border-color); }
+
+.topic-pct {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    min-width: 36px;
+    text-align: right;
+}
+
+.topic-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.topic-action-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.topic-action-btn.completed { border-color: var(--success); color: var(--success); }
+.topic-action-btn.started { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 600px) {
+    .topics-grid { grid-template-columns: 1fr; }
+    .overall-progress-bar-wrap { flex-direction: column; align-items: flex-start; }
+}
+</style>
+
+<div class="page-header">
+    <h1>DSA Topics</h1>
+    <p>Track your progress across all 450 DSA questions</p>
+</div>
+
+{% set percentage = 0 %}
+{% if total_questions > 0 %}
+    {% set percentage = (done_questions / total_questions * 100) | round(1) %}
+{% endif %}
+
+<div class="overall-progress-bar-wrap">
+    <div class="progress-info">
+        <div class="label">Overall Progress</div>
+        <div class="numbers">{{ done_questions }} / {{ total_questions }}</div>
+        <div class="pct">{{ percentage }}% completed</div>
+    </div>
+    <div class="progress-track">
+        <div class="progress-fill" style="width: {{ percentage }}%;"></div>
     </div>
 </div>
 
-<div class="row">
+<div class="topics-grid">
     {% for topic in topics %}
-    <div class="col-md-4 mb-4">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">{{ topic.name }}</h5>
-                {% set t_id_str = topic.id | string %}
-                {% set t_done = topic_progress[t_id_str]['done'] %}
-                {% set t_total = topic_progress[t_id_str]['total'] %}
-                {% set t_percent = 0 %}
-                {% if t_total > 0 %}
-                    {% set t_percent = (t_done / t_total * 100) | round(1) %}
-                {% endif %}
-                <p class="card-text mb-2 text-muted">{{ t_done }} / {{ t_total }} questions completed</p>
-                <div class="progress mb-3" style="height: 10px;">
-                    <div class="progress-bar {% if t_percent == 100 %}bg-success{% else %}bg-info{% endif %}" role="progressbar" style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <a href="{{ url_for('topic', topic_id=topic.id|string) }}" class="btn btn-outline-primary btn-block">
-                    {% if t_percent == 100 %}Review{% elif t_percent > 0 %}Continue{% else %}Start{% endif %}
-                </a>
+    {% set t_id_str = topic.id | string %}
+    {% set t_done = topic_progress[t_id_str]['done'] %}
+    {% set t_total = topic_progress[t_id_str]['total'] %}
+    {% set t_percent = 0 %}
+    {% if t_total > 0 %}
+        {% set t_percent = (t_done / t_total * 100) | round(1) %}
+    {% endif %}
+    <a href="{{ url_for('topic', topic_id=t_id_str) }}" class="topic-card">
+        <div class="topic-card-name">{{ topic.name }}</div>
+        <div class="topic-card-sub">{{ t_done }} / {{ t_total }} questions completed</div>
+        <div class="topic-progress-row">
+            <div class="topic-track">
+                <div class="topic-fill {% if t_percent == 100 %}done{% elif t_percent > 0 %}partial{% else %}empty{% endif %}" style="width: {{ t_percent }}%;"></div>
             </div>
+            <span class="topic-pct">{{ t_percent }}%</span>
         </div>
-    </div>
+        <span class="topic-action-btn {% if t_percent == 100 %}completed{% elif t_percent > 0 %}started{% endif %}">
+            {% if t_percent == 100 %}
+            <i class="bi bi-check-circle-fill"></i> Completed
+            {% elif t_percent > 0 %}
+            <i class="bi bi-play-circle-fill"></i> Continue
+            {% else %}
+            <i class="bi bi-arrow-right-circle"></i> Start
+            {% endif %}
+        </span>
+    </a>
     {% endfor %}
 </div>
 {% endblock %}
