@@ -1,6 +1,4 @@
 import requests
-import json
-import re
 
 def fetch_leetcode(username):
     try:

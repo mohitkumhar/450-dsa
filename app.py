@@ -310,7 +310,7 @@ def register():
             user.save()
             flash('Your account has been created! You can now log in.', 'success')
             return redirect(url_for('login'))
-        except Exception as e:
+        except Exception:
             flash('An error occurred during registration.', 'danger')
     return render_template('register.html')
 

@@ -1,4 +1,4 @@
-from app import User, fetch_leetcode, fetch_gfg
+from app import User, fetch_leetcode
 import mongoengine
 
 mongoengine.connect(host='mongodb://localhost:27017/dsa_tracker')

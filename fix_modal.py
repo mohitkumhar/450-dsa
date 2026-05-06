@@ -1,4 +1,3 @@
-import re
 
 with open('templates/profile.html', encoding='utf-8') as f:
     content = f.read()
