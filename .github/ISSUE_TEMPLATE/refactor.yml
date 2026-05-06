@@ -1,0 +1,34 @@
+name: ♻️ Refactoring Request
+description: Suggest code cleanup or restructuring
+title: "refactor: "
+labels: ["refactor"]
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 🧹 Refactor Summary
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: ❗ Current Issues
+      description: Complexity, duplication, readability, etc.
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 💡 Proposed Improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: ⚠️ Risks / Breaking Changes
+    validations:
+      required: false

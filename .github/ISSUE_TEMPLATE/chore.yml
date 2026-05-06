@@ -1,0 +1,62 @@
+name: 🧹 Chore / Maintenance
+description: Maintenance tasks, tooling, configs, cleanup, or internal changes
+title: "chore: "
+labels: ["chore"]
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 🧾 Chore Summary
+      description: Briefly describe the maintenance task
+      placeholder: e.g. Update tooling configs, clean unused files, bump dependency versions
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: ❓ Why is this needed?
+      description: Explain why this chore is required (cleanup, consistency, tech debt, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 🗂️ Scope of Changes
+      description: Files, folders, or components affected
+      placeholder: e.g. package.json, .github workflows, infra configs
+    validations:
+      required: false
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: ⚠️ Impact
+      description: Does this affect users or functionality?
+      options:
+        - No functional impact
+        - Minor internal impact
+        - Requires review for safety
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ Checklist
+      options:
+        - label: No user-facing behavior change
+          required: true
+        - label: Does not introduce breaking changes
+          required: true
+        - label: Related docs updated (if needed)
+          required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 📌 Additional Notes
+    validations:
+      required: false

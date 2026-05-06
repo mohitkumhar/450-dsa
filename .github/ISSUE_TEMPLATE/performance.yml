@@ -1,0 +1,45 @@
+name: ⚡ Performance Issue
+description: Report slowness, high memory/CPU usage, or inefficiency
+title: "perf: "
+labels: ["performance"]
+
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: 🐌 Performance Problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔄 Steps to Reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: 📊 Observed Behavior
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 🎯 Expected Behavior
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 🖥️ Environment
+      placeholder: OS, version, hardware (if relevant)
+    validations:
+      required: false

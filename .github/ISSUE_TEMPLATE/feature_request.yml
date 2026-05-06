@@ -1,0 +1,36 @@
+name: 🚀 Feature Request
+description: Suggest an idea...
+labels: ["enhancement", "ai-logic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the new feature you'd like to see in the AI Support Agent Dashboard.
+  - type: input
+    id: feature_title
+    attributes:
+      label: Feature Title
+      placeholder: e.g., Add Sentiment Analysis to Sidebar
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Problem Statement
+      description: What pain point is this solving for the support agent?
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: Affected Dashboard Section
+      options:
+        - Pending Reviews
+        - Drafted Reviews
+        - Escalated Reviews
+        - RAG/Context Engine
+        - Database/MongoDB logic
+  - type: textarea
+    id: technical_details
+    attributes:
+      label: Proposed Implementation
+      description: Describe changes to utils.py, the LLM prompt, or Streamlit layout.

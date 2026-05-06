@@ -1,0 +1,36 @@
+name: 📚 Documentation Issue
+description: Report missing, incorrect, or unclear documentation
+title: "docs: "
+labels: ["documentation"]
+
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 📖 Documentation Problem
+      description: What is missing, incorrect, or unclear?
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: 📍 Location
+      description: File path or URL (e.g., README.md, docs/setup.md)
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: ✅ Expected Content
+      description: What should the documentation say?
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 📌 Additional Notes
+    validations:
+      required: false

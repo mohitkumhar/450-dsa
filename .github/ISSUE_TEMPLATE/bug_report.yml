@@ -1,0 +1,66 @@
+name: 🐛 Bug Report
+description: Report a bug to help us improve
+title: "fix: "
+labels: ["bug"]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 🐛 Bug Description
+      description: Clearly describe the bug
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: Steps to reproduce the issue
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Run '...'
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      placeholder: What did you expect to happen?
+    validations:
+      required: false
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      placeholder: What actually happened?
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: Windows / Ubuntu / macOS
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App / Language Version
+      placeholder: Python 3.10 / Node 18
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots / Logs
+      description: Attach logs or screenshots (optional)
+    validations:
+      required: false

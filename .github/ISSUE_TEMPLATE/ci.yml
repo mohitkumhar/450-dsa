@@ -1,0 +1,28 @@
+name: 🤖 CI / Build Issue
+description: Report CI, build, or test failures
+title: "ci: "
+labels: ["ci", "build"]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: ❌ CI / Build Problem
+    validations:
+      required: true
+
+  - type: input
+    id: workflow
+    attributes:
+      label: 🔗 Workflow / Job Link
+      placeholder: GitHub Actions URL
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📄 Error Logs
+      description: Paste relevant logs or error output
+    validations:
+      required: false
