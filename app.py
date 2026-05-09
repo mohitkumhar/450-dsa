@@ -704,5 +704,54 @@ def profile():
                            lc_badges=lc_badges,
                            hr_badges=hr_badges)
 
+
+
+def render_placeholder(title):
+    return render_template('placeholder.html', title=title)
+
+@app.route('/faq')
+def faq():
+    return render_placeholder("FAQ")
+
+@app.route('/contact')
+def contact():
+    return render_placeholder("Contact Us")
+
+@app.route('/privacy')
+def privacy():
+    return render_placeholder("Privacy Policy")
+
+@app.route('/timeline')
+def timeline():
+    return render_placeholder("Timeline")
+
+@app.route('/terms')
+def terms():
+    return render_placeholder("Terms of Service")
+
+@app.route('/refund')
+def refund():
+    return render_placeholder("Refund Policy")
+
+@app.route('/monthly-rewind')
+def monthly_rewind():
+    return render_placeholder("Monthly Rewind")
+
+@app.route('/company-kit')
+def company_kit():
+    return render_placeholder("Company Wise Kit")
+
+@app.route('/search')
+def search():
+    return render_placeholder("Search")
+
+@app.route('/stats')
+def stats():
+    return render_placeholder("Stats")
+
+@app.route('/leaderboard')
+def leaderboard():
+    return render_placeholder("Leaderboard")
+
 if __name__ == '__main__':
     app.run(debug=True)

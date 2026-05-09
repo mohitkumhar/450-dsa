@@ -407,7 +407,7 @@
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button onclick="copyProfileLink()" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
   </div>
 </div>
 
@@ -478,6 +478,17 @@
 
 {% block scripts %}
 <script>
+// ── Share Card Utility ──
+window.copyProfileLink = function() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Profile link copied to clipboard! 📋');
+  }).catch(err => {
+    console.error('Failed to copy: ', err);
+    showToast('❌ Failed to copy link');
+  });
+};
+
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');

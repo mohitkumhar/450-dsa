@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="text-align: center; padding: 60px 20px;">
+    <div style="font-size: 4rem; margin-bottom: 20px;">🚀</div>
+    <h1 style="margin-bottom: 10px;">{{ title }}</h1>
+    <p style="color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 30px;">
+        This feature is currently under development. Stay tuned for updates!
+    </p>
+    <a href="{{ url_for('index') }}" class="pill-btn accent" style="display: inline-flex; width: auto; padding: 10px 24px;">
+        <i class="bi bi-house-fill" style="margin-right: 8px;"></i>
+        Back to Home
+    </a>
+</div>
+{% endblock %}

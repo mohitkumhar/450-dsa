@@ -417,15 +417,15 @@
             <span class="tooltip-label">Bookmarks</span>
         </a>
         {% endif %}
-        <a href="#" class="sidebar-link" id="nav-search">
+        <a href="{{ url_for('search') }}" class="sidebar-link" id="nav-search">
             <i class="bi bi-search"></i>
             <span class="tooltip-label">Search</span>
         </a>
-        <a href="#" class="sidebar-link" id="nav-stats">
+        <a href="{{ url_for('stats') }}" class="sidebar-link" id="nav-stats">
             <i class="bi bi-bar-chart-fill"></i>
             <span class="tooltip-label">Stats</span>
         </a>
-        <a href="#" class="sidebar-link" id="nav-leaderboard">
+        <a href="{{ url_for('leaderboard') }}" class="sidebar-link" id="nav-leaderboard">
             <i class="bi bi-trophy-fill"></i>
             <span class="tooltip-label">Leaderboard</span>
         </a>
@@ -451,11 +451,11 @@
         <a href="{{ url_for('index') }}" class="topbar-brand">450 DSA Cracker</a>
     </div>
     <div class="topbar-right">
-        <a href="#" class="pill-btn" id="monthly-rewind-btn">
+        <a href="{{ url_for('monthly_rewind') }}" class="pill-btn" id="monthly-rewind-btn">
             <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
             <span>Monthly Rewind</span>
         </a>
-        <a href="#" class="pill-btn accent" id="company-kit-btn">
+        <a href="{{ url_for('company_kit') }}" class="pill-btn accent" id="company-kit-btn">
             <i class="bi bi-briefcase-fill"></i>
             <span>Company Wise Kit</span>
         </a>
@@ -497,17 +497,17 @@
 <!-- ─── Footer ─── -->
 <footer class="site-footer">
     <div class="footer-links">
-        <a href="#">FAQ</a>
-        <a href="#">Contact Us</a>
-        <a href="#">Privacy</a>
-        <a href="#">Timeline</a>
-        <a href="#">Terms</a>
-        <a href="#">Refund Policy</a>
+        <a href="{{ url_for('faq') }}">FAQ</a>
+        <a href="{{ url_for('contact') }}">Contact Us</a>
+        <a href="{{ url_for('privacy') }}">Privacy</a>
+        <a href="{{ url_for('timeline') }}">Timeline</a>
+        <a href="{{ url_for('terms') }}">Terms</a>
+        <a href="{{ url_for('refund') }}">Refund Policy</a>
     </div>
     <div class="footer-socials">
-        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-        <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
-        <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="https://www.linkedin.com/" target="_blank" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        <a href="https://twitter.com/" target="_blank" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
+        <a href="https://www.instagram.com/" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
     </div>
     <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
 </footer>
