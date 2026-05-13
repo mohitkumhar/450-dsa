@@ -3,6 +3,8 @@ Fix: Move btnSync and btnSaveProfile event listeners BEFORE chart initialization
 and wrap all new Chart() calls in try/catch.
 This ensures buttons work even if Chart.js CDN fails.
 """
+import re
+
 with open('templates/profile.html', encoding='utf-8') as f:
     content = f.read()
 
@@ -33,7 +35,6 @@ content = content.replace(
 
 # --- Step 2: Move btnSync and btnSaveProfile listeners BEFORE the chart code ---
 # Extract the two addEventListener blocks
-import re
 
 # Find and extract btnSaveProfile block
 save_pattern = r"document\.getElementById\('btnSaveProfile'\)\.addEventListener\('click',function\(\)\{.*?\}\);"

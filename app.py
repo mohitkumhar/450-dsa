@@ -97,7 +97,8 @@ def fetch_leetcode(username):
         }, timeout=8)
         resp_json = r.json().get('data', {})
         data = resp_json.get('matchedUser', {})
-        if not data: return {}
+        if not data:
+            return {}
         cal_str = data.get('userCalendar', {}).get('submissionCalendar', '{}')
         cal_data = json.loads(cal_str) if cal_str else {}
         res_cal = {}
@@ -109,8 +110,10 @@ def fetch_leetcode(username):
         stats = data.get('submitStatsGlobal', {}).get('acSubmissionNum', [])
         for stat in stats:
             diff = stat.get('difficulty')
-            if diff == 'All': total_solved = stat.get('count', 0)
-            elif diff in diff_stats: diff_stats[diff] = stat.get('count', 0)
+            if diff == 'All':
+                total_solved = stat.get('count', 0)
+            elif diff in diff_stats:
+                diff_stats[diff] = stat.get('count', 0)
         contest = resp_json.get('userContestRanking', {})
         return {"calendar": res_cal, "total": total_solved, "difficulty": diff_stats, "contest": contest}
     except Exception as e:
@@ -216,7 +219,8 @@ def fetch_gfg(username):
                 total = d.get('totalProblemsSolved') or d.get('total_problems_solved', 0)
                 if total and int(total) > 0:
                     return {"total": int(total)}
-        except: pass
+        except Exception as e:
+            print("GFG Error", e)
         # Method 2: GFG practice API
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -225,8 +229,12 @@ def fetch_gfg(username):
             if r2.status_code == 200:
                 d2 = r2.json()
                 total = d2.get('data', {}).get('total_problems_solved', 0)
-                if total: return {"total": int(total)}
-        except: pass
+                if total:
+                    return {"total": int(total)}
+        except Exception as e:
+            print("GFG Error", e)
+
+
         # Method 3: Scrape profile page
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120"}
         r3 = requests.get(f"https://www.geeksforgeeks.org/user/{username}/", timeout=8, headers=headers)
@@ -322,7 +330,7 @@ def login_github():
 
 @app.route('/login/github/authorize')
 def authorize_github():
-    token = github.authorize_access_token()
+    # token = github.authorize_access_token()
     resp = github.get('user')
     user_info = resp.json()
     github_id = str(user_info['id'])
@@ -387,13 +395,19 @@ def authorize_google():
 
 @app.template_filter('platform_name')
 def platform_name_filter(url):
-    if not url: return None
+    if not url:
+        return None
     url = url.lower()
-    if 'leetcode.com' in url: return 'LeetCode'
-    if 'geeksforgeeks.org' in url: return 'GFG'
-    if 'codingninjas.com' in url: return 'Coding Ninjas'
-    if 'youtube.com' in url or 'youtu.be' in url: return 'YouTube'
-    if 'hackerrank.com' in url: return 'HackerRank'
+    if 'leetcode.com' in url:
+        return 'LeetCode'
+    if 'geeksforgeeks.org' in url:
+        return 'GFG'
+    if 'codingninjas.com' in url:
+        return 'Coding Ninjas'
+    if 'youtube.com' in url or 'youtu.be' in url:
+        return 'YouTube'
+    if 'hackerrank.com' in url:
+        return 'HackerRank'
     return 'Link'
 
 @app.template_filter('platform_color')
@@ -530,8 +544,10 @@ def sync_platforms():
     totals = {}
     if lc_user:
         lc = fetch_leetcode(lc_user)
-        for k, v in lc.get('calendar', {}).items(): combined[k] = combined.get(k, 0) + v
-        if lc.get('total'): totals['LeetCode'] = lc.get('total')
+        for k, v in lc.get('calendar', {}).items():
+            combined[k] = combined.get(k, 0) + v
+        if lc.get('total'): 
+            totals['LeetCode'] = lc.get('total')
         if lc.get('difficulty'):
             totals['LeetCode_Easy'] = lc['difficulty'].get('Easy', 0)
             totals['LeetCode_Medium'] = lc['difficulty'].get('Medium', 0)
@@ -542,13 +558,15 @@ def sync_platforms():
             totals['LeetCode_GlobalRank'] = lc['contest'].get('globalRanking', 0)
         # Fetch rating history for graph
         rh = fetch_leetcode_rating_history(lc_user)
-        if rh: update_fields['rating_history'] = rh
+        if rh:
+            update_fields['rating_history'] = rh
         # Fetch LC badges and store in dedicated field
         lc_badges = fetch_lc_badges(lc_user)
         update_fields['lc_badges_json'] = json.dumps(lc_badges)
     if gh_user:
         gh = fetch_github(gh_user)
-        for k, v in gh.get('calendar', {}).items(): combined[k] = combined.get(k, 0) + v
+        for k, v in gh.get('calendar', {}).items():
+            combined[k] = combined.get(k, 0) + v
         if gh.get('stats'):
             totals['GitHub_Issues'] = gh['stats']['issues']
             totals['GitHub_PRs'] = gh['stats']['prs']
@@ -556,13 +574,15 @@ def sync_platforms():
             totals['GitHub_Commits'] = gh['stats']['commits']
     if gfg_user:
         gfg = fetch_gfg(gfg_user)
-        if gfg.get('total'): totals['GFG'] = int(gfg.get('total', 0))
+        if gfg.get('total'):
+            totals['GFG'] = int(gfg.get('total', 0))
     # HackerRank badges stored in dedicated field
     if hr_user:
         try:
             hr_badges = fetch_hr_badges(hr_user)
             update_fields['hr_badges_json'] = json.dumps(hr_badges)
-        except: pass
+        except Exception:
+            print("Unable to fetch HackerRank badges")
     update_fields['external_daily_counts'] = combined
     update_fields['external_totals'] = totals
     db.user.update_one({'_id': user_id}, {'$set': update_fields})
@@ -652,11 +672,16 @@ def profile():
         q_id = str(q['_id'])
         if q_id in solved_items:
             url = (q.get('url') or "").lower()
-            if 'leetcode.com' in url: platforms['LeetCode'] += 1
-            elif 'geeksforgeeks.org' in url: platforms['GFG'] += 1
-            elif 'codingninjas.com' in url: platforms['Coding Ninjas'] += 1
-            elif 'hackerrank.com' in url: platforms['HackerRank'] += 1
-            else: platforms['Other'] += 1
+            if 'leetcode.com' in url:
+                platforms['LeetCode'] += 1
+            elif 'geeksforgeeks.org' in url:
+                platforms['GFG'] += 1
+            elif 'codingninjas.com' in url:
+                platforms['Coding Ninjas'] += 1
+            elif 'hackerrank.com' in url:
+                platforms['HackerRank'] += 1
+            else:
+                platforms['Other'] += 1
             
             dt = solved_items[q_id].get('timestamp')
             if not dt:
@@ -722,12 +747,17 @@ def profile():
     # Parse stored badges from dedicated fields
     lc_badges = []
     hr_badges = []
+    
     try:
         lc_badges = json.loads(user.lc_badges_json or '[]')
-    except: pass
+    except json.JSONDecodeError:
+        print("Unable to handle leetcode badges")
+
     try:
         hr_badges = json.loads(user.hr_badges_json or '[]')
-    except: pass
+    except json.JSONDecodeError:
+        print("Unable to handle hackerrank badges")
+
     return render_template('profile.html',
                            user=user,
                            topic_progress=topic_progress,
