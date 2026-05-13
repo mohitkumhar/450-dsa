@@ -20,7 +20,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supersecretkey')
 # Connect to MongoDB
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/dsa_tracker')
 client = MongoClient(MONGO_URI)
-db = client.get_default_database() if '/' in MONGO_URI.split('?')[0].split('//')[-1] else client['dsa_tracker']
+db = client['450_dsa']
 
 # Create indexes
 db.user.create_index('email', unique=True, sparse=True)
