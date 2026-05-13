@@ -71,7 +71,7 @@
         </thead>
         <tbody>
             {% for q in questions %}
-            {% set q_id_str = q.id | string %}
+            {% set q_id_str = q._id | string %}
             {% set p = progress_dict.get(q_id_str) %}
             <tr class="{% if p and p.done %}row-done{% endif %}" id="row-{{ q_id_str }}">
                 <td class="q-num">{{ loop.index }}</td>

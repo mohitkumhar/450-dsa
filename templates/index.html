@@ -159,7 +159,7 @@
 
 <div class="topics-grid">
     {% for topic in topics %}
-    {% set t_id_str = topic.id | string %}
+    {% set t_id_str = topic._id | string %}
     {% set t_done = topic_progress[t_id_str]['done'] %}
     {% set t_total = topic_progress[t_id_str]['total'] %}
     {% set t_percent = 0 %}

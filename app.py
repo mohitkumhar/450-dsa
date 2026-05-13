@@ -5,7 +5,8 @@ import requests
 import base64
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session
-from mongoengine import connect, Document, StringField, IntField, BooleanField, ReferenceField, MapField, EmbeddedDocument, EmbeddedDocumentField, DateTimeField, ListField
+from pymongo import MongoClient
+from bson import ObjectId
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
 from authlib.integrations.flask_client import OAuth
@@ -18,7 +19,14 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supersecretkey')
 
 # Connect to MongoDB
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/dsa_tracker')
-connect(host=MONGO_URI)
+client = MongoClient(MONGO_URI)
+db = client.get_default_database() if '/' in MONGO_URI.split('?')[0].split('//')[-1] else client['dsa_tracker']
+
+# Create indexes
+db.user.create_index('email', unique=True, sparse=True)
+db.user.create_index('github_id', unique=True, sparse=True)
+db.user.create_index('google_id', unique=True, sparse=True)
+db.topic.create_index('name', unique=True)
 
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
@@ -46,56 +54,41 @@ google = oauth.register(
     client_kwargs={'scope': 'openid email profile'}
 )
 
-class ProgressItem(EmbeddedDocument):
-    done = BooleanField(default=False)
-    bookmark = BooleanField(default=False)
-    notes = StringField(default="")
-    timestamp = DateTimeField(default=datetime.utcnow)
 
-class User(Document, UserMixin):
-    email = StringField(unique=True, sparse=True)
-    password = StringField()
-    name = StringField()
-    github_id = StringField(unique=True, sparse=True)
-    google_id = StringField(unique=True, sparse=True)
-    progress = MapField(EmbeddedDocumentField(ProgressItem))
-    leetcode_username = StringField()
-    github_username = StringField()
-    gfg_username = StringField()
-    hackerrank_username = StringField(default='')
-    external_daily_counts = MapField(IntField())
-    external_totals = MapField(IntField())
-    last_sync = DateTimeField()
-    # Profile fields
-    bio = StringField(default='')
-    location = StringField(default='')
-    college = StringField(default='')
-    headline = StringField(default='')
-    linkedin_url = StringField(default='')
-    twitter_url = StringField(default='')
-    website_url = StringField(default='')
-    resume_url = StringField(default='')
-    profile_photo = StringField(default='')  # base64 data URL or external URL
-    rating_history = ListField(default=list)  # [{x: date, y: rating}]
-    lc_badges_json = StringField(default='[]')
-    hr_badges_json = StringField(default='[]')
+class UserWrapper(UserMixin):
+    """Wraps a pymongo user dict for flask-login compatibility."""
+    def __init__(self, user_doc):
+        self._doc = user_doc or {}
 
     def get_id(self):
-        return str(self.id)
+        return str(self._doc['_id'])
 
-class Topic(Document):
-    name = StringField(unique=True, required=True)
-    position = IntField(required=True)
+    @property
+    def id(self):
+        return self._doc.get('_id')
 
-class Question(Document):
-    topic = ReferenceField(Topic, reverse_delete_rule=2)
-    problem = StringField(required=True)
-    url = StringField(required=True)
-    url2 = StringField()
+    @property
+    def progress(self):
+        return self._doc.get('progress', {})
+
+    def __getattr__(self, name):
+        if name.startswith('_'):
+            raise AttributeError(name)
+        return self._doc.get(name)
+
+    def reload(self):
+        """Reload user data from the database."""
+        self._doc = db.user.find_one({'_id': self._doc['_id']}) or self._doc
+        return self
+
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.objects(id=user_id).first()
+    try:
+        doc = db.user.find_one({'_id': ObjectId(user_id)})
+        return UserWrapper(doc) if doc else None
+    except Exception:
+        return None
 
 def fetch_leetcode(username):
     try:
@@ -253,18 +246,22 @@ def fetch_gfg(username):
         return {}
 
 def init_db():
-    if Topic.objects.count() == 0:
+    if db.topic.count_documents({}) == 0:
         with open('data.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
             for t in data:
-                topic = Topic(name=t['topicName'], position=t['position']).save()
+                result = db.topic.insert_one({'name': t['topicName'], 'position': t['position']})
+                topic_id = result.inserted_id
+                questions = []
                 for q in t['questions']:
-                    Question(
-                        topic=topic,
-                        problem=q['Problem'],
-                        url=q['URL'],
-                        url2=q.get('URL2', '')
-                    ).save()
+                    questions.append({
+                        'topic': topic_id,
+                        'problem': q['Problem'],
+                        'url': q['URL'],
+                        'url2': q.get('URL2', '')
+                    })
+                if questions:
+                    db.question.insert_many(questions)
 
 _db_initialized = False
 
@@ -282,9 +279,9 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        user = User.objects(email=email).first()
-        if user and user.password and bcrypt.check_password_hash(user.password, password):
-            login_user(user)
+        user_doc = db.user.find_one({'email': email})
+        if user_doc and user_doc.get('password') and bcrypt.check_password_hash(user_doc['password'], password):
+            login_user(UserWrapper(user_doc))
             return redirect(url_for('index'))
         else:
             flash('Login unsuccessful. Please check email and password.', 'danger')
@@ -299,15 +296,14 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        existing_user = User.objects(email=email).first()
+        existing_user = db.user.find_one({'email': email})
         if existing_user:
             flash('Email already registered', 'danger')
             return redirect(url_for('register'))
             
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = User(name=name, email=email, password=hashed_password)
         try:
-            user.save()
+            db.user.insert_one({'name': name, 'email': email, 'password': hashed_password, 'progress': {}})
             flash('Your account has been created! You can now log in.', 'success')
             return redirect(url_for('login'))
         except Exception:
@@ -339,17 +335,21 @@ def authorize_github():
                 email = e['email']
                 break
 
-    user = User.objects(github_id=github_id).first()
-    if not user:
+    user_doc = db.user.find_one({'github_id': github_id})
+    if not user_doc:
         if email:
-            user = User.objects(email=email).first()
-        if user:
-            user.github_id = github_id
+            user_doc = db.user.find_one({'email': email})
+        if user_doc:
+            db.user.update_one({'_id': user_doc['_id']}, {'$set': {'github_id': github_id}})
+            user_doc['github_id'] = github_id
         else:
-            user = User(name=user_info.get('name', user_info.get('login', 'GitHub User')), email=email, github_id=github_id)
-        user.save()
+            result = db.user.insert_one({
+                'name': user_info.get('name', user_info.get('login', 'GitHub User')),
+                'email': email, 'github_id': github_id, 'progress': {}
+            })
+            user_doc = db.user.find_one({'_id': result.inserted_id})
     
-    login_user(user)
+    login_user(UserWrapper(user_doc))
     return redirect(url_for('index'))
 
 @app.route('/login/google')
@@ -367,17 +367,21 @@ def authorize_google():
     google_id = user_info['sub']
     email = user_info.get('email')
     
-    user = User.objects(google_id=google_id).first()
-    if not user:
+    user_doc = db.user.find_one({'google_id': google_id})
+    if not user_doc:
         if email:
-            user = User.objects(email=email).first()
-        if user:
-            user.google_id = google_id
+            user_doc = db.user.find_one({'email': email})
+        if user_doc:
+            db.user.update_one({'_id': user_doc['_id']}, {'$set': {'google_id': google_id}})
+            user_doc['google_id'] = google_id
         else:
-            user = User(name=user_info.get('name', 'Google User'), email=email, google_id=google_id)
-        user.save()
+            result = db.user.insert_one({
+                'name': user_info.get('name', 'Google User'),
+                'email': email, 'google_id': google_id, 'progress': {}
+            })
+            user_doc = db.user.find_one({'_id': result.inserted_id})
         
-    login_user(user)
+    login_user(UserWrapper(user_doc))
     return redirect(url_for('index'))
 
 
@@ -405,28 +409,28 @@ def platform_color_filter(name):
 
 @app.route('/')
 def index():
-    topics = Topic.objects.order_by('position')
-    total_questions = Question.objects.count()
+    topics = list(db.topic.find().sort('position', 1))
+    total_questions = db.question.count_documents({})
     
     if current_user.is_authenticated:
-        user = current_user
-        done_questions = sum(1 for p in user.progress.values() if p.done)
+        progress = current_user.progress
+        done_questions = sum(1 for p in progress.values() if p.get('done'))
     else:
         done_questions = 0
     
-    all_questions = Question.objects.all()
+    all_questions = list(db.question.find())
     topic_q_count = {}
     for q in all_questions:
-        t_id = str(q.topic.id)
+        t_id = str(q['topic'])
         topic_q_count[t_id] = topic_q_count.get(t_id, [])
-        topic_q_count[t_id].append(str(q.id))
+        topic_q_count[t_id].append(str(q['_id']))
         
     topic_progress = {}
-    for topic in topics:
-        t_id = str(topic.id)
+    for t in topics:
+        t_id = str(t['_id'])
         t_q_ids = topic_q_count.get(t_id, [])
         if current_user.is_authenticated:
-            t_done = sum(1 for q_id in t_q_ids if user.progress.get(q_id, ProgressItem()).done)
+            t_done = sum(1 for q_id in t_q_ids if progress.get(q_id, {}).get('done'))
         else:
             t_done = 0
         topic_progress[t_id] = {
@@ -438,41 +442,51 @@ def index():
 
 @app.route('/topic/<topic_id>')
 def topic(topic_id):
-    topic = Topic.objects(id=topic_id).first()
-    if not topic:
+    try:
+        topic_doc = db.topic.find_one({'_id': ObjectId(topic_id)})
+    except Exception:
+        return "Topic not found", 404
+    if not topic_doc:
         return "Topic not found", 404
         
-    questions = Question.objects(topic=topic)
+    questions = list(db.question.find({'topic': topic_doc['_id']}))
     
     if current_user.is_authenticated:
         progress_dict = current_user.progress
     else:
         progress_dict = {}
     
-    return render_template('topic.html', topic=topic, questions=questions, progress_dict=progress_dict)
+    return render_template('topic.html', topic=topic_doc, questions=questions, progress_dict=progress_dict)
 
 @app.route('/update_question/<question_id>', methods=['POST'])
 @login_required
 def update_question(question_id):
-    question = Question.objects(id=question_id).first()
+    try:
+        question = db.question.find_one({'_id': ObjectId(question_id)})
+    except Exception:
+        return jsonify({"success": False, "error": "Question not found"}), 404
     if not question:
         return jsonify({"success": False, "error": "Question not found"}), 404
         
     data = request.json
+    user_id = current_user.id
     
-    if question_id not in current_user.progress:
-        current_user.progress[question_id] = ProgressItem()
-        
+    update_fields = {}
+    progress = current_user.progress
+    existing = progress.get(question_id, {})
+    
     if 'done' in data:
-        if data['done'] and not current_user.progress[question_id].done:
-            current_user.progress[question_id].timestamp = datetime.utcnow()
-        current_user.progress[question_id].done = data['done']
+        if data['done'] and not existing.get('done'):
+            update_fields[f'progress.{question_id}.timestamp'] = datetime.utcnow()
+        update_fields[f'progress.{question_id}.done'] = data['done']
     if 'bookmark' in data:
-        current_user.progress[question_id].bookmark = data['bookmark']
+        update_fields[f'progress.{question_id}.bookmark'] = data['bookmark']
     if 'notes' in data:
-        current_user.progress[question_id].notes = data['notes']
-        
-    current_user.save()
+        update_fields[f'progress.{question_id}.notes'] = data['notes']
+    
+    if update_fields:
+        db.user.update_one({'_id': user_id}, {'$set': update_fields})
+        current_user.reload()
     
     return jsonify({"success": True})
 
@@ -481,25 +495,41 @@ def update_question(question_id):
 def sync_platforms():
     data = request.json
     now = datetime.utcnow()
+    user_id = current_user.id
     
-    if getattr(current_user, 'last_sync', None):
-        diff = (now - current_user.last_sync).total_seconds()
+    last_sync = current_user.last_sync
+    if last_sync:
+        diff = (now - last_sync).total_seconds()
         if diff < 600:
             rem = int(600 - diff)
             mins = rem // 60
             secs = rem % 60
             return jsonify({"success": False, "error": f"Please wait {mins}m {secs}s before syncing again."})
-            
-    current_user.last_sync = now
     
-    if 'leetcode' in data: current_user.leetcode_username = data.get('leetcode', '').strip()
-    if 'github' in data: current_user.github_username = data.get('github', '').strip()
-    if 'gfg' in data: current_user.gfg_username = data.get('gfg', '').strip()
-    if 'hackerrank' in data: current_user.hackerrank_username = data.get('hackerrank', '').strip()
+    update_fields = {'last_sync': now}
+    
+    lc_user = current_user.leetcode_username or ''
+    gh_user = current_user.github_username or ''
+    gfg_user = current_user.gfg_username or ''
+    hr_user = current_user.hackerrank_username or ''
+    
+    if 'leetcode' in data:
+        lc_user = data.get('leetcode', '').strip()
+        update_fields['leetcode_username'] = lc_user
+    if 'github' in data:
+        gh_user = data.get('github', '').strip()
+        update_fields['github_username'] = gh_user
+    if 'gfg' in data:
+        gfg_user = data.get('gfg', '').strip()
+        update_fields['gfg_username'] = gfg_user
+    if 'hackerrank' in data:
+        hr_user = data.get('hackerrank', '').strip()
+        update_fields['hackerrank_username'] = hr_user
+
     combined = {}
     totals = {}
-    if current_user.leetcode_username:
-        lc = fetch_leetcode(current_user.leetcode_username)
+    if lc_user:
+        lc = fetch_leetcode(lc_user)
         for k, v in lc.get('calendar', {}).items(): combined[k] = combined.get(k, 0) + v
         if lc.get('total'): totals['LeetCode'] = lc.get('total')
         if lc.get('difficulty'):
@@ -511,31 +541,32 @@ def sync_platforms():
             totals['LeetCode_Rating'] = int(lc['contest'].get('rating', 0))
             totals['LeetCode_GlobalRank'] = lc['contest'].get('globalRanking', 0)
         # Fetch rating history for graph
-        rh = fetch_leetcode_rating_history(current_user.leetcode_username)
-        if rh: current_user.rating_history = rh
+        rh = fetch_leetcode_rating_history(lc_user)
+        if rh: update_fields['rating_history'] = rh
         # Fetch LC badges and store in dedicated field
-        lc_badges = fetch_lc_badges(current_user.leetcode_username)
-        current_user.lc_badges_json = json.dumps(lc_badges)
-    if current_user.github_username:
-        gh = fetch_github(current_user.github_username)
+        lc_badges = fetch_lc_badges(lc_user)
+        update_fields['lc_badges_json'] = json.dumps(lc_badges)
+    if gh_user:
+        gh = fetch_github(gh_user)
         for k, v in gh.get('calendar', {}).items(): combined[k] = combined.get(k, 0) + v
         if gh.get('stats'):
             totals['GitHub_Issues'] = gh['stats']['issues']
             totals['GitHub_PRs'] = gh['stats']['prs']
             totals['GitHub_Merged_PRs'] = gh['stats']['merged_prs']
             totals['GitHub_Commits'] = gh['stats']['commits']
-    if current_user.gfg_username:
-        gfg = fetch_gfg(current_user.gfg_username)
+    if gfg_user:
+        gfg = fetch_gfg(gfg_user)
         if gfg.get('total'): totals['GFG'] = int(gfg.get('total', 0))
     # HackerRank badges stored in dedicated field
-    if current_user.hackerrank_username:
+    if hr_user:
         try:
-            hr_badges = fetch_hr_badges(current_user.hackerrank_username)
-            current_user.hr_badges_json = json.dumps(hr_badges)
+            hr_badges = fetch_hr_badges(hr_user)
+            update_fields['hr_badges_json'] = json.dumps(hr_badges)
         except: pass
-    current_user.external_daily_counts = combined
-    current_user.external_totals = totals
-    current_user.save()
+    update_fields['external_daily_counts'] = combined
+    update_fields['external_totals'] = totals
+    db.user.update_one({'_id': user_id}, {'$set': update_fields})
+    current_user.reload()
     return jsonify({"success": True})
 
 @app.route('/edit_profile', methods=['POST'])
@@ -545,10 +576,13 @@ def edit_profile():
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
     # Text fields
+    update_fields = {}
     for field in ['name','bio','location','college','headline','linkedin_url','twitter_url','website_url','resume_url']:
         if field in data:
-            setattr(current_user, field, data[field].strip())
-    current_user.save()
+            update_fields[field] = data[field].strip()
+    if update_fields:
+        db.user.update_one({'_id': current_user.id}, {'$set': update_fields})
+        current_user.reload()
     return jsonify({"success": True})
 
 @app.route('/upload_photo', methods=['POST'])
@@ -568,57 +602,72 @@ def upload_photo():
         return jsonify({"success": False, "error": "File too large (max 2MB)"}), 400
     b64 = base64.b64encode(raw).decode('utf-8')
     mime = f'image/{ext}'
-    current_user.profile_photo = f'data:{mime};base64,{b64}'
-    current_user.save()
-    return jsonify({"success": True, "photo_url": current_user.profile_photo})
+    photo_url = f'data:{mime};base64,{b64}'
+    db.user.update_one({'_id': current_user.id}, {'$set': {'profile_photo': photo_url}})
+    current_user.reload()
+    return jsonify({"success": True, "photo_url": photo_url})
 
 @app.route('/bookmarks')
 @login_required
 def bookmarks():
-    user = current_user
-    bookmarked_q_ids = [q_id for q_id, p in user.progress.items() if p.bookmark]
+    progress = current_user.progress
+    bookmarked_q_ids = [q_id for q_id, p in progress.items() if p.get('bookmark')]
     
-    questions = Question.objects(id__in=bookmarked_q_ids)
-    progress_dict = user.progress
+    obj_ids = []
+    for q_id in bookmarked_q_ids:
+        try:
+            obj_ids.append(ObjectId(q_id))
+        except Exception:
+            pass
+    questions = list(db.question.find({'_id': {'$in': obj_ids}}))
+    
+    # Build topic name lookup for display (mongoengine auto-dereferenced this)
+    topic_ids = list(set(q['topic'] for q in questions))
+    topic_docs = {t['_id']: t['name'] for t in db.topic.find({'_id': {'$in': topic_ids}})}
+    for q in questions:
+        q['topic_name'] = topic_docs.get(q['topic'], 'Unknown')
+    
+    progress_dict = progress
     
     return render_template('bookmarks.html', questions=questions, progress_dict=progress_dict)
 
 @app.route('/profile')
 @login_required
 def profile():
-    topics = Topic.objects.order_by('position')
+    topics = list(db.topic.find().sort('position', 1))
     user = current_user
     
-    all_questions = Question.objects.all()
-    solved_items = {q_id: p for q_id, p in user.progress.items() if p.done}
+    all_questions = list(db.question.find())
+    solved_items = {q_id: p for q_id, p in user.progress.items() if p.get('done')}
     
     platforms = {'LeetCode': 0, 'GFG': 0, 'Coding Ninjas': 0, 'HackerRank': 0, 'Other': 0}
     daily_counts = {}
     
     topic_q_count = {}
     for q in all_questions:
-        t_id = str(q.topic.id)
+        t_id = str(q['topic'])
         topic_q_count[t_id] = topic_q_count.get(t_id, [])
-        topic_q_count[t_id].append(str(q.id))
+        topic_q_count[t_id].append(str(q['_id']))
         
-        q_id = str(q.id)
+        q_id = str(q['_id'])
         if q_id in solved_items:
-            url = (q.url or "").lower()
+            url = (q.get('url') or "").lower()
             if 'leetcode.com' in url: platforms['LeetCode'] += 1
             elif 'geeksforgeeks.org' in url: platforms['GFG'] += 1
             elif 'codingninjas.com' in url: platforms['Coding Ninjas'] += 1
             elif 'hackerrank.com' in url: platforms['HackerRank'] += 1
             else: platforms['Other'] += 1
             
-            dt = getattr(solved_items[q_id], 'timestamp', None)
+            dt = solved_items[q_id].get('timestamp')
             if not dt:
                 dt = datetime.utcnow()
             d_str = dt.strftime('%Y-%m-%d')
             daily_counts[d_str] = daily_counts.get(d_str, 0) + 1
             
     # Merge external counts
-    if hasattr(user, 'external_daily_counts') and user.external_daily_counts:
-        for d_str, count in user.external_daily_counts.items():
+    ext_daily = user.external_daily_counts
+    if ext_daily:
+        for d_str, count in ext_daily.items():
             daily_counts[d_str] = daily_counts.get(d_str, 0) + count
 
     total_active_days = len(daily_counts)
@@ -632,7 +681,7 @@ def profile():
     topic_progress = []
     dsa_done = len(solved_items)
     
-    ext_totals = getattr(user, 'external_totals', {})
+    ext_totals = user.external_totals or {}
     platforms['LeetCode'] = max(platforms['LeetCode'], ext_totals.get('LeetCode', 0))
     platforms['GFG'] = max(platforms['GFG'], ext_totals.get('GFG', 0))
     
@@ -650,16 +699,16 @@ def profile():
     gh_commits = ext_totals.get('GitHub_Commits', 0)
     
     global_total_solved = sum(platforms.values())
-    total_questions = all_questions.count()
+    total_questions = len(all_questions)
     
-    for topic in topics:
-        t_id = str(topic.id)
+    for t in topics:
+        t_id = str(t['_id'])
         t_q_ids = topic_q_count.get(t_id, [])
         t_done = sum(1 for q_id in t_q_ids if q_id in solved_items)
         
         percent = (t_done / len(t_q_ids) * 100) if len(t_q_ids) > 0 else 0
         topic_progress.append({
-            'name': topic.name,
+            'name': t['name'],
             'done': t_done,
             'total': len(t_q_ids),
             'percent': round(percent, 1)
@@ -669,15 +718,15 @@ def profile():
         
     overall_percent = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
     
-    rating_history = list(getattr(user, 'rating_history', []) or [])
+    rating_history = list(user.rating_history or [])
     # Parse stored badges from dedicated fields
     lc_badges = []
     hr_badges = []
     try:
-        lc_badges = json.loads(getattr(user, 'lc_badges_json', '[]') or '[]')
+        lc_badges = json.loads(user.lc_badges_json or '[]')
     except: pass
     try:
-        hr_badges = json.loads(getattr(user, 'hr_badges_json', '[]') or '[]')
+        hr_badges = json.loads(user.hr_badges_json or '[]')
     except: pass
     return render_template('profile.html',
                            user=user,
