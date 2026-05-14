@@ -46,9 +46,11 @@
 .contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
 .empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
 .awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
-.award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative}
+.award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
 .award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
-.award-badge .a-lbl{font-size:.6rem;color:var(--text-muted);margin-top:4px}
+.award-badge .a-lbl{font-size:.58rem;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px;text-align:center}
+.hr-stars{display:flex;gap:1px;align-items:center;justify-content:center;flex-wrap:nowrap;line-height:1}
+.hr-stars .s-on{color:#fbbf24;font-size:.65rem}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:14px 20px;font-size:.85rem;z-index:9998;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none}
 .toast.show{transform:translateY(0);opacity:1}
 .big-num{font-size:2.8rem;font-weight:900;line-height:1}
@@ -240,11 +242,16 @@
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
       {% endfor %}
-      {# Real HR badges #}
+      {# Real HR badges — only earned stars shown, no empty placeholders #}
       {% for badge in hr_badges %}
-      <div class="award-badge" title="{{ badge.name }} ({{ badge.stars }}★)">
-        {% set star_emoji = '⭐' * [badge.stars, 3]|min if badge.stars else '🟢' %}
-        <span style="font-size:1.2rem">{{ star_emoji }}</span>
+      {% set earned = badge.stars|int if badge.stars else 0 %}
+      <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}">
+        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c"></i>
+        <div class="hr-stars">
+          {% for i in range(earned) %}
+            <span class="s-on">★</span>
+          {% endfor %}
+        </div>
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
       {% endfor %}

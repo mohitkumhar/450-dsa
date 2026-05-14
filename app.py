@@ -168,18 +168,27 @@ def fetch_lc_badges(username):
         return []
 
 def fetch_hr_badges(username):
-    """Fetch HackerRank badges for the user."""
+    """Fetch HackerRank badges and total solved count.
+    
+    The /badges endpoint contains a 'solved' field per badge category
+    which represents problems solved in that track — we sum these up
+    to get the total HackerRank questions solved.
+    
+    Returns: (badges_list, total_solved_count)
+    """
     try:
         r = requests.get(f"https://www.hackerrank.com/rest/hackers/{username}/badges",
             timeout=8,
-            headers={"User-Agent": "Mozilla/5.0"})
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
         if r.status_code == 200:
             data = r.json().get('models', [])
-            return [{'name': b.get('badge_name', ''), 'stars': b.get('stars', 0)} for b in data if b.get('badge_name')]
-        return []
+            badges = [{'name': b.get('badge_name', ''), 'stars': min(int(b.get('stars', 0)), 5)} for b in data if b.get('badge_name') and int(b.get('stars', 0)) > 0]
+            total_solved = sum(b.get('solved', 0) for b in data)
+            return badges, total_solved
+        return [], 0
     except Exception as e:
         print("HR Badges Error", e)
-        return []
+        return [], 0
 
 def fetch_github(username):
     try:
@@ -576,11 +585,13 @@ def sync_platforms():
         gfg = fetch_gfg(gfg_user)
         if gfg.get('total'):
             totals['GFG'] = int(gfg.get('total', 0))
-    # HackerRank badges stored in dedicated field
+    # HackerRank: fetch badges + solved count from same endpoint
     if hr_user:
         try:
-            hr_badges = fetch_hr_badges(hr_user)
+            hr_badges, hr_solved = fetch_hr_badges(hr_user)
             update_fields['hr_badges_json'] = json.dumps(hr_badges)
+            if hr_solved > 0:
+                totals['HackerRank'] = hr_solved
         except Exception:
             print("Unable to fetch HackerRank badges")
     update_fields['external_daily_counts'] = combined
@@ -737,6 +748,7 @@ def profile():
     ext_totals = user.external_totals or {}
     platforms['LeetCode'] = max(platforms['LeetCode'], ext_totals.get('LeetCode', 0))
     platforms['GFG'] = max(platforms['GFG'], ext_totals.get('GFG', 0))
+    platforms['HackerRank'] = max(platforms['HackerRank'], ext_totals.get('HackerRank', 0))
     
     lc_easy = ext_totals.get('LeetCode_Easy', 0)
     lc_medium = ext_totals.get('LeetCode_Medium', 0)
@@ -782,8 +794,8 @@ def profile():
         print("Unable to handle leetcode badges")
 
     try:
-        hr_badges = json.loads(user.hr_badges_json or '[]')
-    except json.JSONDecodeError:
+        hr_badges = [b for b in json.loads(user.hr_badges_json or '[]') if int(b.get('stars', 0)) > 0]
+    except (json.JSONDecodeError, ValueError):
         print("Unable to handle hackerrank badges")
 
     return render_template('profile.html',
