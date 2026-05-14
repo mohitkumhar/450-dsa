@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>450 DSA Tracker</title>
-    <meta name="description" content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
+    <meta name="description"
+        content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -37,10 +40,14 @@
             --transition: all 0.2s ease;
             --radius: 10px;
             --radius-lg: 16px;
-            --shadow: 0 4px 20px rgba(0,0,0,0.4);
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -84,7 +91,11 @@
             letter-spacing: -1px;
         }
 
-        .sidebar-logo:hover { background: var(--accent-hover); color: white; text-decoration: none; }
+        .sidebar-logo:hover {
+            background: var(--accent-hover);
+            color: white;
+            text-decoration: none;
+        }
 
         .sidebar-nav {
             display: flex;
@@ -109,7 +120,8 @@
             position: relative;
         }
 
-        .sidebar-link:hover, .sidebar-link.active {
+        .sidebar-link:hover,
+        .sidebar-link.active {
             background: var(--accent-dim);
             color: var(--accent);
             text-decoration: none;
@@ -175,7 +187,10 @@
             text-decoration: none;
         }
 
-        .topbar-brand:hover { color: var(--accent); text-decoration: none; }
+        .topbar-brand:hover {
+            color: var(--accent);
+            text-decoration: none;
+        }
 
         .topbar-right {
             display: flex;
@@ -200,9 +215,22 @@
             white-space: nowrap;
         }
 
-        .pill-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-        .pill-btn.accent { background: var(--accent); border-color: var(--accent); color: white; }
-        .pill-btn.accent:hover { background: var(--accent-hover); color: white; }
+        .pill-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .pill-btn.accent {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .pill-btn.accent:hover {
+            background: var(--accent-hover);
+            color: white;
+        }
 
         .icon-btn {
             width: 36px;
@@ -219,7 +247,10 @@
             font-size: 1rem;
         }
 
-        .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .icon-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
 
         .user-avatar-sm {
             width: 34px;
@@ -239,7 +270,11 @@
             flex-shrink: 0;
         }
 
-        .user-avatar-sm:hover { border-color: var(--accent); color: white; text-decoration: none; }
+        .user-avatar-sm:hover {
+            border-color: var(--accent);
+            color: white;
+            text-decoration: none;
+        }
 
         /* ─── Main Content ─── */
         .main-wrapper {
@@ -258,7 +293,9 @@
             transition: var(--transition);
         }
 
-        .card-dark:hover { border-color: #333; }
+        .card-dark:hover {
+            border-color: #333;
+        }
 
         /* ─── Flash Messages ─── */
         .flash-messages {
@@ -284,14 +321,40 @@
             cursor: pointer;
         }
 
-        .flash-alert.success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
-        .flash-alert.danger  { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.3);  color: #f87171; }
-        .flash-alert.warning { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
-        .flash-alert.info    { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; }
+        .flash-alert.success {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+        }
+
+        .flash-alert.danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .flash-alert.warning {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .flash-alert.info {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+        }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to   { opacity: 1; transform: translateX(0); }
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         /* ─── Footer ─── */
@@ -318,7 +381,9 @@
             transition: color 0.2s;
         }
 
-        .footer-links a:hover { color: var(--accent); }
+        .footer-links a:hover {
+            color: var(--accent);
+        }
 
         .footer-socials {
             display: flex;
@@ -341,7 +406,10 @@
             transition: var(--transition);
         }
 
-        .footer-socials a:hover { border-color: var(--accent); color: var(--accent); }
+        .footer-socials a:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
 
         .footer-copy {
             color: var(--text-muted);
@@ -349,10 +417,23 @@
         }
 
         /* ─── Scrollbars ─── */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
 
         /* ─── Mobile Responsive ─── */
         @media (max-width: 768px) {
@@ -367,201 +448,247 @@
                 border-right: none;
                 border-top: 1px solid var(--border-color);
             }
-            .sidebar-logo { display: none; }
-            .sidebar-nav { flex-direction: row; flex: 1; justify-content: space-around; }
-            .sidebar-bottom { flex-direction: row; padding-bottom: 0; }
-            .sidebar-link .tooltip-label { display: none; }
-            .topbar { left: 0; }
-            .main-wrapper { margin-left: 0; margin-top: var(--topbar-height); padding: 14px; padding-bottom: 72px; }
-            .site-footer { margin-left: 0; padding-bottom: 72px; }
-            .pill-btn span { display: none; }
+
+            .sidebar-logo {
+                display: none;
+            }
+
+            .sidebar-nav {
+                flex-direction: row;
+                flex: 1;
+                justify-content: space-around;
+            }
+
+            .sidebar-bottom {
+                flex-direction: row;
+                padding-bottom: 0;
+            }
+
+            .sidebar-link .tooltip-label {
+                display: none;
+            }
+
+            .topbar {
+                left: 0;
+            }
+
+            .main-wrapper {
+                margin-left: 0;
+                margin-top: var(--topbar-height);
+                padding: 14px;
+                padding-bottom: 72px;
+            }
+
+            .site-footer {
+                margin-left: 0;
+                padding-bottom: 72px;
+            }
+
+            .pill-btn span {
+                display: none;
+            }
         }
 
         @media (max-width: 480px) {
-            .topbar { padding: 0 12px; }
-            .pill-btn { padding: 5px 10px; }
+            .topbar {
+                padding: 0 12px;
+            }
+
+            .pill-btn {
+                padding: 5px 10px;
+            }
         }
 
-        {# page-specific CSS only #}
+            {
+            # page-specific CSS only #
+        }
     </style>
     {% block head %}{% endblock %}
     <!-- Prevent flash of wrong theme -->
     <script>
-        if(localStorage.getItem('theme') === 'light') {
-            document.documentElement.style.setProperty('--bg-primary','#f0f2f5');
-            document.documentElement.style.setProperty('--bg-secondary','#ffffff');
-            document.documentElement.style.setProperty('--bg-card','#ffffff');
-            document.documentElement.style.setProperty('--text-primary','#111111');
-            document.documentElement.style.setProperty('--text-secondary','#555555');
-            document.documentElement.style.setProperty('--border-color','#e0e0e0');
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.style.setProperty('--bg-primary', '#f0f2f5');
+            document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
+            document.documentElement.style.setProperty('--bg-card', '#ffffff');
+            document.documentElement.style.setProperty('--text-primary', '#111111');
+            document.documentElement.style.setProperty('--text-secondary', '#555555');
+            document.documentElement.style.setProperty('--border-color', '#e0e0e0');
         }
     </script>
 </head>
+
 <body>
 
-<!-- ─── Left Sidebar ─── -->
-<aside class="sidebar" role="navigation" aria-label="Main navigation">
-    <a href="{{ url_for('index') }}" class="sidebar-logo" title="450 DSA">D</a>
-    <nav class="sidebar-nav">
-        <a href="{{ url_for('index') }}" class="sidebar-link {% if request.endpoint == 'index' %}active{% endif %}" id="nav-home">
-            <i class="bi bi-house-fill"></i>
-            <span class="tooltip-label">Home</span>
-        </a>
-        {% if current_user.is_authenticated %}
-        <a href="{{ url_for('profile') }}" class="sidebar-link {% if request.endpoint == 'profile' %}active{% endif %}" id="nav-profile">
-            <i class="bi bi-person-circle"></i>
-            <span class="tooltip-label">Profile</span>
-        </a>
-        <a href="{{ url_for('bookmarks') }}" class="sidebar-link {% if request.endpoint == 'bookmarks' %}active{% endif %}" id="nav-bookmarks">
-            <i class="bi bi-bookmark-fill"></i>
-            <span class="tooltip-label">Bookmarks</span>
-        </a>
-        {% endif %}
-        <a href="#" class="sidebar-link" id="nav-search">
-            <i class="bi bi-search"></i>
-            <span class="tooltip-label">Search</span>
-        </a>
-        <a href="#" class="sidebar-link" id="nav-stats">
-            <i class="bi bi-bar-chart-fill"></i>
-            <span class="tooltip-label">Stats</span>
-        </a>
-        <a href="{{ url_for('leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard' %}active{% endif %}" id="nav-leaderboard">
-            <i class="bi bi-trophy-fill"></i>
-            <span class="tooltip-label">Leaderboard</span>
-        </a>
-    </nav>
-    <div class="sidebar-bottom">
-        {% if current_user.is_authenticated %}
-        <a href="{{ url_for('logout') }}" class="sidebar-link" title="Logout" id="nav-logout">
-            <i class="bi bi-box-arrow-right"></i>
-            <span class="tooltip-label">Logout</span>
-        </a>
-        {% else %}
-        <a href="{{ url_for('login') }}" class="sidebar-link" id="nav-login">
-            <i class="bi bi-box-arrow-in-right"></i>
-            <span class="tooltip-label">Login</span>
-        </a>
-        {% endif %}
-    </div>
-</aside>
+    <!-- ─── Left Sidebar ─── -->
+    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+        <a href="{{ url_for('index') }}" class="sidebar-logo" title="450 DSA">D</a>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('index') }}" class="sidebar-link {% if request.endpoint == 'index' %}active{% endif %}"
+                id="nav-home">
+                <i class="bi bi-house-fill"></i>
+                <span class="tooltip-label">Home</span>
+            </a>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('profile') }}"
+                class="sidebar-link {% if request.endpoint == 'profile' %}active{% endif %}" id="nav-profile">
+                <i class="bi bi-person-circle"></i>
+                <span class="tooltip-label">Profile</span>
+            </a>
+            <a href="{{ url_for('bookmarks') }}"
+                class="sidebar-link {% if request.endpoint == 'bookmarks' %}active{% endif %}" id="nav-bookmarks">
+                <i class="bi bi-bookmark-fill"></i>
+                <span class="tooltip-label">Bookmarks</span>
+            </a>
+            {% endif %}
+            <a href="#" class="sidebar-link" id="nav-search">
+                <i class="bi bi-search"></i>
+                <span class="tooltip-label">Search</span>
+            </a>
+            <a href="#" class="sidebar-link" id="nav-stats">
+                <i class="bi bi-bar-chart-fill"></i>
+                <span class="tooltip-label">Stats</span>
+            </a>
+            <a href="{{ url_for('leaderboard') }}"
+                class="sidebar-link {% if request.endpoint == 'leaderboard' %}active{% endif %}" id="nav-leaderboard">
+                <i class="bi bi-trophy-fill"></i>
+                <span class="tooltip-label">Leaderboard</span>
+            </a>
+        </nav>
+        <div class="sidebar-bottom">
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('logout') }}" class="sidebar-link" title="Logout" id="nav-logout">
+                <i class="bi bi-box-arrow-right"></i>
+                <span class="tooltip-label">Logout</span>
+            </a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="sidebar-link" id="nav-login">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span class="tooltip-label">Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </aside>
 
-<!-- ─── Top Bar ─── -->
-<header class="topbar">
-    <div class="topbar-left">
-        <a href="{{ url_for('index') }}" class="topbar-brand">450 DSA Cracker</a>
-    </div>
-    <div class="topbar-right">
-        <a href="#" class="pill-btn" id="monthly-rewind-btn">
-            <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
-            <span>Monthly Rewind</span>
-        </a>
-        <a href="#" class="pill-btn accent" id="company-kit-btn">
-            <i class="bi bi-briefcase-fill"></i>
-            <span>Company Wise Kit</span>
-        </a>
-        <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
-            <i class="bi bi-moon-fill" id="theme-icon"></i>
-        </button>
-        {% if current_user.is_authenticated %}
-        <a href="{{ url_for('profile') }}" class="user-avatar-sm" title="{{ current_user.name }}">
-            {{ current_user.name[0]|upper }}
-        </a>
-        {% else %}
-        <a href="{{ url_for('login') }}" class="pill-btn">
-            <i class="bi bi-person"></i>
-            <span>Login</span>
-        </a>
-        {% endif %}
-    </div>
-</header>
+    <!-- ─── Top Bar ─── -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <a href="{{ url_for('index') }}" class="topbar-brand">450 DSA Cracker</a>
+        </div>
+        <div class="topbar-right">
+            <a href="#" class="pill-btn" id="monthly-rewind-btn">
+                <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
+                <span>Monthly Rewind</span>
+            </a>
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent"
+                id="company-kit-btn" target="_blank">
+                <i class="bi bi-briefcase-fill"></i>
+                <span>Company Wise Kit</span>
+            </a>
+            <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+                <i class="bi bi-moon-fill" id="theme-icon"></i>
+            </button>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('profile') }}" class="user-avatar-sm" title="{{ current_user.name }}">
+                {{ current_user.name[0]|upper }}
+            </a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="pill-btn">
+                <i class="bi bi-person"></i>
+                <span>Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </header>
 
-<!-- ─── Flash Messages ─── -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-<div class="flash-messages" id="flash-container">
-    {% for category, message in messages %}
-    <div class="flash-alert {{ category }}" onclick="this.remove()">
-        <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
-        {{ message }}
+    <!-- ─── Flash Messages ─── -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages" id="flash-container">
+        {% for category, message in messages %}
+        <div class="flash-alert {{ category }}" onclick="this.remove()">
+            <i
+                class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-</div>
-{% endif %}
-{% endwith %}
+    {% endif %}
+    {% endwith %}
 
-<!-- ─── Main Content ─── -->
-<main class="main-wrapper">
-    {% block content %}{% endblock %}
-</main>
+    <!-- ─── Main Content ─── -->
+    <main class="main-wrapper">
+        {% block content %}{% endblock %}
+    </main>
 
-<!-- ─── Footer ─── -->
-<footer class="site-footer">
-    <div class="footer-links">
-        <a href="#">FAQ</a>
-        <a href="#">Contact Us</a>
-        <a href="#">Privacy</a>
-        <a href="#">Timeline</a>
-        <a href="#">Terms</a>
-        <a href="#">Refund Policy</a>
-    </div>
-    <div class="footer-socials">
-        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-        <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
-        <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-    </div>
-    <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
-</footer>
+    <!-- ─── Footer ─── -->
+    <footer class="site-footer">
+        <div class="footer-links">
+            <a href="#">FAQ</a>
+            <a href="#">Contact Us</a>
+            <a href="#">Privacy</a>
+            <a href="#">Timeline</a>
+            <a href="#">Terms</a>
+            <a href="#">Refund Policy</a>
+        </div>
+        <div class="footer-socials">
+            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
+            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        </div>
+        <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
+    </footer>
 
-<!-- Scripts -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script>
-    // Theme Toggle
-    const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = document.getElementById('theme-icon');
-    const root = document.documentElement;
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const root = document.documentElement;
 
-    function applyTheme(theme) {
-        if (theme === 'light') {
-            root.style.setProperty('--bg-primary', '#f0f2f5');
-            root.style.setProperty('--bg-secondary', '#ffffff');
-            root.style.setProperty('--bg-card', '#ffffff');
-            root.style.setProperty('--bg-card-hover', '#f5f5f5');
-            root.style.setProperty('--border-color', '#e0e0e0');
-            root.style.setProperty('--border-subtle', '#ececec');
-            root.style.setProperty('--text-primary', '#111111');
-            root.style.setProperty('--text-secondary', '#555555');
-            root.style.setProperty('--text-muted', '#999999');
-            themeIcon.className = 'bi bi-sun-fill';
-        } else {
-            root.style.setProperty('--bg-primary', '#111111');
-            root.style.setProperty('--bg-secondary', '#1a1a1a');
-            root.style.setProperty('--bg-card', '#1e1e1e');
-            root.style.setProperty('--bg-card-hover', '#252525');
-            root.style.setProperty('--border-color', '#2a2a2a');
-            root.style.setProperty('--border-subtle', '#222222');
-            root.style.setProperty('--text-primary', '#f0f0f0');
-            root.style.setProperty('--text-secondary', '#a0a0a0');
-            root.style.setProperty('--text-muted', '#666666');
-            themeIcon.className = 'bi bi-moon-fill';
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                root.style.setProperty('--bg-primary', '#f0f2f5');
+                root.style.setProperty('--bg-secondary', '#ffffff');
+                root.style.setProperty('--bg-card', '#ffffff');
+                root.style.setProperty('--bg-card-hover', '#f5f5f5');
+                root.style.setProperty('--border-color', '#e0e0e0');
+                root.style.setProperty('--border-subtle', '#ececec');
+                root.style.setProperty('--text-primary', '#111111');
+                root.style.setProperty('--text-secondary', '#555555');
+                root.style.setProperty('--text-muted', '#999999');
+                themeIcon.className = 'bi bi-sun-fill';
+            } else {
+                root.style.setProperty('--bg-primary', '#111111');
+                root.style.setProperty('--bg-secondary', '#1a1a1a');
+                root.style.setProperty('--bg-card', '#1e1e1e');
+                root.style.setProperty('--bg-card-hover', '#252525');
+                root.style.setProperty('--border-color', '#2a2a2a');
+                root.style.setProperty('--border-subtle', '#222222');
+                root.style.setProperty('--text-primary', '#f0f0f0');
+                root.style.setProperty('--text-secondary', '#a0a0a0');
+                root.style.setProperty('--text-muted', '#666666');
+                themeIcon.className = 'bi bi-moon-fill';
+            }
         }
-    }
 
-    const saved = localStorage.getItem('theme') || 'dark';
-    applyTheme(saved);
+        const saved = localStorage.getItem('theme') || 'dark';
+        applyTheme(saved);
 
-    themeToggle.addEventListener('click', () => {
-        const curr = localStorage.getItem('theme') || 'dark';
-        const next = curr === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('theme', next);
-        applyTheme(next);
-    });
+        themeToggle.addEventListener('click', () => {
+            const curr = localStorage.getItem('theme') || 'dark';
+            const next = curr === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme', next);
+            applyTheme(next);
+        });
 
-    // Auto-dismiss flash messages
-    setTimeout(() => {
-        const fc = document.getElementById('flash-container');
-        if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
-    }, 4000);
-</script>
-{% block scripts %}{% endblock %}
+        // Auto-dismiss flash messages
+        setTimeout(() => {
+            const fc = document.getElementById('flash-container');
+            if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
+        }, 4000);
+    </script>
+    {% block scripts %}{% endblock %}
 </body>
+
 </html>
