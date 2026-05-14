@@ -605,6 +605,34 @@ def edit_profile():
         current_user.reload()
     return jsonify({"success": True})
 
+@app.route('/search_universities')
+def search_universities():
+    """Proxy endpoint for Hipolabs Universities API (global coverage)."""
+    query = request.args.get('q', '').strip()
+    if len(query) < 2:
+        return jsonify([])
+    try:
+        r = requests.get(
+            f'http://universities.hipolabs.com/search?name={query}',
+            timeout=5
+        )
+        if r.status_code == 200:
+            data = r.json()
+            # Return deduplicated, formatted results (name + country)
+            seen = set()
+            results = []
+            for uni in data[:30]:
+                name = uni.get('name', '')
+                country = uni.get('country', '')
+                label = f"{name}, {country}" if country else name
+                if label not in seen:
+                    seen.add(label)
+                    results.append({'name': name, 'country': country, 'label': label})
+            return jsonify(results)
+        return jsonify([])
+    except Exception:
+        return jsonify([])
+
 @app.route('/upload_photo', methods=['POST'])
 @login_required
 def upload_photo():

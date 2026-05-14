@@ -4,3 +4,13 @@ __pycache__
 .env
 # Added by code-review-graph
 .code-review-graph/
+.claude/
+.cursor/
+.cursorrules
+.kiro/
+.mcp.json
+.opencode.json
+.windsurfrules
+AGENTS.md
+CLAUDE.md
+GEMINI.md
