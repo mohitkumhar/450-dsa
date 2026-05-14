@@ -857,10 +857,8 @@ def compute_c_score(user_doc):
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
     c_score = min(c_score, 999)
     
-    # Total questions across all platforms
-    total_solved = max(lc_total, 0) + max(gfg_total, 0) + max(hr_total, 0) + dsa_done
-    # Deduplicate: cap at sum of external + unique DSA
-    # Simple approach: use the larger of dsa_done or external totals
+    # Total questions across all platforms (external + unique DSA)
+
     global_total = max(sum(max(v, 0) for k, v in ext.items() 
                          if k in ('LeetCode', 'GFG', 'HackerRank')), 0) + dsa_done
     
