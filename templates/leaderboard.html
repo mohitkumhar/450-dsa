@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* ── Leaderboard Page ── */
+.lb-header { margin-bottom: 24px; }
+.lb-header h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.lb-header p { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
+
+/* Tab Switcher */
+.lb-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
+  width: fit-content;
+}
+.lb-tab {
+  padding: 9px 20px;
+  border-radius: 9px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.lb-tab:hover { color: var(--text-primary); }
+.lb-tab.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255,107,0,0.3);
+}
+
+/* Podium */
+.podium-section { margin-bottom: 28px; }
+.podium-grid {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 0 10px;
+}
+.podium-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 20px 18px 16px;
+  text-align: center;
+  width: 200px;
+  position: relative;
+  transition: all 0.3s;
+}
+.podium-card:hover { transform: translateY(-4px); border-color: var(--border-color); }
+.podium-card.gold {
+  border-color: #ffd700;
+  box-shadow: 0 4px 24px rgba(255,215,0,0.15);
+  order: 2;
+  padding-top: 28px;
+  padding-bottom: 20px;
+}
+.podium-card.silver {
+  border-color: #c0c0c0;
+  box-shadow: 0 4px 20px rgba(192,192,192,0.1);
+  order: 1;
+}
+.podium-card.bronze {
+  border-color: #cd7f32;
+  box-shadow: 0 4px 20px rgba(205,127,50,0.1);
+  order: 3;
+}
+.podium-medal {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #fff;
+}
+.podium-medal.gold-m { background: linear-gradient(135deg, #ffd700, #ffaa00); }
+.podium-medal.silver-m { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); }
+.podium-medal.bronze-m { background: linear-gradient(135deg, #cd7f32, #b06020); }
+
+.podium-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+  overflow: hidden;
+}
+.podium-card.gold .podium-avatar { background: linear-gradient(135deg, #ffd700, #ff8c00); width: 64px; height: 64px; font-size: 1.6rem; }
+.podium-card.silver .podium-avatar { background: linear-gradient(135deg, #c0c0c0, #888); }
+.podium-card.bronze .podium-avatar { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+.podium-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+.podium-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.podium-college { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.podium-score {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.podium-card.gold .podium-score { color: #ffd700; }
+.podium-card.silver .podium-score { color: #c0c0c0; }
+.podium-card.bronze .podium-score { color: #cd7f32; }
+.podium-score-label { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Table */
+.lb-table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.lb-table { width: 100%; border-collapse: collapse; }
+.lb-table thead th {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.lb-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+.lb-table tbody tr:last-child { border-bottom: none; }
+.lb-table tbody tr:hover { background: var(--bg-secondary); }
+.lb-table tbody tr.me-row {
+  background: rgba(255,107,0,0.06);
+  border-left: 3px solid var(--accent);
+}
+.lb-table tbody tr.me-row:hover { background: rgba(255,107,0,0.1); }
+.lb-table tbody td { padding: 12px 16px; font-size: 0.85rem; vertical-align: middle; }
+
+.rank-cell { font-weight: 800; color: var(--text-muted); font-size: 0.9rem; min-width: 44px; }
+.rank-cell.top-1 { color: #ffd700; }
+.rank-cell.top-2 { color: #c0c0c0; }
+.rank-cell.top-3 { color: #cd7f32; }
+
+.user-cell { display: flex; align-items: center; gap: 12px; }
+.user-cell-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #ff375f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.user-cell-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.user-cell-info { min-width: 0; }
+.user-cell-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-cell-college { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+.stat-badge.lc { background: rgba(255,184,0,0.12); color: #ffb800; border: 1px solid rgba(255,184,0,0.2); }
+.stat-badge.gfg { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+.stat-badge.dsa { background: rgba(255,107,0,0.12); color: var(--accent); border: 1px solid rgba(255,107,0,0.2); }
+
+.score-cell { font-weight: 900; font-size: 1rem; color: var(--accent); }
+.score-cell.rating-mode { color: #ffb800; }
+.score-cell.questions-mode { color: var(--success); }
+
+.me-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.lb-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-muted);
+}
+.lb-empty i { font-size: 3rem; display: block; margin-bottom: 12px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .podium-grid { gap: 8px; padding: 10px 0; }
+  .podium-card { width: 120px; padding: 14px 10px 12px; }
+  .podium-card.gold { padding-top: 20px; }
+  .podium-avatar { width: 42px; height: 42px; font-size: 1.1rem; }
+  .podium-card.gold .podium-avatar { width: 48px; height: 48px; }
+  .podium-name { font-size: 0.78rem; }
+  .podium-score { font-size: 1.2rem; }
+  .lb-tabs { width: 100%; }
+  .lb-tab { flex: 1; text-align: center; padding: 8px 10px; font-size: 0.78rem; }
+  .lb-table thead th:nth-child(4),
+  .lb-table tbody td:nth-child(4),
+  .lb-table thead th:nth-child(5),
+  .lb-table tbody td:nth-child(5) { display: none; }
+}
+@media (max-width: 480px) {
+  .podium-card { width: 100px; }
+  .user-cell-college { display: none; }
+}
+</style>
+
+<div class="lb-header">
+  <h1><i class="bi bi-trophy-fill" style="color:var(--accent)"></i> Leaderboard</h1>
+  <p>Compete with fellow coders — ranked by C-Score, Questions Solved, or LeetCode Rating</p>
+</div>
+
+<!-- Tab Switcher -->
+<div class="lb-tabs" id="lbTabs">
+  <button class="lb-tab active" data-mode="cscore" id="tab-cscore">
+    <i class="bi bi-lightning-fill"></i> C-Score
+  </button>
+  <button class="lb-tab" data-mode="questions" id="tab-questions">
+    <i class="bi bi-code-slash"></i> Questions Solved
+  </button>
+  <button class="lb-tab" data-mode="rating" id="tab-rating">
+    <i class="bi bi-star-fill"></i> LeetCode Rating
+  </button>
+</div>
+
+<!-- Podium (Top 3) -->
+<div class="podium-section" id="podiumSection">
+  <!-- Rendered by JS based on active tab -->
+</div>
+
+<!-- Table -->
+<div class="lb-table-wrap">
+  <table class="lb-table">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>User</th>
+        <th id="scoreHeader">C-Score</th>
+        <th>DSA Done</th>
+        <th>Platforms</th>
+      </tr>
+    </thead>
+    <tbody id="lbBody">
+      <!-- Rendered by JS -->
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Pre-loaded data from server (avoids extra API calls)
+const DATA = {
+  cscore: {{ by_cscore | tojson }},
+  questions: {{ by_questions | tojson }},
+  rating: {{ by_rating | tojson }},
+};
+const CURRENT_USER_ID = {{ current_user_id | tojson }};
+
+let activeMode = 'cscore';
+
+function getScoreValue(entry, mode) {
+  if (mode === 'cscore') return entry.c_score;
+  if (mode === 'questions') return entry.total_solved;
+  if (mode === 'rating') return entry.lc_rating;
+  return 0;
+}
+
+function getScoreLabel(mode) {
+  if (mode === 'cscore') return 'C-Score';
+  if (mode === 'questions') return 'Solved';
+  if (mode === 'rating') return 'Rating';
+  return '';
+}
+
+function getScoreClass(mode) {
+  if (mode === 'rating') return 'rating-mode';
+  if (mode === 'questions') return 'questions-mode';
+  return '';
+}
+
+function avatarHTML(entry, size) {
+  if (entry.profile_photo) {
+    return `<img src="${entry.profile_photo}" alt="${entry.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  }
+  return (entry.name || '?')[0].toUpperCase();
+}
+
+function renderPodium(entries, mode) {
+  const section = document.getElementById('podiumSection');
+  if (entries.length < 1) {
+    section.innerHTML = '';
+    return;
+  }
+
+  const medals = ['gold', 'silver', 'bronze'];
+  const medalClasses = ['gold-m', 'silver-m', 'bronze-m'];
+  const top3 = entries.slice(0, 3);
+
+  let html = '<div class="podium-grid">';
+  top3.forEach((e, i) => {
+    const score = getScoreValue(e, mode);
+    const label = getScoreLabel(mode);
+    html += `
+      <div class="podium-card ${medals[i]}">
+        <div class="podium-medal ${medalClasses[i]}">${i + 1}</div>
+        <div class="podium-avatar">${avatarHTML(e)}</div>
+        <div class="podium-name">${e.name}${e.user_id === CURRENT_USER_ID ? '<span class="me-tag">YOU</span>' : ''}</div>
+        <div class="podium-college">${e.college || '—'}</div>
+        <div class="podium-score">${score}</div>
+        <div class="podium-score-label">${label}</div>
+      </div>`;
+  });
+  html += '</div>';
+  section.innerHTML = html;
+}
+
+function renderTable(entries, mode) {
+  const body = document.getElementById('lbBody');
+  const header = document.getElementById('scoreHeader');
+  header.textContent = getScoreLabel(mode);
+
+  if (entries.length === 0) {
+    body.innerHTML = `<tr><td colspan="5"><div class="lb-empty"><i class="bi bi-people"></i><p>No users yet. Be the first to join!</p></div></td></tr>`;
+    return;
+  }
+
+  let html = '';
+  entries.forEach((e, i) => {
+    const rank = i + 1;
+    const isMe = e.user_id === CURRENT_USER_ID;
+    const score = getScoreValue(e, mode);
+    const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
+
+    html += `
+      <tr class="${isMe ? 'me-row' : ''}">
+        <td class="rank-cell ${rankClass}">
+          ${rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : '#' + rank}
+        </td>
+        <td>
+          <div class="user-cell">
+            <div class="user-cell-avatar">${avatarHTML(e)}</div>
+            <div class="user-cell-info">
+              <div class="user-cell-name">${e.name}${isMe ? '<span class="me-tag">YOU</span>' : ''}</div>
+              <div class="user-cell-college">${e.college || ''}</div>
+            </div>
+          </div>
+        </td>
+        <td class="score-cell ${getScoreClass(mode)}">${score}</td>
+        <td><span class="stat-badge dsa">${e.dsa_done} / 450</span></td>
+        <td>
+          ${e.lc_total ? `<span class="stat-badge lc">LC ${e.lc_total}</span> ` : ''}
+          ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span>` : ''}
+        </td>
+      </tr>`;
+  });
+  body.innerHTML = html;
+}
+
+function switchTab(mode) {
+  activeMode = mode;
+  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.lb-tab[data-mode="${mode}"]`).classList.add('active');
+  const entries = DATA[mode];
+  renderPodium(entries, mode);
+  renderTable(entries, mode);
+}
+
+// Init
+switchTab('cscore');
+
+// Tab click handlers
+document.querySelectorAll('.lb-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    switchTab(this.dataset.mode);
+  });
+});
+</script>
+{% endblock %}

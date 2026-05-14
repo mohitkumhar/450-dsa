@@ -811,5 +811,145 @@ def profile():
                            lc_badges=lc_badges,
                            hr_badges=hr_badges)
 
+
+# ── Leaderboard ──
+
+def compute_c_score(user_doc):
+    """Compute composite C-Score (0–999) for a user document.
+    
+    Factors:
+      - DSA Questions (450 tracker): 25% → max 250 pts
+      - LeetCode Total Solved:       20% → max 200 pts
+      - LeetCode Difficulty Bonus:   15% → max 150 pts  (easy×1, med×3, hard×6)
+      - LeetCode Rating:             20% → max 200 pts
+      - GFG + HackerRank Solved:     10% → max 100 pts
+      - Consistency (Active Days):   10% → max 100 pts
+    """
+    progress = user_doc.get('progress', {})
+    dsa_done = sum(1 for p in progress.values() if p.get('done'))
+    
+    ext = user_doc.get('external_totals', {})
+    lc_total = ext.get('LeetCode', 0)
+    lc_easy = ext.get('LeetCode_Easy', 0)
+    lc_medium = ext.get('LeetCode_Medium', 0)
+    lc_hard = ext.get('LeetCode_Hard', 0)
+    lc_rating = ext.get('LeetCode_Rating', 0)
+    gfg_total = ext.get('GFG', 0)
+    hr_total = ext.get('HackerRank', 0)
+    
+    # Count active days from external + DSA daily activity
+    ext_daily = user_doc.get('external_daily_counts', {})
+    daily_dates = set(ext_daily.keys()) if ext_daily else set()
+    for p in progress.values():
+        ts = p.get('timestamp')
+        if ts and p.get('done'):
+            daily_dates.add(ts.strftime('%Y-%m-%d'))
+    active_days = len(daily_dates)
+    
+    # Score components
+    s_dsa = min(dsa_done / 450, 1.0) * 250
+    s_lc_total = min(lc_total / 500, 1.0) * 200
+    s_lc_diff = min((lc_easy * 1 + lc_medium * 3 + lc_hard * 6) / 1500, 1.0) * 150
+    s_lc_rating = min(lc_rating / 2500, 1.0) * 200
+    s_other = min((gfg_total + hr_total) / 300, 1.0) * 100
+    s_consistency = min(active_days / 365, 1.0) * 100
+    
+    c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
+    c_score = min(c_score, 999)
+    
+    # Total questions across all platforms
+    total_solved = max(lc_total, 0) + max(gfg_total, 0) + max(hr_total, 0) + dsa_done
+    # Deduplicate: cap at sum of external + unique DSA
+    # Simple approach: use the larger of dsa_done or external totals
+    global_total = max(sum(max(v, 0) for k, v in ext.items() 
+                         if k in ('LeetCode', 'GFG', 'HackerRank')), 0) + dsa_done
+    
+    return {
+        'c_score': c_score,
+        'dsa_done': dsa_done,
+        'lc_total': lc_total,
+        'lc_easy': lc_easy,
+        'lc_medium': lc_medium,
+        'lc_hard': lc_hard,
+        'lc_rating': lc_rating,
+        'gfg_total': gfg_total,
+        'hr_total': hr_total,
+        'active_days': active_days,
+        'total_solved': global_total,
+    }
+
+
+def build_leaderboard_data():
+    """Query all users and compute leaderboard rankings."""
+    users = list(db.user.find({}, {
+        'name': 1, 'email': 1, 'profile_photo': 1, 'college': 1,
+        'leetcode_username': 1, 'github_username': 1, 'gfg_username': 1,
+        'progress': 1, 'external_totals': 1, 'external_daily_counts': 1,
+    }))
+    
+    entries = []
+    for u in users:
+        name = u.get('name', 'Anonymous')
+        if not name or name.strip() == '':
+            continue
+        stats = compute_c_score(u)
+        entries.append({
+            'user_id': str(u['_id']),
+            'name': name,
+            'profile_photo': u.get('profile_photo', ''),
+            'college': u.get('college', ''),
+            'leetcode_username': u.get('leetcode_username', ''),
+            **stats,
+        })
+    
+    return entries
+
+
+@app.route('/leaderboard')
+def leaderboard():
+    entries = build_leaderboard_data()
+    
+    # Sort for each ranking mode
+    by_cscore = sorted(entries, key=lambda x: x['c_score'], reverse=True)
+    by_questions = sorted(entries, key=lambda x: x['total_solved'], reverse=True)
+    by_rating = sorted(entries, key=lambda x: x['lc_rating'], reverse=True)
+    
+    # Assign ranks (handle ties)
+    def assign_ranks(sorted_list, key):
+        for i, entry in enumerate(sorted_list):
+            entry[f'rank_{key}'] = i + 1
+        return sorted_list
+    
+    assign_ranks(by_cscore, 'cscore')
+    assign_ranks(by_questions, 'questions')
+    assign_ranks(by_rating, 'rating')
+    
+    current_user_id = str(current_user.id) if current_user.is_authenticated else None
+    
+    return render_template('leaderboard.html',
+                           by_cscore=by_cscore,
+                           by_questions=by_questions,
+                           by_rating=by_rating,
+                           current_user_id=current_user_id)
+
+
+@app.route('/api/leaderboard')
+def api_leaderboard():
+    mode = request.args.get('mode', 'cscore')
+    entries = build_leaderboard_data()
+    
+    if mode == 'questions':
+        entries.sort(key=lambda x: x['total_solved'], reverse=True)
+    elif mode == 'rating':
+        entries.sort(key=lambda x: x['lc_rating'], reverse=True)
+    else:
+        entries.sort(key=lambda x: x['c_score'], reverse=True)
+    
+    for i, e in enumerate(entries):
+        e['rank'] = i + 1
+    
+    return jsonify(entries)
+
+
 if __name__ == '__main__':
     app.run(debug=True)

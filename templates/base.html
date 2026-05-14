@@ -425,7 +425,7 @@
             <i class="bi bi-bar-chart-fill"></i>
             <span class="tooltip-label">Stats</span>
         </a>
-        <a href="#" class="sidebar-link" id="nav-leaderboard">
+        <a href="{{ url_for('leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard' %}active{% endif %}" id="nav-leaderboard">
             <i class="bi bi-trophy-fill"></i>
             <span class="tooltip-label">Leaderboard</span>
         </a>
