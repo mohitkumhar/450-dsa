@@ -148,8 +148,16 @@
       </span>
     </div>
     <div class="platform-row">
+      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px"></i>Coding Ninjas</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+      </span>
+    </div>
+    <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px"></i>HackerRank</span>
-      <a href="https://hackerrank.com" target="_blank" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>
+      <span style="display:flex;align-items:center;gap:6px">
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+      </span>
     </div>
     <button class="add-btn" onclick="openSyncModal()"><i class="bi bi-plus"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
@@ -323,6 +331,10 @@
         <strong>{{ platforms['GFG'] }}</strong>
       </div>
       <div class="legend-item">
+        <span><span class="legend-dot" style="background:#8b5cf6"></span><span style="color:#8b5cf6;font-weight:700">Coding Ninjas</span></span>
+        <strong>{{ platforms['Coding Ninjas'] }}</strong>
+      </div>
+      <div class="legend-item">
         <span><span class="legend-dot" style="background:#00bd6c"></span><span style="color:#00bd6c;font-weight:700">HackerRank</span></span>
         <strong>{{ platforms['HackerRank'] }}</strong>
       </div>
@@ -386,9 +398,11 @@
     <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
     <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
     <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
+    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
     <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
-    <div class="m-note">⚠️ GFG sync is experimental and may take a few seconds.</div>
+    <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
       <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
@@ -481,6 +495,8 @@
     <span id="ss_gh" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GitHub</span>
     <span style="color:rgba(255,255,255,.2)">·</span>
     <span id="ss_gfg" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GFG</span>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <span id="ss_cn" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; Coding Ninjas</span>
   </div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
@@ -532,8 +548,9 @@ window.handleQuickSync = function(btn) {
   const gh = '{{ user.github_username or "" }}';
   const gfg = '{{ user.gfg_username or "" }}';
   const hr = '{{ user.hackerrank_username or "" }}';
+  const cn = '{{ user.codingninjas_username or "" }}';
   
-  if(!lc && !gh && !gfg && !hr){
+  if(!lc && !gh && !gfg && !hr && !cn){
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
@@ -546,7 +563,7 @@ window.handleQuickSync = function(btn) {
   fetch('/sync_platforms', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr})
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
   })
   .then(r => r.json())
   .then(res => {
@@ -572,7 +589,8 @@ window.handleSyncProfile = function(btn){
   const gh=document.getElementById('gh_username').value.trim();
   const gfg=document.getElementById('gfg_username').value.trim();
   const hr=document.getElementById('hr_username').value.trim();
-  if(!lc && !gh && !gfg && !hr){showToast('\u26a0\ufe0f Enter at least one username');return;}
+  const cn=document.getElementById('cn_username').value.trim();
+  if(!lc && !gh && !gfg && !hr && !cn){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
   btn.disabled=true;
@@ -584,8 +602,8 @@ window.handleSyncProfile = function(btn){
   document.getElementById('syncOverlayMsg').textContent='Syncing your profiles...';
 
   // Animate step indicators
-  const steps=['ss_lc','ss_gh','ss_gfg'];
-  const labels=['LeetCode','GitHub','GFG'];
+  const steps=['ss_lc','ss_gh','ss_gfg','ss_cn'];
+  const labels=['LeetCode','GitHub','GFG','Coding Ninjas'];
   let si=0;
   const stepTimer=setInterval(()=>{
     if(si>0) document.getElementById(steps[si-1]).style.color='rgba(0,200,100,.8)';
@@ -603,7 +621,7 @@ window.handleSyncProfile = function(btn){
   fetch('/sync_platforms',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr}),
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
@@ -674,7 +692,7 @@ if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
 const pData = {{ platforms | tojson }};
 try{new Chart(document.getElementById('platformsChart'),{
   type:'doughnut',
-  data:{labels:['LeetCode','GFG','HackerRank','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['HackerRank'],pData['Other']],backgroundColor:['#ffb800','#22c55e','#00bd6c','#6c757d'],borderWidth:0,cutout:'78%'}]},
+  data:{labels:['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['Coding Ninjas'],pData['HackerRank'],pData['Other']],backgroundColor:['#ffb800','#22c55e','#8b5cf6','#00bd6c','#6c757d'],borderWidth:0,cutout:'78%'}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
 });}catch(e){console.warn('Chart.js load failed:',e);}
 

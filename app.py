@@ -262,6 +262,74 @@ def fetch_gfg(username):
         print("GFG Error", e)
         return {}
 
+def normalize_coding_ninjas_profile_id(value):
+    """Return the Code360 public profile id from a username, UUID, or profile URL."""
+    value = (value or '').strip()
+    if not value:
+        return ''
+    match = re.search(r'(?:naukri\.com/code360/profile/|codingninjas\.com/(?:studio|codestudio)/profile/)([^/?#]+)', value, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return value.rstrip('/').split('/')[-1].strip()
+
+def fetch_coding_ninjas(username):
+    """Fetch Coding Ninjas/Code360 solved count from public profile pages."""
+    profile_id = normalize_coding_ninjas_profile_id(username)
+    if not profile_id:
+        return {}
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+        "Accept": "application/json,text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        api_url = "https://www.naukri.com/code360/api/v3/public_section/profile/user_details"
+        r = requests.get(api_url, params={"uuid": profile_id}, headers=headers, timeout=8)
+        if r.status_code == 200:
+            data = r.json().get('data') or {}
+            total = 0
+            for domain_key in ('dsa_domain_data', 'web_domain_data', 'analytics_domain_data'):
+                count_data = data.get(domain_key, {}).get('problem_count_data', {})
+                total += int(count_data.get('total_count') or 0)
+            if total > 0:
+                return {"total": total}
+    except Exception as e:
+        print("Coding Ninjas API Error", e)
+
+    urls = [
+        f"https://www.naukri.com/code360/profile/{profile_id}",
+        f"https://www.codingninjas.com/studio/profile/{profile_id}",
+        f"https://www.codingninjas.com/codestudio/profile/{profile_id}",
+    ]
+    patterns = [
+        r'"totalProblemsSolved"\s*:\s*(\d+)',
+        r'"total_problems_solved"\s*:\s*(\d+)',
+        r'"problemsSolved"\s*:\s*(\d+)',
+        r'"solvedProblems"\s*:\s*(\d+)',
+        r'Problems\s+Solved[^\d]{0,80}(\d+)',
+        r'Solved\s+Problems[^\d]{0,80}(\d+)',
+        r'(\d+)[^\d]{0,80}Problems\s+Solved',
+    ]
+
+    try:
+        for url in urls:
+            try:
+                r = requests.get(url, headers=headers, timeout=8)
+                if r.status_code != 200:
+                    continue
+                text = r.text
+                for pattern in patterns:
+                    match = re.search(pattern, text, re.IGNORECASE)
+                    if match:
+                        return {"total": int(match.group(1))}
+            except Exception as e:
+                print("Coding Ninjas Error", e)
+        return {"total": 0}
+    except Exception as e:
+        print("Coding Ninjas Error", e)
+        return {}
+
 def init_db():
     if db.topic.count_documents({}) == 0:
         with open('data.json', 'r', encoding='utf-8') as f:
@@ -411,7 +479,7 @@ def platform_name_filter(url):
         return 'LeetCode'
     if 'geeksforgeeks.org' in url:
         return 'GFG'
-    if 'codingninjas.com' in url:
+    if 'codingninjas.com' in url or 'naukri.com/code360' in url:
         return 'Coding Ninjas'
     if 'youtube.com' in url or 'youtu.be' in url:
         return 'YouTube'
@@ -535,6 +603,7 @@ def sync_platforms():
     gh_user = current_user.github_username or ''
     gfg_user = current_user.gfg_username or ''
     hr_user = current_user.hackerrank_username or ''
+    cn_user = current_user.codingninjas_username or ''
     
     if 'leetcode' in data:
         lc_user = data.get('leetcode', '').strip()
@@ -548,6 +617,9 @@ def sync_platforms():
     if 'hackerrank' in data:
         hr_user = data.get('hackerrank', '').strip()
         update_fields['hackerrank_username'] = hr_user
+    if 'codingninjas' in data:
+        cn_user = normalize_coding_ninjas_profile_id(data.get('codingninjas', ''))
+        update_fields['codingninjas_username'] = cn_user
 
     combined = {}
     totals = {}
@@ -585,6 +657,10 @@ def sync_platforms():
         gfg = fetch_gfg(gfg_user)
         if gfg.get('total'):
             totals['GFG'] = int(gfg.get('total', 0))
+    if cn_user:
+        cn = fetch_coding_ninjas(cn_user)
+        if cn.get('total'):
+            totals['Coding Ninjas'] = int(cn.get('total', 0))
     # HackerRank: fetch badges + solved count from same endpoint
     if hr_user:
         try:
@@ -748,6 +824,7 @@ def profile():
     ext_totals = user.external_totals or {}
     platforms['LeetCode'] = max(platforms['LeetCode'], ext_totals.get('LeetCode', 0))
     platforms['GFG'] = max(platforms['GFG'], ext_totals.get('GFG', 0))
+    platforms['Coding Ninjas'] = max(platforms['Coding Ninjas'], ext_totals.get('Coding Ninjas', 0))
     platforms['HackerRank'] = max(platforms['HackerRank'], ext_totals.get('HackerRank', 0))
     
     lc_easy = ext_totals.get('LeetCode_Easy', 0)
@@ -834,7 +911,7 @@ def compute_c_score(user_doc):
       - LeetCode Total Solved:       20% → max 200 pts
       - LeetCode Difficulty Bonus:   15% → max 150 pts  (easy×1, med×3, hard×6)
       - LeetCode Rating:             20% → max 200 pts
-      - GFG + HackerRank Solved:     10% → max 100 pts
+      - GFG + HackerRank + Coding Ninjas Solved: 10% → max 100 pts
       - Consistency (Active Days):   10% → max 100 pts
     """
     progress = user_doc.get('progress', {})
@@ -848,6 +925,7 @@ def compute_c_score(user_doc):
     lc_rating = ext.get('LeetCode_Rating', 0)
     gfg_total = ext.get('GFG', 0)
     hr_total = ext.get('HackerRank', 0)
+    cn_total = ext.get('Coding Ninjas', 0)
     
     # Count active days from external + DSA daily activity
     ext_daily = user_doc.get('external_daily_counts', {})
@@ -863,7 +941,7 @@ def compute_c_score(user_doc):
     s_lc_total = min(lc_total / 500, 1.0) * 200
     s_lc_diff = min((lc_easy * 1 + lc_medium * 3 + lc_hard * 6) / 1500, 1.0) * 150
     s_lc_rating = min(lc_rating / 2500, 1.0) * 200
-    s_other = min((gfg_total + hr_total) / 300, 1.0) * 100
+    s_other = min((gfg_total + hr_total + cn_total) / 300, 1.0) * 100
     s_consistency = min(active_days / 365, 1.0) * 100
     
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
@@ -872,7 +950,7 @@ def compute_c_score(user_doc):
     # Total questions across all platforms (external + unique DSA)
 
     global_total = max(sum(max(v, 0) for k, v in ext.items() 
-                         if k in ('LeetCode', 'GFG', 'HackerRank')), 0) + dsa_done
+                         if k in ('LeetCode', 'GFG', 'Coding Ninjas', 'HackerRank')), 0) + dsa_done
     
     return {
         'c_score': c_score,
@@ -884,6 +962,7 @@ def compute_c_score(user_doc):
         'lc_rating': lc_rating,
         'gfg_total': gfg_total,
         'hr_total': hr_total,
+        'cn_total': cn_total,
         'active_days': active_days,
         'total_solved': global_total,
     }
@@ -894,6 +973,7 @@ def build_leaderboard_data():
     users = list(db.user.find({}, {
         'name': 1, 'email': 1, 'profile_photo': 1, 'college': 1,
         'leetcode_username': 1, 'github_username': 1, 'gfg_username': 1,
+        'hackerrank_username': 1, 'codingninjas_username': 1,
         'progress': 1, 'external_totals': 1, 'external_daily_counts': 1,
     }))
     
@@ -909,6 +989,7 @@ def build_leaderboard_data():
             'profile_photo': u.get('profile_photo', ''),
             'college': u.get('college', ''),
             'leetcode_username': u.get('leetcode_username', ''),
+            'codingninjas_username': u.get('codingninjas_username', ''),
             **stats,
         })
     

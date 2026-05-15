@@ -194,6 +194,8 @@
 }
 .stat-badge.lc { background: rgba(255,184,0,0.12); color: #ffb800; border: 1px solid rgba(255,184,0,0.2); }
 .stat-badge.gfg { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+.stat-badge.cn { background: rgba(139,92,246,0.12); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.2); }
+.stat-badge.hr { background: rgba(0,189,108,0.12); color: #00bd6c; border: 1px solid rgba(0,189,108,0.2); }
 .stat-badge.dsa { background: rgba(255,107,0,0.12); color: var(--accent); border: 1px solid rgba(255,107,0,0.2); }
 
 .score-cell { font-weight: 900; font-size: 1rem; color: var(--accent); }
@@ -245,7 +247,7 @@
 
 <div class="lb-header">
   <h1><i class="bi bi-trophy-fill" style="color:var(--accent)"></i> Leaderboard</h1>
-  <p>Compete with fellow coders — ranked by C-Score, Questions Solved, or LeetCode Rating</p>
+  <p>Compete with fellow coders — ranked across LeetCode, GFG, Coding Ninjas, HackerRank, and DSA progress</p>
 </div>
 
 <!-- Tab Switcher -->
@@ -389,7 +391,9 @@ function renderTable(entries, mode) {
         <td><span class="stat-badge dsa">${e.dsa_done} / 450</span></td>
         <td>
           ${e.lc_total ? `<span class="stat-badge lc">LC ${e.lc_total}</span> ` : ''}
-          ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span>` : ''}
+          ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span> ` : ''}
+          ${e.cn_total ? `<span class="stat-badge cn">CN ${e.cn_total}</span> ` : ''}
+          ${e.hr_total ? `<span class="stat-badge hr">HR ${e.hr_total}</span>` : ''}
         </td>
       </tr>`;
   });
