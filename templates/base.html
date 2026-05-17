@@ -540,7 +540,8 @@
                 <span class="tooltip-label">Bookmarks</span>
             </a>
             {% endif %}
-            <a href="#" class="sidebar-link" id="nav-search">
+            <a href="{{ url_for('search') }}"
+                class="sidebar-link {% if request.endpoint == 'search' %}active{% endif %}" id="nav-search">
                 <i class="bi bi-search"></i>
                 <span class="tooltip-label">Search</span>
             </a>

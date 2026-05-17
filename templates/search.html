@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.search-shell { max-width: 980px; }
+.search-head { margin-bottom: 20px; }
+.search-title { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.search-sub { color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px; }
+.search-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0 12px;
+}
+.search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,107,0,0.12); }
+.search-box i { color: var(--text-muted); font-size: 1rem; }
+.search-input {
+  width: 100%;
+  min-height: 46px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.95rem;
+}
+.clear-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.clear-btn:hover { color: var(--accent); background: rgba(255,107,0,0.08); }
+.platform-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.platform-chip {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.platform-chip:hover,
+.platform-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(255,107,0,0.08); }
+.search-meta {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  margin: 0 0 10px;
+  min-height: 20px;
+}
+.result-list { display: grid; gap: 10px; }
+.result-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+.result-card:hover { border-color: var(--accent); }
+.result-topic {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-bottom: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(99,102,241,0.12);
+  color: #818cf8;
+  border: 1px solid rgba(99,102,241,0.22);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.result-name { color: var(--text-primary); font-size: 0.95rem; font-weight: 750; margin-bottom: 8px; }
+.link-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.q-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.q-badge:hover { opacity: 0.86; text-decoration: none; }
+.badge-lc { background: rgba(255,184,0,0.15); color: #ffb800; border: 1px solid rgba(255,184,0,0.25); }
+.badge-gfg { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
+.badge-cn { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+.badge-hr { background: rgba(0,189,108,0.15); color: #00bd6c; border: 1px solid rgba(0,189,108,0.25); }
+.badge-link { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+.result-actions { display: flex; align-items: flex-start; gap: 8px; }
+.topic-open {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.topic-open:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+.empty-search {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 14px;
+  padding: 42px 18px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.empty-search i { display: block; color: var(--text-muted); font-size: 2.3rem; margin-bottom: 10px; }
+@media (max-width: 720px) {
+  .result-card { grid-template-columns: 1fr; }
+  .result-actions { justify-content: flex-start; }
+}
+</style>
+
+<div class="search-shell">
+  <div class="search-head">
+    <div class="search-title"><i class="bi bi-search" style="color:var(--accent)"></i> Search</div>
+    <div class="search-sub">Find 450 DSA questions and jump to matching platform searches.</div>
+  </div>
+
+  <div class="search-panel">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input id="searchInput" class="search-input" value="{{ initial_query }}" autocomplete="off" autofocus
+        placeholder="Search arrays, kadane, lc two sum, gfg graph, cn dp...">
+      <button id="clearSearch" class="clear-btn" type="button" title="Clear">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="platform-row" aria-label="Platform filters">
+      <button class="platform-chip" type="button" data-token="">All</button>
+      <button class="platform-chip" type="button" data-token="leetcode">LeetCode</button>
+      <button class="platform-chip" type="button" data-token="gfg">GFG</button>
+      <button class="platform-chip" type="button" data-token="cn">Coding Ninjas</button>
+      <button class="platform-chip" type="button" data-token="hackerrank">HackerRank</button>
+    </div>
+  </div>
+
+  <div id="searchMeta" class="search-meta"></div>
+  <div id="results" class="result-list"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const input = document.getElementById('searchInput');
+const results = document.getElementById('results');
+const meta = document.getElementById('searchMeta');
+const clearBtn = document.getElementById('clearSearch');
+const chips = document.querySelectorAll('.platform-chip');
+let activeToken = '';
+let debounceTimer = null;
+let controller = null;
+
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function badgeClass(color) {
+  if (color === 'lc') return 'badge-lc';
+  if (color === 'gfg') return 'badge-gfg';
+  if (color === 'cn') return 'badge-cn';
+  if (color === 'hr') return 'badge-hr';
+  return 'badge-link';
+}
+
+function currentQuery() {
+  const text = input.value.trim();
+  return [activeToken, text].filter(Boolean).join(' ');
+}
+
+function setActiveChip(token) {
+  activeToken = token;
+  chips.forEach(chip => chip.classList.toggle('active', chip.dataset.token === token));
+}
+
+function renderEmpty(icon, text) {
+  results.innerHTML = `<div class="empty-search"><i class="bi ${icon}"></i><p>${escapeHtml(text)}</p></div>`;
+}
+
+function renderResults(payload) {
+  const count = payload.results.length;
+  const platforms = payload.requested_platforms || [];
+  meta.textContent = count ? `${count} result${count === 1 ? '' : 's'}${platforms.length ? ' with ' + platforms.join(', ') : ''}` : '';
+
+  if (!input.value.trim()) {
+    meta.textContent = '';
+    renderEmpty('bi-search', 'Start typing to search the DSA sheet.');
+    return;
+  }
+
+  if (!count) {
+    const external = (payload.external_searches || []).map(link =>
+      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-box-arrow-up-right"></i>${escapeHtml(link.platform)}
+      </a>`
+    ).join('');
+    results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
+    return;
+  }
+
+  results.innerHTML = payload.results.map(item => {
+    const directLinks = (item.links || []).map(link =>
+      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-box-arrow-up-right"></i>${escapeHtml(link.platform)}
+      </a>`
+    ).join('');
+    const platformSearches = (item.external_searches || []).map(link =>
+      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-search"></i>${escapeHtml(link.platform)}
+      </a>`
+    ).join('');
+    const topicUrl = `/topic/${encodeURIComponent(item.topic_id)}`;
+
+    return `
+      <article class="result-card">
+        <div>
+          <a href="${topicUrl}" class="result-topic">${escapeHtml(item.topic)}</a>
+          <div class="result-name">${escapeHtml(item.problem)}</div>
+          <div class="link-row">${directLinks}${platformSearches}</div>
+        </div>
+        <div class="result-actions">
+          <a class="topic-open" href="${topicUrl}" title="Open topic"><i class="bi bi-arrow-right"></i></a>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+async function runSearch() {
+  const query = currentQuery();
+  if (controller) controller.abort();
+
+  if (!input.value.trim() && !activeToken) {
+    meta.textContent = '';
+    renderEmpty('bi-search', 'Start typing to search the DSA sheet.');
+    return;
+  }
+
+  controller = new AbortController();
+  meta.textContent = 'Searching...';
+
+  try {
+    const res = await fetch(`/api/search_questions?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+    renderResults(await res.json());
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      meta.textContent = '';
+      renderEmpty('bi-wifi-off', 'Search failed. Please try again.');
+    }
+  }
+}
+
+function scheduleSearch() {
+  window.clearTimeout(debounceTimer);
+  debounceTimer = window.setTimeout(runSearch, 180);
+}
+
+input.addEventListener('input', scheduleSearch);
+clearBtn.addEventListener('click', () => {
+  input.value = '';
+  input.focus();
+  scheduleSearch();
+});
+chips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    setActiveChip(chip.dataset.token);
+    runSearch();
+  });
+});
+
+setActiveChip('');
+runSearch();
+</script>
+{% endblock %}

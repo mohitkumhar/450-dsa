@@ -4,6 +4,7 @@ import re
 import requests
 import base64
 from datetime import datetime
+from urllib.parse import quote_plus
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash, session
 from pymongo import MongoClient
 from bson import ObjectId
@@ -487,6 +488,156 @@ def platform_name_filter(url):
         return 'HackerRank'
     return 'Link'
 
+
+PLATFORM_SEARCHES = {
+    'LeetCode': {
+        'aliases': ('lc', 'leetcode', 'leet code'),
+        'color': 'lc',
+        'url': 'https://duckduckgo.com/?q=site%3Aleetcode.com%2Fproblems+{query}',
+    },
+    'GFG': {
+        'aliases': ('gfg', 'geeksforgeeks', 'geeks for geeks'),
+        'color': 'gfg',
+        'url': 'https://duckduckgo.com/?q=site%3Ageeksforgeeks.org%2Fproblems+{query}',
+    },
+    'Coding Ninjas': {
+        'aliases': ('cn', 'coding ninjas', 'codingninjas', 'code360', 'naukri code360'),
+        'color': 'cn',
+        'url': 'https://duckduckgo.com/?q=%28site%3Anaukri.com%2Fcode360%2Fproblems+OR+site%3Acodingninjas.com%2Fcodestudio%2Fproblems%29+{query}',
+    },
+    'HackerRank': {
+        'aliases': ('hr', 'hackerrank', 'hacker rank'),
+        'color': 'hr',
+        'url': 'https://duckduckgo.com/?q=site%3Ahackerrank.com%2Fchallenges+{query}',
+    },
+}
+
+
+def parse_search_query(raw_query):
+    """Return cleaned query text and platform names mentioned by the user."""
+    query = (raw_query or '').strip()
+    query_l = query.lower()
+    requested_platforms = []
+
+    for platform, meta in PLATFORM_SEARCHES.items():
+        platform_requested = False
+        for alias in meta['aliases']:
+            pattern = r'(?<![a-z0-9])' + re.escape(alias) + r'(?![a-z0-9])'
+            if re.search(pattern, query_l):
+                platform_requested = True
+                query = re.sub(pattern, ' ', query, flags=re.IGNORECASE)
+                query_l = query.lower()
+        if platform_requested:
+            requested_platforms.append(platform)
+
+    cleaned = re.sub(r'\s+', ' ', query).strip()
+    return cleaned, requested_platforms
+
+
+def tokenize_search_text(value):
+    return [token for token in re.split(r'[^a-z0-9]+', (value or '').lower()) if token]
+
+
+def build_external_searches(query, requested_platforms=None):
+    platforms = requested_platforms or list(PLATFORM_SEARCHES.keys())
+    encoded = quote_plus(query)
+    return [
+        {
+            'platform': platform,
+            'url': PLATFORM_SEARCHES[platform]['url'].format(query=encoded),
+            'color': PLATFORM_SEARCHES[platform]['color'],
+        }
+        for platform in platforms
+        if platform in PLATFORM_SEARCHES and query
+    ]
+
+
+def question_links(question):
+    links = []
+    for field in ('url', 'url2'):
+        url = question.get(field)
+        if not url:
+            continue
+        platform = platform_name_filter(url)
+        links.append({
+            'platform': platform,
+            'url': url,
+            'color': PLATFORM_SEARCHES.get(platform, {}).get('color', 'link'),
+        })
+    return links
+
+
+def search_dsa_questions(raw_query, limit=40):
+    query, requested_platforms = parse_search_query(raw_query)
+    query_tokens = tokenize_search_text(query)
+    if not query_tokens:
+        return {
+            'query': query,
+            'requested_platforms': requested_platforms,
+            'results': [],
+            'external_searches': [],
+        }
+
+    topics = {t['_id']: t for t in db.topic.find({}, {'name': 1, 'position': 1})}
+    results = []
+
+    for q in db.question.find({}, {'problem': 1, 'topic': 1, 'url': 1, 'url2': 1}):
+        topic_doc = topics.get(q.get('topic'), {})
+        problem = q.get('problem', '')
+        topic_name = topic_doc.get('name', 'Unknown')
+        links = question_links(q)
+
+        if requested_platforms and not any(link['platform'] in requested_platforms for link in links):
+            platform_score = 0
+        else:
+            platform_score = 8 if requested_platforms else 0
+
+        title_l = problem.lower()
+        topic_l = topic_name.lower()
+        url_l = ' '.join(link['url'].lower() for link in links)
+        title_tokens = set(tokenize_search_text(problem))
+        topic_tokens = set(tokenize_search_text(topic_name))
+
+        score = platform_score
+        if query.lower() in title_l:
+            score += 70
+        if query.lower() in topic_l:
+            score += 28
+
+        matched_tokens = 0
+        for token in query_tokens:
+            if token in title_tokens:
+                score += 18
+                matched_tokens += 1
+            elif token in topic_tokens:
+                score += 8
+                matched_tokens += 1
+            elif token in url_l:
+                score += 4
+                matched_tokens += 1
+
+        if matched_tokens == 0 and query.lower() not in title_l and query.lower() not in topic_l:
+            continue
+
+        results.append({
+            'id': str(q['_id']),
+            'problem': problem,
+            'topic': topic_name,
+            'topic_id': str(q.get('topic')),
+            'topic_position': topic_doc.get('position', 999),
+            'links': links,
+            'external_searches': build_external_searches(problem, requested_platforms),
+            'score': score,
+        })
+
+    results.sort(key=lambda r: (-r['score'], r['topic_position'], r['problem'].lower()))
+    return {
+        'query': query,
+        'requested_platforms': requested_platforms,
+        'results': results[:limit],
+        'external_searches': build_external_searches(query, requested_platforms),
+    }
+
 @app.template_filter('platform_color')
 def platform_color_filter(name):
     colors = {
@@ -530,6 +681,25 @@ def index():
         }
     
     return render_template('index.html', topics=topics, total_questions=total_questions, done_questions=done_questions, topic_progress=topic_progress)
+
+
+@app.route('/search')
+def search():
+    initial_query = request.args.get('q', '').strip()
+    return render_template('search.html', initial_query=initial_query)
+
+
+@app.route('/api/search_questions')
+def api_search_questions():
+    raw_query = request.args.get('q', '')
+    try:
+        limit = min(max(int(request.args.get('limit', 40)), 1), 80)
+    except ValueError:
+        limit = 40
+
+    payload = search_dsa_questions(raw_query, limit=limit)
+    return jsonify(payload)
+
 
 @app.route('/topic/<topic_id>')
 def topic(topic_id):
