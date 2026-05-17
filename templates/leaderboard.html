@@ -9,6 +9,7 @@
 /* Tab Switcher */
 .lb-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -201,6 +202,7 @@
 .score-cell { font-weight: 900; font-size: 1rem; color: var(--accent); }
 .score-cell.rating-mode { color: #ffb800; }
 .score-cell.questions-mode { color: var(--success); }
+.score-cell.college-mode { color: #38bdf8; }
 
 .me-tag {
   display: inline-flex;
@@ -214,6 +216,13 @@
   font-weight: 700;
   margin-left: 6px;
   vertical-align: middle;
+}
+
+.top-user-note {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  margin-top: 4px;
 }
 
 .lb-empty {
@@ -261,6 +270,9 @@
   <button class="lb-tab" data-mode="rating" id="tab-rating">
     <i class="bi bi-star-fill"></i> LeetCode Rating
   </button>
+  <button class="lb-tab" data-mode="college" id="tab-college">
+    <i class="bi bi-mortarboard-fill"></i> College Ranking
+  </button>
 </div>
 
 <!-- Podium (Top 3) -->
@@ -274,10 +286,10 @@
     <thead>
       <tr>
         <th>Rank</th>
-        <th>User</th>
+        <th id="nameHeader">User</th>
         <th id="scoreHeader">C-Score</th>
-        <th>DSA Done</th>
-        <th>Platforms</th>
+        <th id="dsaHeader">DSA Done</th>
+        <th id="platformHeader">Platforms</th>
       </tr>
     </thead>
     <tbody id="lbBody">
@@ -295,6 +307,7 @@ const DATA = {
   cscore: {{ by_cscore | tojson }},
   questions: {{ by_questions | tojson }},
   rating: {{ by_rating | tojson }},
+  college: {{ by_college | tojson }},
 };
 const CURRENT_USER_ID = {{ current_user_id | tojson }};
 
@@ -304,6 +317,7 @@ function getScoreValue(entry, mode) {
   if (mode === 'cscore') return entry.c_score;
   if (mode === 'questions') return entry.total_solved;
   if (mode === 'rating') return entry.lc_rating;
+  if (mode === 'college') return entry.c_score;
   return 0;
 }
 
@@ -311,12 +325,14 @@ function getScoreLabel(mode) {
   if (mode === 'cscore') return 'C-Score';
   if (mode === 'questions') return 'Solved';
   if (mode === 'rating') return 'Rating';
+  if (mode === 'college') return 'College Score';
   return '';
 }
 
 function getScoreClass(mode) {
   if (mode === 'rating') return 'rating-mode';
   if (mode === 'questions') return 'questions-mode';
+  if (mode === 'college') return 'college-mode';
   return '';
 }
 
@@ -342,12 +358,15 @@ function renderPodium(entries, mode) {
   top3.forEach((e, i) => {
     const score = getScoreValue(e, mode);
     const label = getScoreLabel(mode);
+    const subtitle = mode === 'college'
+      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'}`
+      : (e.college || '-');
     html += `
       <div class="podium-card ${medals[i]}">
         <div class="podium-medal ${medalClasses[i]}">${i + 1}</div>
         <div class="podium-avatar">${avatarHTML(e)}</div>
         <div class="podium-name">${e.name}${e.user_id === CURRENT_USER_ID ? '<span class="me-tag">YOU</span>' : ''}</div>
-        <div class="podium-college">${e.college || '—'}</div>
+        <div class="podium-college">${subtitle}</div>
         <div class="podium-score">${score}</div>
         <div class="podium-score-label">${label}</div>
       </div>`;
@@ -359,10 +378,18 @@ function renderPodium(entries, mode) {
 function renderTable(entries, mode) {
   const body = document.getElementById('lbBody');
   const header = document.getElementById('scoreHeader');
+  const nameHeader = document.getElementById('nameHeader');
+  const dsaHeader = document.getElementById('dsaHeader');
+  const platformHeader = document.getElementById('platformHeader');
   header.textContent = getScoreLabel(mode);
+  const isCollegeMode = mode === 'college';
+  nameHeader.textContent = isCollegeMode ? 'College' : 'User';
+  dsaHeader.textContent = isCollegeMode ? 'DSA Done' : 'DSA Done';
+  platformHeader.textContent = isCollegeMode ? 'Summary' : 'Platforms';
 
   if (entries.length === 0) {
-    body.innerHTML = `<tr><td colspan="5"><div class="lb-empty"><i class="bi bi-people"></i><p>No users yet. Be the first to join!</p></div></td></tr>`;
+    const emptyText = isCollegeMode ? 'No colleges yet. Add your college in your profile to appear here.' : 'No users yet. Be the first to join!';
+    body.innerHTML = `<tr><td colspan="5"><div class="lb-empty"><i class="bi bi-people"></i><p>${emptyText}</p></div></td></tr>`;
     return;
   }
 
@@ -372,6 +399,21 @@ function renderTable(entries, mode) {
     const isMe = e.user_id === CURRENT_USER_ID;
     const score = getScoreValue(e, mode);
     const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
+    const nameHTML = isCollegeMode
+      ? `${e.college}<span class="top-user-note">Top coder: ${e.top_user ? e.top_user.name : 'N/A'}</span>`
+      : `${e.name}${isMe ? '<span class="me-tag">YOU</span>' : ''}`;
+    const subtitleHTML = isCollegeMode
+      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'}`
+      : (e.college || '');
+    const dsaHTML = isCollegeMode
+      ? `<span class="stat-badge dsa">${e.dsa_done} total</span>`
+      : `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
+    const platformHTML = isCollegeMode
+      ? `<span class="stat-badge lc">Solved ${e.total_solved}</span> ${e.lc_rating ? `<span class="stat-badge lc">Avg LC ${e.lc_rating}</span>` : ''}`
+      : `${e.lc_total ? `<span class="stat-badge lc">LC ${e.lc_total}</span> ` : ''}
+          ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span> ` : ''}
+          ${e.cn_total ? `<span class="stat-badge cn">CN ${e.cn_total}</span> ` : ''}
+          ${e.hr_total ? `<span class="stat-badge hr">HR ${e.hr_total}</span>` : ''}`;
 
     html += `
       <tr class="${isMe ? 'me-row' : ''}">
@@ -382,18 +424,15 @@ function renderTable(entries, mode) {
           <div class="user-cell">
             <div class="user-cell-avatar">${avatarHTML(e)}</div>
             <div class="user-cell-info">
-              <div class="user-cell-name">${e.name}${isMe ? '<span class="me-tag">YOU</span>' : ''}</div>
-              <div class="user-cell-college">${e.college || ''}</div>
+              <div class="user-cell-name">${nameHTML}</div>
+              <div class="user-cell-college">${subtitleHTML}</div>
             </div>
           </div>
         </td>
         <td class="score-cell ${getScoreClass(mode)}">${score}</td>
-        <td><span class="stat-badge dsa">${e.dsa_done} / 450</span></td>
+        <td>${dsaHTML}</td>
         <td>
-          ${e.lc_total ? `<span class="stat-badge lc">LC ${e.lc_total}</span> ` : ''}
-          ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span> ` : ''}
-          ${e.cn_total ? `<span class="stat-badge cn">CN ${e.cn_total}</span> ` : ''}
-          ${e.hr_total ? `<span class="stat-badge hr">HR ${e.hr_total}</span>` : ''}
+          ${platformHTML}
         </td>
       </tr>`;
   });

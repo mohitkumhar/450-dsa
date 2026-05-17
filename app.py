@@ -996,6 +996,70 @@ def build_leaderboard_data():
     return entries
 
 
+def build_college_leaderboard_data(entries=None):
+    """Aggregate user leaderboard entries into college rankings."""
+    entries = entries if entries is not None else build_leaderboard_data()
+    colleges = {}
+
+    for entry in entries:
+        college = (entry.get('college') or '').strip()
+        if not college:
+            continue
+
+        college_entry = colleges.setdefault(college.lower(), {
+            'college': college,
+            'member_count': 0,
+            'c_score': 0,
+            'total_solved': 0,
+            'dsa_done': 0,
+            'lc_total': 0,
+            'gfg_total': 0,
+            'cn_total': 0,
+            'hr_total': 0,
+            'lc_rating_total': 0,
+            'rated_member_count': 0,
+            'top_user': None,
+        })
+
+        college_entry['member_count'] += 1
+        college_entry['c_score'] += entry.get('c_score', 0)
+        college_entry['total_solved'] += entry.get('total_solved', 0)
+        college_entry['dsa_done'] += entry.get('dsa_done', 0)
+        college_entry['lc_total'] += entry.get('lc_total', 0)
+        college_entry['gfg_total'] += entry.get('gfg_total', 0)
+        college_entry['cn_total'] += entry.get('cn_total', 0)
+        college_entry['hr_total'] += entry.get('hr_total', 0)
+
+        lc_rating = entry.get('lc_rating', 0)
+        if lc_rating:
+            college_entry['lc_rating_total'] += lc_rating
+            college_entry['rated_member_count'] += 1
+
+        top_user = college_entry['top_user']
+        if top_user is None or entry.get('c_score', 0) > top_user.get('c_score', 0):
+            college_entry['top_user'] = {
+                'name': entry.get('name', 'Anonymous'),
+                'c_score': entry.get('c_score', 0),
+                'profile_photo': entry.get('profile_photo', ''),
+            }
+
+    college_entries = []
+    for college_entry in colleges.values():
+        rated_count = college_entry.pop('rated_member_count')
+        rating_total = college_entry.pop('lc_rating_total')
+        college_entry['lc_rating'] = round(rating_total / rated_count) if rated_count else 0
+        college_entry['user_id'] = ''
+        college_entry['name'] = college_entry['college']
+        college_entry['profile_photo'] = ''
+        college_entries.append(college_entry)
+
+    return sorted(
+        college_entries,
+        key=lambda x: (x['c_score'], x['total_solved'], x['member_count']),
+        reverse=True
+    )
+
+
 @app.route('/leaderboard')
 def leaderboard():
     entries = build_leaderboard_data()
@@ -1004,6 +1068,7 @@ def leaderboard():
     by_cscore = sorted(entries, key=lambda x: x['c_score'], reverse=True)
     by_questions = sorted(entries, key=lambda x: x['total_solved'], reverse=True)
     by_rating = sorted(entries, key=lambda x: x['lc_rating'], reverse=True)
+    by_college = build_college_leaderboard_data(entries)
     
     # Assign ranks (handle ties)
     def assign_ranks(sorted_list, key):
@@ -1014,6 +1079,7 @@ def leaderboard():
     assign_ranks(by_cscore, 'cscore')
     assign_ranks(by_questions, 'questions')
     assign_ranks(by_rating, 'rating')
+    assign_ranks(by_college, 'college')
     
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
     
@@ -1021,6 +1087,7 @@ def leaderboard():
                            by_cscore=by_cscore,
                            by_questions=by_questions,
                            by_rating=by_rating,
+                           by_college=by_college,
                            current_user_id=current_user_id)
 
 
@@ -1033,6 +1100,8 @@ def api_leaderboard():
         entries.sort(key=lambda x: x['total_solved'], reverse=True)
     elif mode == 'rating':
         entries.sort(key=lambda x: x['lc_rating'], reverse=True)
+    elif mode == 'college':
+        entries = build_college_leaderboard_data(entries)
     else:
         entries.sort(key=lambda x: x['c_score'], reverse=True)
     
