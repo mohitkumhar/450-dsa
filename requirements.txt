@@ -1,9 +1,9 @@
 Flask==2.3.2
-pymongo
-Flask-Login
-Authlib
-requests
-python-dotenv
-email-validator
-Flask-Bcrypt
+pymongo==4.17.0
+Flask-Login==0.6.3
+Authlib==1.6.12
+requests==2.32.5
+python-dotenv==1.2.1
+email-validator==2.3.0
+Flask-Bcrypt==1.0.1
 # pyjson5==1.6.2
