@@ -37,7 +37,10 @@ profile_bp = Blueprint("profile", __name__)
 @login_required
 @limiter.limit("5 per minute")
 def sync_platforms():
-    data = request.json
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
+
     now = utc_now()
     user_id = current_user.id
 
