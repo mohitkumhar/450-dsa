@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 
-from app.extensions import limiter
+from app.extensions import limiter, cache
 from app.utils import build_college_leaderboard_data, build_leaderboard_data
 
 
@@ -10,6 +10,7 @@ leaderboard_bp = Blueprint("leaderboard", __name__)
 
 @leaderboard_bp.route("/leaderboard")
 @limiter.limit("20 per minute")
+@cache.cached(timeout=300)
 def leaderboard():
     entries = build_leaderboard_data()
 
@@ -40,6 +41,7 @@ def leaderboard():
 
 
 @leaderboard_bp.route("/api/leaderboard")
+@cache.cached(timeout=300, query_string=True)
 def api_leaderboard():
     mode = request.args.get("mode", "cscore")
     entries = build_leaderboard_data()

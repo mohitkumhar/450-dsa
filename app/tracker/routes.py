@@ -57,8 +57,23 @@ def topic(topic_id):
         return "Topic not found", 404
 
     questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    
+    # Get difficulty filter from query parameter
+    difficulty_filter = request.args.get('difficulty', 'all')
+    
+    # Filter questions by difficulty if needed
+    if difficulty_filter != 'all':
+        questions = [q for q in questions if q.get('difficulty', 'Medium') == difficulty_filter]
+    
     progress_dict = current_user.progress if current_user.is_authenticated else {}
-    return render_template("topic.html", topic=topic_doc, questions=questions, progress_dict=progress_dict)
+    
+    return render_template(
+        "topic.html", 
+        topic=topic_doc, 
+        questions=questions, 
+        progress_dict=progress_dict,
+        difficulty_filter=difficulty_filter
+    )
 
 
 @tracker_bp.route("/topic/<topic_id>/export-notes")
@@ -130,3 +145,41 @@ def bookmarks():
         question["topic_name"] = topic_docs.get(question["topic"], "Unknown")
 
     return render_template("bookmarks.html", questions=questions, progress_dict=progress)
+
+
+@tracker_bp.route("/export/csv")
+@login_required
+def export_csv():
+    import csv
+    from io import StringIO
+    from flask import Response
+    
+    questions = list(db.question.find())
+    topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
+    topic_lookup = {
+        topic['_id']: topic.get('name', 'Unknown')
+        for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
+    }
+    
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Topic', 'Problem', 'Status', 'Bookmarked', 'Notes', 'Difficulty', 'URL', 'URL2'])
+    
+    for q in questions:
+        topic_name = topic_lookup.get(q.get('topic'), 'Unknown')
+        q_id = str(q['_id'])
+        progress = current_user.progress.get(q_id, {})
+        status = 'Done' if progress.get('done') else 'Pending'
+        bookmarked = 'Yes' if progress.get('bookmark') else 'No'
+        notes = progress.get('notes', '')
+        difficulty = q.get('difficulty', 'Medium')
+        
+        writer.writerow([
+            topic_name, q.get('problem', ''), status, bookmarked, 
+            notes, difficulty, q.get('url', ''), q.get('url2', '')
+        ])
+    
+    response = Response(output.getvalue(), mimetype='text/csv')
+    response.headers['Content-Disposition'] = 'attachment; filename=my_dsa_progress.csv'
+    return response

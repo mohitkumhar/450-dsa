@@ -5,6 +5,19 @@
 .back-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .topic-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
 .topic-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px; }
+
+/* Filter buttons */
+.filter-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.filter-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+/* Difficulty badges */
+.difficulty-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
+.difficulty-easy { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.difficulty-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+.difficulty-hard { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+
 .questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
 .q-table { width: 100%; border-collapse: collapse; }
 .q-table thead th { background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
@@ -73,14 +86,23 @@
     {% endif %}
 </div>
 
+<!-- Filter Buttons -->
+<div class="filter-buttons">
+    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all">📋 All ({{ questions|length }})</button>
+    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy">🟢 Easy</button>
+    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium">🟡 Medium</button>
+    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard">🔴 Hard</button>
+</div>
+
 <div class="questions-table-wrap">
-    <table class="q-table" aria-label="Questions for {{ topic.name }}">
+    <table class="q-table" id="questions-table" aria-label="Questions for {{ topic.name }}">
         <caption class="visually-hidden">Questions for {{ topic.name }}</caption>
         <thead>
             <tr>
                 <th scope="col">#</th>
                 <th scope="col">Done</th>
                 <th scope="col">Problem</th>
+                <th scope="col">Difficulty</th>
                 <th scope="col">Save</th>
                 <th scope="col">Notes</th>
             </tr>
@@ -89,7 +111,8 @@
             {% for q in questions %}
             {% set q_id_str = q._id | string %}
             {% set p = progress_dict.get(q_id_str) %}
-            <tr class="{% if p and p.done %}row-done{% endif %}" id="row-{{ q_id_str }}">
+            {% set difficulty = q.get('difficulty', 'Medium') %}
+            <tr class="{% if p and p.done %}row-done{% endif %}" id="row-{{ q_id_str }}" data-difficulty="{{ difficulty }}">
                 <td class="q-num">{{ loop.index }}</td>
                 <td>
                     <input type="checkbox" class="q-checkbox status-checkbox"
@@ -116,6 +139,11 @@
                             </a>
                         {% endif %}
                     </div>
+                </td>
+                <td>
+                    <span class="difficulty-badge difficulty-{{ difficulty|lower }}">
+                        {{ difficulty }}
+                    </span>
                 </td>
                 <td>
                     <button class="action-icon bookmark-btn {% if p and p.bookmark %}bookmarked{% endif %}"
@@ -195,6 +223,16 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
                 icon.className = 'bi bi-bookmark';
             }
         });
+    });
+});
+
+// Difficulty Filtering
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const difficulty = this.dataset.difficulty;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('difficulty', difficulty);
+        window.location.href = currentUrl.toString();
     });
 });
 

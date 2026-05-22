@@ -5,6 +5,7 @@ from flask_limiter.util import get_remote_address
 from flask_login import LoginManager
 from flask_pymongo import PyMongo
 from werkzeug.local import LocalProxy
+from flask_caching import Cache
 
 
 mongo = PyMongo()
@@ -15,3 +16,4 @@ oauth = OAuth()
 limiter = Limiter(key_func=get_remote_address, default_limits=[], headers_enabled=True)
 github = LocalProxy(lambda: oauth.create_client("github"))
 google = LocalProxy(lambda: oauth.create_client("google"))
+cache = Cache()

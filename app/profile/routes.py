@@ -1,18 +1,18 @@
 import base64
 import json
 import os
+import time
 
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
+# Comment out cloudinary for now if not installed
+# import cloudinary
+# import cloudinary.uploader
+# import cloudinary.api
 import requests
 from flask import Blueprint, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
-import time
-from card_generator import generate_progress_card
 
 from app.extensions import db
-from app.extensions import limiter
+from app.extensions import limiter, cache
 from app.platforms.fetchers import (
     fetch_coding_ninjas,
     fetch_gfg,
@@ -25,7 +25,7 @@ from app.platforms.fetchers import (
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
 from profile_validation import build_profile_updates
 
-
+# THIS LINE IS IMPORTANT - defines the blueprint
 profile_bp = Blueprint("profile", __name__)
 
 
@@ -128,6 +128,9 @@ def sync_platforms():
     update_fields["external_totals"] = totals
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
+
+    cache.clear()
+    
     return jsonify({"success": True})
 
 
@@ -174,6 +177,7 @@ def public_card(user_id):
         dsa_progress = user.get("dsa_progress", 0)
         current_streak = user.get("current_streak", 0)
         platforms = user.get("platforms", {})
+        from card_generator import generate_progress_card
         img = generate_progress_card(name, c_score, dsa_progress, current_streak, platforms)
         img_io = BytesIO()
         img.save(img_io, 'PNG')
@@ -213,40 +217,7 @@ def search_universities():
 @login_required
 @limiter.limit("10 per minute")
 def upload_photo():
-    if "photo" not in request.files:
-        return jsonify({"success": False, "error": "No file"}), 400
-    file_obj = request.files["photo"]
-    if file_obj.filename == "":
-        return jsonify({"success": False, "error": "Empty filename"}), 400
-    allowed = {"png", "jpg", "jpeg", "gif", "webp"}
-    ext = file_obj.filename.rsplit(".", 1)[-1].lower()
-    if ext not in allowed:
-        return jsonify({"success": False, "error": "Invalid file type"}), 400
-    
-    file_obj.seek(0, os.SEEK_END)
-    size = file_obj.tell()
-    if size > 2 * 1024 * 1024:
-        return jsonify({'success': False, 'error': 'File too large (max 2MB)'}), 400
-    file_obj.seek(0)
-    
-    try:
-        upload_result = cloudinary.uploader.upload(
-            file_obj,
-            folder="450dsa_profiles",
-            public_id=f"user_{current_user.id}",
-            overwrite=True,
-            transformation=[
-                {'width': 500, 'height': 500, 'crop': 'fill', 'gravity': 'face'}
-            ]
-        )
-        photo_url = upload_result.get('secure_url')
-        
-        db.user.update_one({'_id': current_user.id}, {'$set': {'profile_photo': photo_url}})
-        current_user.reload()
-        
-        return jsonify({'success': True, 'photo_url': photo_url})
-    except Exception as e:
-        return jsonify({'success': False, 'error': f"Cloudinary error: {str(e)}"}), 500
+    return jsonify({"success": False, "error": "Photo upload disabled (Cloudinary not configured)"}), 500
 
 
 @profile_bp.route("/profile")
@@ -257,6 +228,23 @@ def profile():
 
     all_questions = list(db.question.find())
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
+
+    # ===== Count difficulties from DSA questions =====
+    difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
+    
+    dsa_easy = 0
+    dsa_medium = 0
+    dsa_hard = 0
+    
+    for q_id in solved_items.keys():
+        diff = difficulty_map.get(q_id, "Medium")
+        if diff == "Easy":
+            dsa_easy += 1
+        elif diff == "Medium":
+            dsa_medium += 1
+        elif diff == "Hard":
+            dsa_hard += 1
+    # ================================================
 
     platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "Other": 0}
     daily_counts = {}
@@ -306,9 +294,11 @@ def profile():
     platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0))
     platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0))
 
-    lc_easy = ext_totals.get("LeetCode_Easy", 0)
-    lc_medium = ext_totals.get("LeetCode_Medium", 0)
-    lc_hard = ext_totals.get("LeetCode_Hard", 0)
+    # Use DSA difficulties for the chart
+    lc_easy = dsa_easy
+    lc_medium = dsa_medium
+    lc_hard = dsa_hard
+    
     lc_contests = ext_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_totals.get("LeetCode_Rating", 0)
     lc_rank = ext_totals.get("LeetCode_GlobalRank", 0)
@@ -376,3 +366,4 @@ def profile():
         lc_badges=lc_badges,
         hr_badges=hr_badges,
     )
+    
