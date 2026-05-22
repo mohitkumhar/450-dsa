@@ -195,7 +195,11 @@ def search_universities():
     if len(query) < 2:
         return jsonify([])
     try:
-        response = requests.get(f"http://universities.hipolabs.com/search?name={query}", timeout=5)
+        response = requests.get(
+            "https://universities.hipolabs.com/search",
+            params={"name": query},
+            timeout=5,
+        )
         if response.status_code == 200:
             data = response.json()
             seen = set()
