@@ -55,19 +55,14 @@ def create_app():
         client_kwargs={"scope": "openid email profile"},
     )
 
-    db.user.create_index("email", unique=True, sparse=True)
-    db.user.create_index("github_id", unique=True, sparse=True)
-    db.user.create_index("google_id", unique=True, sparse=True)
-    db.topic.create_index("name", unique=True)
-    db.question.create_index([("problem", "text")], name="problem_text")
-    db.user.create_index("is_admin")
-    db.topic.create_index("name", unique=True)
     # Create indexes (skip if using mock)
     try:
         db.user.create_index("email", unique=True, sparse=True)
         db.user.create_index("github_id", unique=True, sparse=True)
         db.user.create_index("google_id", unique=True, sparse=True)
+        db.user.create_index("is_admin")
         db.topic.create_index("name", unique=True)
+        db.question.create_index([("problem", "text")], name="problem_text")
     except Exception:
         pass  # Skip indexes if using mock DB
 
