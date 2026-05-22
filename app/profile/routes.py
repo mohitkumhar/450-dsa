@@ -10,6 +10,9 @@ import time
 import requests
 from flask import Blueprint, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
+from flask import Response
+import time
+from card_generator import generate_progress_card
 
 from app.extensions import db
 from app.extensions import limiter, cache
@@ -24,6 +27,7 @@ from app.platforms.fetchers import (
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
 from profile_validation import build_profile_updates
+from progress_export import build_progress_csv
 
 # THIS LINE IS IMPORTANT - defines the blueprint
 profile_bp = Blueprint("profile", __name__)
@@ -366,4 +370,23 @@ def profile():
         lc_badges=lc_badges,
         hr_badges=hr_badges,
     )
+
+
+@profile_bp.route('/export_csv', endpoint='export_csv')
+@login_required
+def export_csv():
+    # Build CSV of all questions + user's progress and return as attachment
+    try:
+        all_questions = list(db.question.find())
+        topic_lookup = {t['_id']: t.get('name', '') for t in db.topic.find()}
+        csv_text = build_progress_csv(all_questions, topic_lookup, current_user.progress or {})
+        return Response(
+            csv_text,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=progress.csv'
+            }
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
     

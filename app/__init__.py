@@ -1,9 +1,11 @@
 import json
 import os
+import secrets
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, session
 
+from app.admin import admin_bp
 from app.auth import auth_bp
 from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth, cache
 from app.leaderboard import leaderboard_bp
@@ -58,6 +60,8 @@ def create_app():
     db.user.create_index("google_id", unique=True, sparse=True)
     db.topic.create_index("name", unique=True)
     db.question.create_index([("problem", "text")], name="problem_text")
+    db.user.create_index("is_admin")
+    db.topic.create_index("name", unique=True)
     # Create indexes (skip if using mock)
     try:
         db.user.create_index("email", unique=True, sparse=True)
@@ -66,6 +70,9 @@ def create_app():
         db.topic.create_index("name", unique=True)
     except Exception:
         pass  # Skip indexes if using mock DB
+
+    # Lightweight schema backfill for legacy user documents.
+    db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
 
     data_path = os.path.abspath(os.path.join(app.root_path, os.pardir, "data.json"))
     app._db_initialized = False
@@ -102,11 +109,23 @@ def create_app():
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
 
+    @app.context_processor
+    def inject_csrf_token():
+        def csrf_token():
+            token = session.get("csrf_token")
+            if not token:
+                token = secrets.token_urlsafe(32)
+                session["csrf_token"] = token
+            return token
+
+        return {"csrf_token": csrf_token}
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(tracker_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(search_bp)
+    app.register_blueprint(admin_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):

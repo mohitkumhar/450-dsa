@@ -21,6 +21,9 @@ class FakeCollection:
     def insert_many(self, *args, **kwargs):
         return None
 
+    def update_many(self, *args, **kwargs):
+        return None
+
 
 class FakeDB:
     def __init__(self):
@@ -48,7 +51,7 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert flask_app.config["MONGO_URI"] == "mongodb://localhost:27017/450_dsa"
     assert login_manager.login_view == "auth.login"
     assert registered_clients == ["github", "google"]
-    assert {"auth", "tracker", "profile", "leaderboard", "search"} <= set(flask_app.blueprints)
+    assert {"auth", "tracker", "profile", "leaderboard", "search", "admin"} <= set(flask_app.blueprints)
 
     routes = {rule.rule for rule in flask_app.url_map.iter_rules()}
     assert "/" in routes
@@ -75,3 +78,5 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
 
     question_indexes = app_module.db.question.indexes
     assert (([("problem", "text")],), {"name": "problem_text"}) in question_indexes
+    assert "/admin" in routes
+    assert "/admin/users/<user_id>/delete" in routes

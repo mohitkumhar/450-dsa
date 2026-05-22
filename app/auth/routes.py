@@ -3,6 +3,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from flask_login import UserMixin, current_user, login_user, logout_user
 
 from app.extensions import bcrypt, db, github, google, login_manager
+from app.utils import utc_now
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -24,6 +25,10 @@ class UserWrapper(UserMixin):
     @property
     def progress(self):
         return self._doc.get("progress", {})
+
+    @property
+    def is_admin(self):
+        return bool(self._doc.get("is_admin", False))
 
     def __getattr__(self, name):
         if name.startswith("_"):
@@ -75,7 +80,16 @@ def register():
 
         hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
         try:
-            db.user.insert_one({"name": name, "email": email, "password": hashed_password, "progress": {}})
+            db.user.insert_one(
+                {
+                    "name": name,
+                    "email": email,
+                    "password": hashed_password,
+                    "progress": {},
+                    "is_admin": False,
+                    "created_at": utc_now(),
+                }
+            )
             flash("Your account has been created! You can now log in.", "success")
             return redirect(url_for("auth.login"))
         except Exception:
@@ -130,6 +144,8 @@ def authorize_github():
                     "email": email,
                     "github_id": github_id,
                     "progress": {},
+                    "is_admin": False,
+                    "created_at": utc_now(),
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
@@ -168,6 +184,8 @@ def authorize_google():
                     "email": email,
                     "google_id": google_id,
                     "progress": {},
+                    "is_admin": False,
+                    "created_at": utc_now(),
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})

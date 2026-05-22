@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.admin-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.admin-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(150deg, rgba(255, 107, 0, 0.12), rgba(59, 130, 246, 0.06));
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.admin-panels {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 16px;
+}
+
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.panel-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.panel-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.panel-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.search-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 9px;
+    padding: 9px 12px;
+    min-width: 220px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 9px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.action-btn.danger {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #f87171;
+}
+
+.action-btn.danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+    padding: 11px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.users-table th {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.users-table td {
+    font-size: 0.9rem;
+}
+
+.role-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+.role-pill.admin {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+
+.pagination-row {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pagination-links {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.page-chip {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+.page-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.page-chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.log-area {
+    max-height: 460px;
+    overflow: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    background: #0f0f0f;
+    padding: 10px;
+}
+
+.log-line {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.76rem;
+    color: #ddd;
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+
+.log-source {
+    color: #9ca3af;
+    margin-right: 6px;
+}
+
+.empty-state {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.58);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    padding: 14px;
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    padding: 18px;
+}
+
+.modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.modal-copy {
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    margin-bottom: 14px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+@media (max-width: 980px) {
+    .admin-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 780px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-form {
+        width: 100%;
+    }
+
+    .search-input {
+        max-width: none;
+    }
+}
+</style>
+
+<section class="admin-header">
+    <div>
+        <h1 class="admin-title">Admin Dashboard</h1>
+        <p class="admin-subtitle">Manage users, monitor activity, and review recent server errors.</p>
+    </div>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <p class="stat-label">Total Users</p>
+        <p class="stat-value">{{ stats.total_users }}</p>
+    </article>
+    <article class="stat-card">
+        <p class="stat-label">Total Solved / Submissions</p>
+        <p class="stat-value">{{ stats.total_submissions }}</p>
+    </article>
+    <article class="stat-card">
+        <p class="stat-label">Active Users Today</p>
+        <p class="stat-value">{{ stats.active_users_today }}</p>
+    </article>
+</section>
+
+<section class="admin-panels">
+    <article class="panel">
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">User Management</h2>
+                <p class="panel-subtitle">Showing {{ users|length }} of {{ total_matching }} matching users</p>
+            </div>
+            <form class="search-form" method="GET" action="{{ url_for('admin.dashboard') }}">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ search_term }}"
+                    class="search-input"
+                    placeholder="Search by username or email"
+                    aria-label="Search users"
+                >
+                <button class="action-btn" type="submit"><i class="bi bi-search"></i> Search</button>
+                {% if search_term %}
+                <a class="action-btn" href="{{ url_for('admin.dashboard') }}">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="table-wrap">
+            <table class="users-table" aria-label="Registered users">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if users %}
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ ((page - 1) * per_page) + loop.index }}</td>
+                            <td>{{ user.name or '-' }}</td>
+                            <td>{{ user.email or '-' }}</td>
+                            <td>
+                                <span class="role-pill {% if user.is_admin %}admin{% endif %}">
+                                    {% if user.is_admin %}
+                                    <i class="bi bi-shield-lock-fill"></i> Admin
+                                    {% else %}
+                                    User
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if user._id|string == current_user.id|string %}
+                                <span class="action-btn" aria-disabled="true">Current User</span>
+                                {% else %}
+                                <button
+                                    type="button"
+                                    class="action-btn danger js-delete-user"
+                                    data-user-id="{{ user._id }}"
+                                    data-user-name="{{ user.name or user.email or 'this user' }}"
+                                    data-q="{{ search_term }}"
+                                    data-page="{{ page }}"
+                                >
+                                    <i class="bi bi-trash3-fill"></i> Delete
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="empty-state">No users found for the current filter.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pagination-row">
+            <p class="panel-subtitle">Page {{ page }} of {{ total_pages }}</p>
+            <nav class="pagination-links" aria-label="User table pagination">
+                {% if page > 1 %}
+                <a class="page-chip" href="{{ url_for('admin.dashboard', q=search_term, page=page-1) }}">Previous</a>
+                {% endif %}
+                <span class="page-chip active">{{ page }}</span>
+                {% if page < total_pages %}
+                <a class="page-chip" href="{{ url_for('admin.dashboard', q=search_term, page=page+1) }}">Next</a>
+                {% endif %}
+            </nav>
+        </div>
+    </article>
+
+    <article class="panel">
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">Recent Error Logs</h2>
+                <p class="panel-subtitle">Latest entries from known log files.</p>
+            </div>
+        </div>
+
+        <div class="log-area">
+            {% if logs %}
+                {% for entry in logs %}
+                <div class="log-line"><span class="log-source">[{{ entry.source }}]</span>{{ entry.line }}</div>
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">No log files found yet. Add app logging to populate this panel.</p>
+            {% endif %}
+        </div>
+    </article>
+</section>
+
+<div class="modal-backdrop" id="delete-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="modal-card">
+        <h3 class="modal-title" id="delete-modal-title">Delete User Account</h3>
+        <p class="modal-copy" id="delete-modal-copy">This action is permanent.</p>
+        <form id="delete-user-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="delete-q" name="q" value="">
+            <input type="hidden" id="delete-page" name="page" value="1">
+            <div class="modal-actions">
+                <button type="button" class="action-btn" id="cancel-delete-btn">Cancel</button>
+                <button type="submit" class="action-btn danger"><i class="bi bi-trash3-fill"></i> Confirm Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

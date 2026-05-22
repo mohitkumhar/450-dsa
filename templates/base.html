@@ -554,6 +554,13 @@
                 <i class="bi bi-trophy-fill"></i>
                 <span class="tooltip-label">Leaderboard</span>
             </a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}"
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin">
+                <i class="bi bi-shield-lock-fill"></i>
+                <span class="tooltip-label">Admin</span>
+            </a>
+            {% endif %}
         </nav>
         <div class="sidebar-bottom">
             {% if current_user.is_authenticated %}

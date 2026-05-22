@@ -38,91 +38,51 @@
   box-shadow: 0 2px 8px rgba(255,107,0,0.3);
 }
 
-/* Podium */
-.podium-section { margin-bottom: 28px; }
-.podium-grid {
+/* Pagination */
+.pagination {
   display: flex;
   justify-content: center;
-  align-items: flex-end;
-  gap: 16px;
-  padding: 20px 0 10px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px;
 }
-.podium-card {
-  background: var(--bg-card);
+.pagination-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 20px 18px 16px;
-  text-align: center;
-  width: 200px;
-  position: relative;
-  transition: all 0.3s;
-}
-.podium-card:hover { transform: translateY(-4px); border-color: var(--border-color); }
-.podium-card.gold {
-  border-color: #ffd700;
-  box-shadow: 0 4px 24px rgba(255,215,0,0.15);
-  order: 2;
-  padding-top: 28px;
-  padding-bottom: 20px;
-}
-.podium-card.silver {
-  border-color: #c0c0c0;
-  box-shadow: 0 4px 20px rgba(192,192,192,0.1);
-  order: 1;
-}
-.podium-card.bronze {
-  border-color: #cd7f32;
-  box-shadow: 0 4px 20px rgba(205,127,50,0.1);
-  order: 3;
-}
-.podium-medal {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font-size: 0.85rem;
-  font-weight: 900;
-  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
 }
-.podium-medal.gold-m { background: linear-gradient(135deg, #ffd700, #ffaa00); }
-.podium-medal.silver-m { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); }
-.podium-medal.bronze-m { background: linear-gradient(135deg, #cd7f32, #b06020); }
+.pagination-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.page-info {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
 
-.podium-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  margin: 0 auto 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #fff;
-  overflow: hidden;
+/* Current user pinned row */
+.current-user-pinned {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-card);
+  border-top: 2px solid var(--accent);
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
 }
-.podium-card.gold .podium-avatar { background: linear-gradient(135deg, #ffd700, #ff8c00); width: 64px; height: 64px; font-size: 1.6rem; }
-.podium-card.silver .podium-avatar { background: linear-gradient(135deg, #c0c0c0, #888); }
-.podium-card.bronze .podium-avatar { background: linear-gradient(135deg, #cd7f32, #a0522d); }
-.podium-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-
-.podium-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.podium-college { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.podium-score {
-  font-size: 1.6rem;
-  font-weight: 900;
-  line-height: 1;
+.current-user-pinned td {
+  background: rgba(255,107,0,0.1);
 }
-.podium-card.gold .podium-score { color: #ffd700; }
-.podium-card.silver .podium-score { color: #c0c0c0; }
-.podium-card.bronze .podium-score { color: #cd7f32; }
-.podium-score-label { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 
 /* Table */
 .lb-table-wrap {
@@ -218,29 +178,14 @@
   vertical-align: middle;
 }
 
-.top-user-note {
-  display: block;
-  color: var(--text-muted);
-  font-size: 0.7rem;
-  margin-top: 4px;
-}
-
-.lb-empty {
+.loading {
   text-align: center;
-  padding: 60px 24px;
+  padding: 40px;
   color: var(--text-muted);
 }
-.lb-empty i { font-size: 3rem; display: block; margin-bottom: 12px; }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .podium-grid { gap: 8px; padding: 10px 0; }
-  .podium-card { width: 120px; padding: 14px 10px 12px; }
-  .podium-card.gold { padding-top: 20px; }
-  .podium-avatar { width: 42px; height: 42px; font-size: 1.1rem; }
-  .podium-card.gold .podium-avatar { width: 48px; height: 48px; }
-  .podium-name { font-size: 0.78rem; }
-  .podium-score { font-size: 1.2rem; }
   .lb-tabs { width: 100%; }
   .lb-tab { flex: 1; text-align: center; padding: 8px 10px; font-size: 0.78rem; }
   .lb-table thead th:nth-child(4),
@@ -248,9 +193,21 @@
   .lb-table thead th:nth-child(5),
   .lb-table tbody td:nth-child(5) { display: none; }
 }
-@media (max-width: 480px) {
-  .podium-card { width: 100px; }
-  .user-cell-college { display: none; }
+/* Make "Go to your rank" link visible in dark mode */
+.current-user-pinned a {
+  background: rgba(255, 107, 0, 0.25) !important;
+  color: #ffab4a !important;
+  border: 1px solid rgba(255, 107, 0, 0.5);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.current-user-pinned a:hover {
+  background: var(--accent) !important;
+  color: white !important;
+  text-decoration: none;
 }
 </style>
 
@@ -275,51 +232,41 @@
   </button>
 </div>
 
-<!-- Podium (Top 3) -->
-<div class="podium-section" id="podiumSection">
-  <!-- Rendered by JS based on active tab -->
-</div>
-
 <!-- Table -->
 <div class="lb-table-wrap">
   <table class="lb-table">
     <thead>
       <tr>
         <th>Rank</th>
-        <th id="nameHeader">User</th>
-        <th id="scoreHeader">C-Score</th>
-        <th id="dsaHeader">DSA Done</th>
-        <th id="platformHeader">Platforms</th>
+        <th>User</th>
+        <th>Score</th>
+        <th>DSA Done</th>
+        <th>Platforms</th>
       </tr>
     </thead>
     <tbody id="lbBody">
-      <!-- Rendered by JS -->
+      <tr><td colspan="5" class="loading">Loading...</td></tr>
     </tbody>
   </table>
+</div>
+
+<!-- Pagination -->
+<div class="pagination" id="pagination">
+  <button class="pagination-btn" id="prevBtn" disabled>← Previous</button>
+  <span class="page-info" id="pageInfo">Page 1</span>
+  <button class="pagination-btn" id="nextBtn">Next →</button>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Pre-loaded data from server (avoids extra API calls)
-const DATA = {
-  cscore: {{ by_cscore | tojson }},
-  questions: {{ by_questions | tojson }},
-  rating: {{ by_rating | tojson }},
-  college: {{ by_college | tojson }},
-};
 const CURRENT_USER_ID = {{ current_user_id | tojson }};
-
 let activeMode = 'cscore';
-
-function getScoreValue(entry, mode) {
-  if (mode === 'cscore') return entry.c_score;
-  if (mode === 'questions') return entry.total_solved;
-  if (mode === 'rating') return entry.lc_rating;
-  if (mode === 'college') return entry.c_score;
-  return 0;
-}
+let currentPage = 1;
+let totalPages = 1;
+let currentUserRank = null;
+let isLoading = false;
 
 function getScoreLabel(mode) {
   if (mode === 'cscore') return 'C-Score';
@@ -336,90 +283,80 @@ function getScoreClass(mode) {
   return '';
 }
 
-function avatarHTML(entry, size) {
+function avatarHTML(entry, size = 36) {
   if (entry.profile_photo) {
     return `<img src="${entry.profile_photo}" alt="${entry.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   }
   return (entry.name || '?')[0].toUpperCase();
 }
 
-function renderPodium(entries, mode) {
-  const section = document.getElementById('podiumSection');
-  if (entries.length < 1) {
-    section.innerHTML = '';
-    return;
+async function loadLeaderboard(page = 1) {
+  if (isLoading) return;
+  isLoading = true;
+  
+  document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading">Loading...</td></tr>';
+  
+  try {
+    const url = `/api/leaderboard?mode=${activeMode}&page=${page}&per_page=20&current_user_id=${CURRENT_USER_ID || ''}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    totalPages = data.total_pages;
+    currentPage = data.page;
+    currentUserRank = data.current_user_rank;
+    
+    renderTable(data.entries, activeMode);
+    renderPagination();
+  } catch (error) {
+    console.error('Error loading leaderboard:', error);
+    document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading">Error loading data</td></tr>';
   }
-
-  const medals = ['gold', 'silver', 'bronze'];
-  const medalClasses = ['gold-m', 'silver-m', 'bronze-m'];
-  const top3 = entries.slice(0, 3);
-
-  let html = '<div class="podium-grid">';
-  top3.forEach((e, i) => {
-    const score = getScoreValue(e, mode);
-    const label = getScoreLabel(mode);
-    const subtitle = mode === 'college'
-      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'}`
-      : (e.college || '-');
-    html += `
-      <div class="podium-card ${medals[i]}">
-        <div class="podium-medal ${medalClasses[i]}">${i + 1}</div>
-        <div class="podium-avatar">${avatarHTML(e)}</div>
-        <div class="podium-name">${e.name}${e.user_id === CURRENT_USER_ID ? '<span class="me-tag">YOU</span>' : ''}</div>
-        <div class="podium-college">${subtitle}</div>
-        <div class="podium-score">${score}</div>
-        <div class="podium-score-label">${label}</div>
-      </div>`;
-  });
-  html += '</div>';
-  section.innerHTML = html;
+  
+  isLoading = false;
 }
 
 function renderTable(entries, mode) {
   const body = document.getElementById('lbBody');
-  const header = document.getElementById('scoreHeader');
-  const nameHeader = document.getElementById('nameHeader');
-  const dsaHeader = document.getElementById('dsaHeader');
-  const platformHeader = document.getElementById('platformHeader');
-  header.textContent = getScoreLabel(mode);
   const isCollegeMode = mode === 'college';
-  nameHeader.textContent = isCollegeMode ? 'College' : 'User';
-  dsaHeader.textContent = isCollegeMode ? 'DSA Done' : 'DSA Done';
-  platformHeader.textContent = isCollegeMode ? 'Summary' : 'Platforms';
-
+  
   if (entries.length === 0) {
-    const emptyText = isCollegeMode ? 'No colleges yet. Add your college in your profile to appear here.' : 'No users yet. Be the first to join!';
-    body.innerHTML = `<tr><td colspan="5"><div class="lb-empty"><i class="bi bi-people"></i><p>${emptyText}</p></div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="5"><div class="loading">No users yet. Be the first to join!</div></td></tr>`;
     return;
   }
-
+  
   let html = '';
   entries.forEach((e, i) => {
-    const rank = i + 1;
+    const rank = e.rank;
     const isMe = e.user_id === CURRENT_USER_ID;
-    const score = getScoreValue(e, mode);
     const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
+    const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+    
+    let score = 0;
+    if (mode === 'cscore') score = e.c_score;
+    else if (mode === 'questions') score = e.total_solved;
+    else if (mode === 'rating') score = e.lc_rating;
+    else if (mode === 'college') score = e.c_score;
+    
     const nameHTML = isCollegeMode
-      ? `${e.college}<span class="top-user-note">Top coder: ${e.top_user ? e.top_user.name : 'N/A'}</span>`
+      ? `${e.college}`
       : `${e.name}${isMe ? '<span class="me-tag">YOU</span>' : ''}`;
+    
     const subtitleHTML = isCollegeMode
-      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'}`
-      : (e.college || '');
-    const dsaHTML = isCollegeMode
-      ? `<span class="stat-badge dsa">${e.dsa_done} total</span>`
-      : `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
+      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} · Top: ${e.top_user?.name || 'N/A'}`
+      : (e.college || '—');
+    
+    const dsaHTML = `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
+    
     const platformHTML = isCollegeMode
-      ? `<span class="stat-badge lc">Solved ${e.total_solved}</span> ${e.lc_rating ? `<span class="stat-badge lc">Avg LC ${e.lc_rating}</span>` : ''}`
+      ? `<span class="stat-badge lc">Solved ${e.total_solved}</span>`
       : `${e.lc_total ? `<span class="stat-badge lc">LC ${e.lc_total}</span> ` : ''}
-          ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span> ` : ''}
-          ${e.cn_total ? `<span class="stat-badge cn">CN ${e.cn_total}</span> ` : ''}
-          ${e.hr_total ? `<span class="stat-badge hr">HR ${e.hr_total}</span>` : ''}`;
-
+         ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span> ` : ''}
+         ${e.cn_total ? `<span class="stat-badge cn">CN ${e.cn_total}</span> ` : ''}
+         ${e.hr_total ? `<span class="stat-badge hr">HR ${e.hr_total}</span>` : ''}`;
+    
     html += `
       <tr class="${isMe ? 'me-row' : ''}">
-        <td class="rank-cell ${rankClass}">
-          ${rank <= 3 ? ['🥇','🥈','🥉'][rank-1] : '#' + rank}
-        </td>
+        <td class="rank-cell ${rankClass}">${rankIcon}</td>
         <td>
           <div class="user-cell">
             <div class="user-cell-avatar">${avatarHTML(e)}</div>
@@ -431,31 +368,60 @@ function renderTable(entries, mode) {
         </td>
         <td class="score-cell ${getScoreClass(mode)}">${score}</td>
         <td>${dsaHTML}</td>
-        <td>
-          ${platformHTML}
-        </td>
+        <td>${platformHTML}</td>
       </tr>`;
   });
+  
+  // Add pinned row for current user if not already visible
+  if (CURRENT_USER_ID && currentUserRank && !entries.some(e => e.user_id === CURRENT_USER_ID)) {
+    html += `<tr class="current-user-pinned me-row">
+      <td colspan="5" style="text-align: center; padding: 12px;">
+        <i class="bi bi-pin-angle-fill" style="color: var(--accent);"></i> 
+        You are ranked #${currentUserRank} in this category. 
+        <a href="?page=${Math.ceil(currentUserRank / 20)}">Go to your rank →</a>
+      </td>
+    </tr>`;
+  }
+  
   body.innerHTML = html;
+}
+
+function renderPagination() {
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const pageInfo = document.getElementById('pageInfo');
+  
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
+  pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
 }
 
 function switchTab(mode) {
   activeMode = mode;
+  currentPage = 1;
+  
   document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`.lb-tab[data-mode="${mode}"]`).classList.add('active');
-  const entries = DATA[mode];
-  renderPodium(entries, mode);
-  renderTable(entries, mode);
+  
+  loadLeaderboard(1);
 }
 
-// Init
-switchTab('cscore');
+// Event Listeners
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (currentPage > 1) loadLeaderboard(currentPage - 1);
+});
 
-// Tab click handlers
+document.getElementById('nextBtn').addEventListener('click', () => {
+  if (currentPage < totalPages) loadLeaderboard(currentPage + 1);
+});
+
 document.querySelectorAll('.lb-tab').forEach(tab => {
   tab.addEventListener('click', function() {
     switchTab(this.dataset.mode);
   });
 });
+
+// Initial load
+loadLeaderboard(1);
 </script>
 {% endblock %}
