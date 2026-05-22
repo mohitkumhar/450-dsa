@@ -175,16 +175,12 @@ def public_card(user_id):
             return send_file(cached_image, mimetype="image/png")
             
     try:
-        from io import BytesIO
         name = user.get("name", "Anonymous")
         c_score = user.get("c_score", 0)
         dsa_progress = user.get("dsa_progress", 0)
         current_streak = user.get("current_streak", 0)
-        platforms = user.get("platforms", {})
-        from card_generator import generate_progress_card
-        img = generate_progress_card(name, c_score, dsa_progress, current_streak, platforms)
-        img_io = BytesIO()
-        img.save(img_io, 'PNG')
+        platforms = user.get("platforms", {})        
+        img_io = generate_progress_card(name, c_score, dsa_progress, current_streak, platforms)
         img_io.seek(0)
         
         card_cache[user_id] = (current_time, img_io)
