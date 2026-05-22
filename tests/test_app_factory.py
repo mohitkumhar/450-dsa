@@ -5,7 +5,11 @@ from app.extensions import login_manager
 
 
 class FakeCollection:
+    def __init__(self):
+        self.indexes = []
+
     def create_index(self, *args, **kwargs):
+        self.indexes.append((args, kwargs))
         return None
 
     def count_documents(self, *args, **kwargs):
@@ -68,3 +72,6 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/api/leaderboard" in routes
     assert "/search" in routes
     assert "/api/search_questions" in routes
+
+    question_indexes = app_module.db.question.indexes
+    assert (([("problem", "text")],), {"name": "problem_text"}) in question_indexes

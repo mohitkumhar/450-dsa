@@ -149,45 +149,45 @@ def search_dsa_questions(raw_query, limit=40):
             "external_searches": [],
         }
 
-    topics = {t["_id"]: t for t in db.topic.find({}, {"name": 1, "position": 1})}
-    results = []
+    cursor = (
+        db.question.find(
+            {"$text": {"$search": query}},
+            {
+                "problem": 1,
+                "topic": 1,
+                "url": 1,
+                "url2": 1,
+                "score": {"$meta": "textScore"},
+            },
+        )
+        .sort([("score", {"$meta": "textScore"})])
+        .limit(limit)
+    )
+    questions = list(cursor)
+    topic_ids = list(
+        {question.get("topic") for question in questions if question.get("topic")}
+    )
+    topics = (
+        {
+            topic["_id"]: topic
+            for topic in db.topic.find(
+                {"_id": {"$in": topic_ids}}, {"name": 1, "position": 1}
+            )
+        }
+        if topic_ids
+        else {}
+    )
 
-    for question in db.question.find({}, {"problem": 1, "topic": 1, "url": 1, "url2": 1}):
+    results = []
+    for question in questions:
         topic_doc = topics.get(question.get("topic"), {})
         problem = question.get("problem", "")
         topic_name = topic_doc.get("name", "Unknown")
         links = question_links(question)
 
-        if requested_platforms and not any(link["platform"] in requested_platforms for link in links):
-            platform_score = 0
-        else:
-            platform_score = 8 if requested_platforms else 0
-
-        title_l = problem.lower()
-        topic_l = topic_name.lower()
-        url_l = " ".join(link["url"].lower() for link in links)
-        title_tokens = set(tokenize_search_text(problem))
-        topic_tokens = set(tokenize_search_text(topic_name))
-
-        score = platform_score
-        if query.lower() in title_l:
-            score += 70
-        if query.lower() in topic_l:
-            score += 28
-
-        matched_tokens = 0
-        for token in query_tokens:
-            if token in title_tokens:
-                score += 18
-                matched_tokens += 1
-            elif token in topic_tokens:
-                score += 8
-                matched_tokens += 1
-            elif token in url_l:
-                score += 4
-                matched_tokens += 1
-
-        if matched_tokens == 0 and query.lower() not in title_l and query.lower() not in topic_l:
+        if requested_platforms and not any(
+            link["platform"] in requested_platforms for link in links
+        ):
             continue
 
         results.append(
@@ -198,16 +198,17 @@ def search_dsa_questions(raw_query, limit=40):
                 "topic_id": str(question.get("topic")),
                 "topic_position": topic_doc.get("position", 999),
                 "links": links,
-                "external_searches": build_external_searches(problem, requested_platforms),
-                "score": score,
+                "external_searches": build_external_searches(
+                    problem, requested_platforms
+                ),
+                "score": question.get("score", 0),
             }
         )
 
-    results.sort(key=lambda item: (-item["score"], item["topic_position"], item["problem"].lower()))
     return {
         "query": query,
         "requested_platforms": requested_platforms,
-        "results": results[:limit],
+        "results": results,
         "external_searches": build_external_searches(query, requested_platforms),
     }
 

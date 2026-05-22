@@ -52,6 +52,7 @@ def create_app():
     db.user.create_index("github_id", unique=True, sparse=True)
     db.user.create_index("google_id", unique=True, sparse=True)
     db.topic.create_index("name", unique=True)
+    db.question.create_index([("problem", "text")], name="problem_text")
 
     data_path = os.path.abspath(os.path.join(app.root_path, os.pardir, "data.json"))
     app._db_initialized = False
