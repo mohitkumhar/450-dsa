@@ -41,6 +41,7 @@
 .action-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; font-size: 1.1rem; color: var(--text-muted); transition: all 0.2s; }
 .action-icon:hover { background: var(--bg-secondary); color: var(--accent); }
 .action-icon.bookmarked { color: var(--warning); }
+.action-icon:disabled, .q-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
 .notes-btn-sm { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 0.77rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .notes-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
 .notes-btn-sm.has-notes { border-color: var(--info); color: var(--info); }
@@ -60,6 +61,17 @@
 .btn-modal-cancel { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-color); background: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .btn-modal-save { padding: 9px 18px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit; }
 .btn-modal-save:hover { background: var(--accent-hover); }
+.topic-status {
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    border: 1px solid rgba(239,68,68,0.35);
+    border-radius: 8px;
+    background: rgba(239,68,68,0.12);
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.topic-status:empty { display: none; }
 
 @media (max-width: 640px) {
     .topic-header { flex-direction: column; align-items: stretch; }
@@ -93,6 +105,8 @@
     <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium">🟡 Medium</button>
     <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard">🔴 Hard</button>
 </div>
+
+<div class="topic-status" id="topicStatus" role="status" aria-live="polite"></div>
 
 <div class="questions-table-wrap">
     <table class="q-table" id="questions-table" aria-label="Questions for {{ topic.name }}">
@@ -186,14 +200,37 @@
 {% block scripts %}
 <script>
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+const topicStatus = document.getElementById('topicStatus');
+
+function showUpdateError(message = 'Unable to save your change. Please try again.') {
+    topicStatus.textContent = message;
+    window.clearTimeout(topicStatus._hideTimer);
+    topicStatus._hideTimer = window.setTimeout(() => {
+        topicStatus.textContent = '';
+    }, 5000);
+}
+
+function setBookmarkState(btn, isBookmarked) {
+    const icon = btn.querySelector('i');
+    btn.dataset.bookmarked = isBookmarked ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', isBookmarked ? 'true' : 'false');
+    btn.classList.toggle('bookmarked', isBookmarked);
+    icon.className = isBookmarked ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+}
 
 function updateQuestion(id, data, callback) {
-    fetch('/update_question/' + id, {
+    return fetch('/update_question/' + id, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
-    }).then(r => r.json()).then(res => { if (res.success) callback(); })
-      .catch(() => alert('Error updating. Please try again.'));
+    }).then(r => {
+        if (!r.ok) throw new Error('Request failed');
+        return r.json();
+    }).then(res => {
+        if (!res.success) throw new Error(res.error || 'Update failed');
+        if (callback) callback(res);
+        return res;
+    });
 }
 
 // Checkboxes
@@ -201,8 +238,19 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
         if (!isAuthenticated) { this.checked = !this.checked; window.location.href = "{{ url_for('auth.login') }}"; return; }
         const row = document.getElementById('row-' + this.dataset.id);
-        if (this.checked) row.classList.add('row-done'); else row.classList.remove('row-done');
-        updateQuestion(this.dataset.id, {done: this.checked}, () => {});
+        const previousChecked = !this.checked;
+        const nextChecked = this.checked;
+        this.disabled = true;
+        row.classList.toggle('row-done', nextChecked);
+        updateQuestion(this.dataset.id, {done: nextChecked})
+            .catch(() => {
+                this.checked = previousChecked;
+                row.classList.toggle('row-done', previousChecked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+            });
     });
 });
 
@@ -212,17 +260,16 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
         if (!isAuthenticated) { window.location.href = "{{ url_for('auth.login') }}"; return; }
         const isBookmarked = this.dataset.bookmarked === 'true';
         const newStatus = !isBookmarked;
-        updateQuestion(this.dataset.id, {bookmark: newStatus}, () => {
-            this.dataset.bookmarked = newStatus ? 'true' : 'false';
-            const icon = this.querySelector('i');
-            if (newStatus) {
-                this.classList.add('bookmarked');
-                icon.className = 'bi bi-bookmark-fill';
-            } else {
-                this.classList.remove('bookmarked');
-                icon.className = 'bi bi-bookmark';
-            }
-        });
+        this.disabled = true;
+        setBookmarkState(this, newStatus);
+        updateQuestion(this.dataset.id, {bookmark: newStatus})
+            .catch(() => {
+                setBookmarkState(this, isBookmarked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+            });
     });
 });
 
@@ -289,14 +336,8 @@ document.getElementById('saveNotesBtn').addEventListener('click', function() {
             btn.innerHTML = `<i class="bi bi-journal-text" aria-hidden="true"></i> ${label}`;
             btn.setAttribute('aria-label', `${label} notes for this question`);
         }
-    });
-});
-
-// Update bookmark aria-pressed on toggle
-document.querySelectorAll('.bookmark-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const newStatus = this.dataset.bookmarked !== 'true';
-        this.setAttribute('aria-pressed', newStatus ? 'true' : 'false');
+    }).catch(() => {
+        showUpdateError('Unable to save notes. Please try again.');
     });
 });
 </script>
