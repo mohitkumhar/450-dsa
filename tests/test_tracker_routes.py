@@ -2,6 +2,7 @@ import mongomock
 from bson import ObjectId
 
 import app as app_module
+import app.auth.routes as auth_routes
 import app.tracker.routes as tracker_routes
 
 
@@ -9,6 +10,7 @@ def create_test_app(monkeypatch):
     test_db = mongomock.MongoClient().db
 
     monkeypatch.setattr(app_module, "db", test_db)
+    monkeypatch.setattr(auth_routes, "db", test_db)
     monkeypatch.setattr(tracker_routes, "db", test_db)
 
     monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
@@ -19,6 +21,16 @@ def create_test_app(monkeypatch):
     flask_app._db_initialized = True
 
     return flask_app, test_db
+
+
+def login_test_user(client, test_db):
+    user_id = test_db.user.insert_one(
+        {"email": "user@example.com", "progress": {}, "is_admin": False}
+    ).inserted_id
+    with client.session_transaction() as session:
+        session["_user_id"] = str(user_id)
+        session["_fresh"] = True
+    return user_id
 
 
 def test_topic_not_found_invalid_id(monkeypatch):
@@ -80,7 +92,6 @@ def test_topic_page_all_and_filtered_counts(monkeypatch):
     assert "Hard Prob 1" in html
     assert "Default Medium Prob" in html
 
-
     # 2. Test topic page filtered by Easy difficulty
     with flask_app.test_client() as client:
         response = client.get(f"/topic/{topic_id}?difficulty=Easy")
@@ -127,3 +138,77 @@ def test_topic_page_all_and_filtered_counts(monkeypatch):
     assert "Easy Prob 1" not in html
     assert "Easy Prob 2" not in html
     assert "Hard Prob 1" not in html
+
+
+def test_update_question_rejects_missing_json_body(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(f"/update_question/{question_id}")
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "success": False,
+        "error": "Request body must be a JSON object",
+    }
+
+
+def test_update_question_rejects_malformed_json(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            data="{not-json",
+            content_type="application/json",
+        )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Request body must be a JSON object"
+
+
+def test_update_question_rejects_json_array(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(f"/update_question/{question_id}", json=["done"])
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Request body must be a JSON object"
+
+
+def test_update_question_rejects_non_boolean_done(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"done": "true"},
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"success": False, "error": "done must be a boolean"}
+
+
+def test_update_question_accepts_valid_boolean_update(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        user_id = login_test_user(client, test_db)
+        response = client.post(f"/update_question/{question_id}", json={"done": True})
+
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True
+    user = test_db.user.find_one({"_id": user_id})
+    progress = user["progress"][str(question_id)]
+    assert progress["done"] is True
+    assert "timestamp" in progress

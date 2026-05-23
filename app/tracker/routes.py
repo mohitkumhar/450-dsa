@@ -162,7 +162,14 @@ def update_question(question_id):
     if not question:
         return jsonify({"success": False, "error": "Question not found"}), 404
 
-    data = request.json
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object"}), 400
+
+    for field in ("done", "bookmark"):
+        if field in data and not isinstance(data[field], bool):
+            return jsonify({"success": False, "error": f"{field} must be a boolean"}), 400
+
     user_id = current_user.id
     update_fields = {}
     progress = current_user.progress
