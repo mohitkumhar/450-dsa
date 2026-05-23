@@ -127,16 +127,6 @@
       },
       {
         "Topic": "Array",
-        "Problem": "Kadane's Algo [V.V.V.V.V IMP]",
-        "Done": false,
-        "Bookmark": false,
-        "Notes": "",
-        "URL": "https://practice.geeksforgeeks.org/problems/kadanes-algorithm/0",
-        "URL2": "",
-        "difficulty": "Medium"
-      },
-      {
-        "Topic": "Array",
         "Problem": "Merge Intervals",
         "Done": false,
         "Bookmark": false,
