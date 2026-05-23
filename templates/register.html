@@ -6,13 +6,31 @@
 .auth-logo { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; color: white; margin: 0 auto 24px; }
 .auth-card h2 { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--text-primary); }
 .auth-card p.subtitle { text-align: center; color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 28px; }
-.form-group { margin-bottom: 16px; }
+.form-group { margin-bottom: 16px; position: relative; }
 .form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
-.form-control { width: 100%; padding: 11px 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; transition: all 0.2s; outline: none; }
+.input-wrap { position: relative; }
+.form-control { width: 100%; padding: 11px 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; transition: all 0.2s; outline: none; box-sizing: border-box; }
 .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .form-control::placeholder { color: var(--text-muted); }
-.btn-primary-full { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 0.95rem; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-top: 6px; }
+.form-control.is-valid { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+.form-control.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+.field-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; pointer-events: none; }
+.field-error { font-size: 0.75rem; color: #f87171; margin-top: 5px; display: none; }
+.field-error.show { display: block; }
+.password-wrap { position: relative; }
+.toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; font-size: 1rem; }
+.toggle-password:hover { color: var(--text-primary); }
+.strength-bar-wrap { margin-top: 8px; }
+.strength-bar { height: 4px; border-radius: 99px; background: var(--border-color); overflow: hidden; margin-bottom: 4px; }
+.strength-fill { height: 100%; border-radius: 99px; transition: width 0.3s, background 0.3s; width: 0%; }
+.strength-label { font-size: 0.72rem; color: var(--text-muted); }
+.strength-rules { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.rule { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+.rule.met { color: #4ade80; }
+.rule i { font-size: 0.75rem; }
+.btn-primary-full { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 0.95rem; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-primary-full:hover { background: var(--accent-hover); transform: translateY(-1px); }
+.btn-primary-full:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 .divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--text-muted); font-size: 0.8rem; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
 .oauth-btn { width: 100%; padding: 11px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: all 0.2s; margin-bottom: 10px; }
@@ -20,10 +38,11 @@
 .auth-footer { text-align: center; margin-top: 24px; font-size: 0.84rem; color: var(--text-secondary); }
 .auth-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .auth-footer a:hover { text-decoration: underline; }
-.flash-inline { padding: 10px 14px; border-radius: 8px; font-size: 0.83rem; margin-bottom: 14px; }
+.flash-inline { padding: 10px 14px; border-radius: 8px; font-size: 0.83rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
 .flash-inline.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
 .flash-inline.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
 </style>
+
 <div class="auth-wrap">
     <div class="auth-card">
         <div class="auth-logo">D</div>
@@ -33,40 +52,194 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-            <div class="flash-inline {{ category }}">{{ message }}</div>
+            <div class="flash-inline {{ category }}">
+                <i class="bi bi-{% if category == 'danger' %}x-circle{% else %}check-circle{% endif %}"></i>
+                {{ message }}
+            </div>
             {% endfor %}
         {% endif %}
         {% endwith %}
 
-        <form method="POST" action="{{ url_for('auth.register') }}">
+        <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" novalidate>
             <div class="form-group">
                 <label class="form-label" for="name">Full Name</label>
-                <input type="text" class="form-control" id="name" name="name" placeholder="Mohit Kumhar" required>
+                <div class="input-wrap">
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Mohit Kumhar" required>
+                    <span class="field-icon" id="nameIcon"></span>
+                </div>
+                <div class="field-error" id="nameError">Please enter your full name.</div>
             </div>
             <div class="form-group">
                 <label class="form-label" for="email">Email Address</label>
-                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+                <div class="input-wrap">
+                    <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+                    <span class="field-icon" id="emailIcon"></span>
+                </div>
+                <div class="field-error" id="emailError">Please enter a valid email address.</div>
             </div>
             <div class="form-group">
                 <label class="form-label" for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                <div class="password-wrap">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                    <button type="button" class="toggle-password" id="togglePassword" aria-label="Toggle password visibility">
+                        <i class="bi bi-eye" id="toggleIcon"></i>
+                    </button>
+                </div>
+                <div class="strength-bar-wrap">
+                    <div class="strength-bar">
+                        <div class="strength-fill" id="strengthFill"></div>
+                    </div>
+                    <div class="strength-label" id="strengthLabel"></div>
+                </div>
+                <div class="strength-rules" id="strengthRules">
+                    <div class="rule" id="rule-length"><i class="bi bi-circle"></i> At least 8 characters</div>
+                    <div class="rule" id="rule-upper"><i class="bi bi-circle"></i> One uppercase letter</div>
+                    <div class="rule" id="rule-number"><i class="bi bi-circle"></i> One number</div>
+                    <div class="rule" id="rule-special"><i class="bi bi-circle"></i> One special character</div>
+                </div>
+                <div class="field-error" id="passwordError">Password must meet the requirements above.</div>
             </div>
-            <button type="submit" class="btn-primary-full">Create Account</button>
+            <button type="submit" class="btn-primary-full" id="submitBtn">
+                <i class="bi bi-person-plus"></i> Create Account
+            </button>
         </form>
 
         <div class="divider">or register with</div>
-
         <a href="{{ url_for('auth.login_github') }}" class="oauth-btn">
             <i class="bi bi-github" style="font-size:1.1rem;"></i> GitHub
         </a>
-        <!-- <a href="{{ url_for('auth.login_google') }}" class="oauth-btn">
-            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.5 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.9 6.1C12.8 13.1 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.9 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.6L2.4 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.4 10.7l8.5-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.7 2.3-7.7 2.3-6.1 0-11.2-3.6-13.1-9.2L2.4 35.7C6.3 43.3 14.5 48 24 48z"/></svg>
-            Google
-        </a> -->
 
         <div class="auth-footer">
             Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a>
         </div>
     </div>
 </div>
+
+<script>
+function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+function setFieldState(input, iconEl, errorEl, valid, empty) {
+    if (empty) {
+        input.classList.remove('is-valid', 'is-invalid');
+        iconEl.innerHTML = '';
+        errorEl.classList.remove('show');
+    } else if (valid) {
+        input.classList.add('is-valid'); input.classList.remove('is-invalid');
+        iconEl.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#22c55e"></i>';
+        errorEl.classList.remove('show');
+    } else {
+        input.classList.add('is-invalid'); input.classList.remove('is-valid');
+        iconEl.innerHTML = '<i class="bi bi-x-circle-fill" style="color:#ef4444"></i>';
+        errorEl.classList.add('show');
+    }
+}
+
+const nameInput = document.getElementById('name');
+const nameIcon = document.getElementById('nameIcon');
+const nameError = document.getElementById('nameError');
+nameInput.addEventListener('input', () => {
+    const v = nameInput.value.trim();
+    setFieldState(nameInput, nameIcon, nameError, v.length >= 2, v === '');
+});
+nameInput.addEventListener('blur', () => {
+    if (nameInput.value.trim().length === 0) setFieldState(nameInput, nameIcon, nameError, false, false);
+});
+
+const emailInput = document.getElementById('email');
+const emailIcon = document.getElementById('emailIcon');
+const emailError = document.getElementById('emailError');
+emailInput.addEventListener('input', () => {
+    const v = emailInput.value.trim();
+    setFieldState(emailInput, emailIcon, emailError, validateEmail(v), v === '');
+});
+emailInput.addEventListener('blur', () => {
+    if (emailInput.value.trim() && !validateEmail(emailInput.value.trim()))
+        setFieldState(emailInput, emailIcon, emailError, false, false);
+});
+
+const passwordInput = document.getElementById('password');
+const strengthFill = document.getElementById('strengthFill');
+const strengthLabel = document.getElementById('strengthLabel');
+const passwordError = document.getElementById('passwordError');
+const togglePassword = document.getElementById('togglePassword');
+const toggleIcon = document.getElementById('toggleIcon');
+
+const rules = {
+    length: { el: document.getElementById('rule-length'), test: v => v.length >= 8 },
+    upper:  { el: document.getElementById('rule-upper'),  test: v => /[A-Z]/.test(v) },
+    number: { el: document.getElementById('rule-number'), test: v => /[0-9]/.test(v) },
+    special:{ el: document.getElementById('rule-special'),test: v => /[^A-Za-z0-9]/.test(v) },
+};
+
+function updateRule(key, met) {
+    const el = rules[key].el;
+    const icon = el.querySelector('i');
+    if (met) { el.classList.add('met'); icon.className = 'bi bi-check-circle-fill'; }
+    else { el.classList.remove('met'); icon.className = 'bi bi-circle'; }
+}
+
+const levels = [
+    { label: 'Weak', color: '#ef4444', width: '25%' },
+    { label: 'Fair', color: '#f59e0b', width: '50%' },
+    { label: 'Good', color: '#3b82f6', width: '75%' },
+    { label: 'Strong', color: '#22c55e', width: '100%' },
+];
+
+passwordInput.addEventListener('input', () => {
+    const v = passwordInput.value;
+    let score = 0;
+    for (const key in rules) {
+        const met = rules[key].test(v);
+        updateRule(key, met);
+        if (met) score++;
+    }
+    if (v.length === 0) {
+        strengthFill.style.width = '0%';
+        strengthLabel.textContent = '';
+        passwordError.classList.remove('show');
+        passwordInput.classList.remove('is-valid', 'is-invalid');
+    } else {
+        const lvl = levels[score - 1] || levels[0];
+        strengthFill.style.width = lvl.width;
+        strengthFill.style.background = lvl.color;
+        strengthLabel.textContent = lvl.label;
+        strengthLabel.style.color = lvl.color;
+        if (score === 4) {
+            passwordInput.classList.add('is-valid'); passwordInput.classList.remove('is-invalid');
+            passwordError.classList.remove('show');
+        } else {
+            passwordInput.classList.remove('is-valid', 'is-invalid');
+        }
+    }
+});
+
+togglePassword.addEventListener('click', () => {
+    const show = passwordInput.type === 'password';
+    passwordInput.type = show ? 'text' : 'password';
+    toggleIcon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+});
+
+document.getElementById('registerForm').addEventListener('submit', (e) => {
+    let valid = true;
+    if (nameInput.value.trim().length < 2) {
+        setFieldState(nameInput, nameIcon, nameError, false, false);
+        valid = false;
+    }
+    if (!validateEmail(emailInput.value.trim())) {
+        setFieldState(emailInput, emailIcon, emailError, false, false);
+        valid = false;
+    }
+    const v = passwordInput.value;
+    const allMet = Object.values(rules).every(r => r.test(v));
+    if (!allMet) {
+        passwordInput.classList.add('is-invalid');
+        passwordError.classList.add('show');
+        valid = false;
+    }
+    if (!valid) { e.preventDefault(); return; }
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Creating account...';
+});
+</script>
 {% endblock %}
