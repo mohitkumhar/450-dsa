@@ -111,13 +111,39 @@
     <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;">
       <i class="bi bi-share-fill" style="margin-right:6px"></i> Share Progress (Image)
     </button>
+    <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
+      <input id="progress-card-copy-url" type="text" readonly aria-label="Progress image URL"
+             style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-secondary);font-size:.75rem">
+    </div>
     <script>
+      function showProgressCardUrlFallback(url) {
+        const fallback = document.getElementById('progress-card-copy-fallback');
+        const input = document.getElementById('progress-card-copy-url');
+        if (!fallback || !input) return;
+
+        input.value = url;
+        fallback.style.display = 'block';
+        input.focus();
+        input.select();
+
+        if (typeof showToast === 'function') {
+          showToast('Could not copy automatically. The URL is selected below.', 'warning');
+        }
+      }
+
       function copyProgressCardUrl() {
         const url = window.location.origin + '/u/{{ user.id }}/card.png';
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+          showProgressCardUrlFallback(url);
+          return;
+        }
+
         navigator.clipboard.writeText(url).then(() => {
           if (typeof showToast === 'function') {
             showToast('Progress Image URL copied!', 'success');
           }
+        }).catch(() => {
+          showProgressCardUrlFallback(url);
         });
       }
     </script>
