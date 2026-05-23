@@ -1,6 +1,4 @@
-import base64
 import json
-import os
 import time
 
 # Comment out cloudinary for now if not installed
@@ -8,14 +6,12 @@ import time
 # import cloudinary.uploader
 # import cloudinary.api
 import requests
-from flask import Blueprint, jsonify, render_template, request, send_file
+from flask import Blueprint, Response, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
-from flask import Response
-import time
-from card_generator import generate_progress_card
 
 from app.extensions import db
-from app.extensions import limiter, cache
+from app.extensions import limiter
+from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.platforms.fetchers import (
     fetch_atcoder,
     fetch_coding_ninjas,
@@ -281,7 +277,7 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
-    cache.clear()
+    invalidate_leaderboard_cache()
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -359,6 +355,7 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
+        invalidate_leaderboard_cache()
     return jsonify({"success": True})
 
 

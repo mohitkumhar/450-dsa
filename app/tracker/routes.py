@@ -3,6 +3,7 @@ from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.utils import utc_now
 from notes_export import build_topic_notes_markdown, topic_notes_filename
 
@@ -191,6 +192,7 @@ def update_question(question_id):
     if update_fields:
         db.user.update_one({"_id": user_id}, {"$set": update_fields})
         current_user.reload()
+        invalidate_leaderboard_cache()
         return jsonify({"success": True, "message": message})
 
     return jsonify({"success": True, "message": "No changes made"})
