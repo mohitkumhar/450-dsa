@@ -19,6 +19,18 @@ from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter
 
 
+def _env_flag(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_local_environment():
+    app_env = os.environ.get("FLASK_ENV") or os.environ.get("APP_ENV") or os.environ.get("ENV") or ""
+    return app_env.strip().lower() in {"development", "dev", "local", "test", "testing"} or _env_flag("FLASK_DEBUG")
+
+
 def _is_production_environment():
     return os.environ.get("FLASK_ENV") == "production" or os.environ.get("APP_ENV") == "production"
 
@@ -37,6 +49,9 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
     app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://localhost:27017/450_dsa")
     _configure_rate_limit_storage(app)
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
+    app.config["SESSION_COOKIE_SECURE"] = _env_flag("SESSION_COOKIE_SECURE", default=not _is_local_environment())
     app.config["CACHE_TYPE"] = "SimpleCache"
     app.config["CACHE_DEFAULT_TIMEOUT"] = 300
     app.config["SWAGGER"] = {

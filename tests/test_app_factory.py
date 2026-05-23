@@ -99,6 +99,44 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/edit_profile" in spec["paths"]
     assert "/upload_photo" in spec["paths"]
 
+def test_create_app_sets_secure_session_cookie_defaults(monkeypatch):
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("ENV", raising=False)
+    monkeypatch.delenv("FLASK_DEBUG", raising=False)
+    monkeypatch.delenv("SESSION_COOKIE_SECURE", raising=False)
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app()
+
+    assert flask_app.config["SESSION_COOKIE_HTTPONLY"] is True
+    assert flask_app.config["SESSION_COOKIE_SAMESITE"] == "Lax"
+    assert flask_app.config["SESSION_COOKIE_SECURE"] is True
+
+
+def test_create_app_allows_insecure_session_cookie_in_development(monkeypatch):
+    monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.delenv("SESSION_COOKIE_SECURE", raising=False)
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app()
+
+    assert flask_app.config["SESSION_COOKIE_HTTPONLY"] is True
+    assert flask_app.config["SESSION_COOKIE_SAMESITE"] == "Lax"
+    assert flask_app.config["SESSION_COOKIE_SECURE"] is False
+
 
 def test_create_app_uses_configured_rate_limit_storage(monkeypatch):
     monkeypatch.setenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/0")
