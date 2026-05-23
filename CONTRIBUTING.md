@@ -18,7 +18,7 @@ This document provides guidelines and instructions for contributing to this proj
 
 ## Code of Conduct
 
-By participating in this project, you are expected to uphold a welcoming, inclusive, and harassment-free environment for everyone. Please be respectful and constructive in your communication.
+By participating in this project, you are expected to uphold a welcoming, inclusive, and harassment-free environment for everyone. Please read and follow the full [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Getting Started
 
