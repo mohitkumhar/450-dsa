@@ -9,6 +9,19 @@ from notes_export import build_topic_notes_markdown, topic_notes_filename
 
 tracker_bp = Blueprint("tracker", __name__)
 
+DIFFICULTY_FILTERS = {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+}
+
+
+def normalize_difficulty_filter(raw_filter):
+    value = (raw_filter or "all").strip().lower()
+    if value == "all":
+        return "all"
+    return DIFFICULTY_FILTERS.get(value, "all")
+
 
 @tracker_bp.route("/")
 def index():
@@ -65,7 +78,7 @@ def topic(topic_id):
     hard_count = sum(1 for q in questions if q.get('difficulty', 'Medium') == 'Hard')
     
     # Get difficulty filter from query parameter
-    difficulty_filter = request.args.get('difficulty', 'all')
+    difficulty_filter = normalize_difficulty_filter(request.args.get('difficulty', 'all'))
     
     if difficulty_filter != 'all':
         questions = [q for q in questions if q.get('difficulty', 'Medium') == difficulty_filter]

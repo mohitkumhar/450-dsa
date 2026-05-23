@@ -127,3 +127,40 @@ def test_topic_page_all_and_filtered_counts(monkeypatch):
     assert "Easy Prob 1" not in html
     assert "Easy Prob 2" not in html
     assert "Hard Prob 1" not in html
+
+
+def test_topic_page_accepts_lowercase_difficulty_filter(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    test_db.question.insert_many([
+        {"topic": topic_id, "problem": "Easy Prob", "difficulty": "Easy"},
+        {"topic": topic_id, "problem": "Hard Prob", "difficulty": "Hard"},
+    ])
+
+    with flask_app.test_client() as client:
+        response = client.get(f"/topic/{topic_id}?difficulty=easy")
+
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Showing 1 of 2 questions (Easy difficulty)" in html
+    assert "Easy Prob" in html
+    assert "Hard Prob" not in html
+
+
+def test_topic_page_ignores_unknown_difficulty_filter(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    test_db.question.insert_many([
+        {"topic": topic_id, "problem": "Easy Prob", "difficulty": "Easy"},
+        {"topic": topic_id, "problem": "Hard Prob", "difficulty": "Hard"},
+    ])
+
+    with flask_app.test_client() as client:
+        response = client.get(f"/topic/{topic_id}?difficulty=Invalid")
+
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "2 questions in this topic" in html
+    assert "Showing 0 of 2 questions" not in html
+    assert "Easy Prob" in html
+    assert "Hard Prob" in html
