@@ -20,3 +20,4 @@ cache = Cache()
 
 # GSSoC Redis Connection Failure Recovery
 # Fallback to local thread-safe memory storage on connection timeout.
+csrf = CSRFProtect()

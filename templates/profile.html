@@ -570,7 +570,7 @@ window.handleSaveProfile = function(btn){
     resume_url: document.getElementById('ep_resume').value,
   };
   window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
-  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})
+  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken,'X-CSRFToken':'{{ csrf_token() }}'},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -610,7 +610,7 @@ window.handleQuickSync = function(btn) {
   
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
-    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken, 'X-CSRFToken':'{{ csrf_token() }}'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})
   })
   .then(r => r.json())
@@ -768,7 +768,7 @@ function handlePhotoUpload(e){
   const fd=new FormData();
   fd.append('photo',file);
   showToast('⏳ Uploading photo...');
-  fetch(endpointConfig.uploadPhoto,{method:'POST',headers:{'X-CSRFToken':csrfToken},body:fd})
+  fetch(endpointConfig.uploadPhoto,{method:'POST',headers:{'X-CSRFToken':csrfToken},headers:{'X-CSRFToken':'{{ csrf_token() }}'},body:fd})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
