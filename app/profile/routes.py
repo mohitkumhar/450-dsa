@@ -8,7 +8,7 @@ import time
 # import cloudinary.uploader
 # import cloudinary.api
 import requests
-from flask import Blueprint, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
 from flask import Response
 import time
@@ -406,8 +406,9 @@ def public_card(user_id):
         
         card_cache[user_id] = (current_time, img_io)
         return send_file(img_io, mimetype="image/png")
-    except Exception as e:
-        return str(e), 500
+    except Exception:
+        current_app.logger.exception("Failed to generate public progress card")
+        return "Unable to generate progress card", 500
 
 
 @profile_bp.route("/search_universities")
