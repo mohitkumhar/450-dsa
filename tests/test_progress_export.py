@@ -1,7 +1,7 @@
 import csv
 from io import StringIO
 
-from progress_export import CSV_HEADERS, build_progress_csv
+from progress_export import CSV_HEADERS, build_progress_csv, escape_csv_formula_cell
 
 
 def parse_csv(value):
@@ -31,6 +31,37 @@ def test_progress_csv_escapes_commas_and_newlines_in_notes():
     rows = parse_csv(build_progress_csv(questions, {'t1': 'Arrays'}, progress))
 
     assert rows[1][4] == 'sort by start,\nthen merge'
+
+
+def test_progress_csv_escapes_formula_prefixed_notes():
+    questions = [
+        {'_id': '=id', 'topic': 't1', 'problem': 'Equals'},
+        {'_id': '+id', 'topic': 't1', 'problem': 'Plus'},
+        {'_id': '-id', 'topic': 't1', 'problem': 'Minus'},
+        {'_id': '@id', 'topic': 't1', 'problem': 'At'},
+        {'_id': 'safe', 'topic': 't1', 'problem': 'Safe'},
+    ]
+    progress = {
+        '=id': {'notes': '=HYPERLINK("https://example.com")'},
+        '+id': {'notes': '+SUM(1,2)'},
+        '-id': {'notes': '-10+5'},
+        '@id': {'notes': '@malicious'},
+        'safe': {'notes': 'ordinary note'},
+    }
+
+    rows = parse_csv(build_progress_csv(questions, {'t1': 'Arrays'}, progress))
+
+    assert rows[1][4] == '\'=HYPERLINK("https://example.com")'
+    assert rows[2][4] == "'+SUM(1,2)"
+    assert rows[3][4] == "'-10+5"
+    assert rows[4][4] == "'@malicious"
+    assert rows[5][4] == 'ordinary note'
+
+
+def test_escape_csv_formula_cell_leaves_non_strings_and_empty_values():
+    assert escape_csv_formula_cell('') == ''
+    assert escape_csv_formula_cell(None) is None
+    assert escape_csv_formula_cell(False) is False
 
 
 def test_progress_csv_uses_unknown_topic_fallback():

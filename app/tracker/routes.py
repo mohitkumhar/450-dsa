@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.utils import utc_now
 from notes_export import build_topic_notes_markdown, topic_notes_filename
+from progress_export import escape_csv_formula_cell
 
 
 tracker_bp = Blueprint("tracker", __name__)
@@ -242,7 +243,7 @@ def export_csv():
         progress = current_user.progress.get(q_id, {})
         status = 'Done' if progress.get('done') else 'Pending'
         bookmarked = 'Yes' if progress.get('bookmark') else 'No'
-        notes = progress.get('notes', '')
+        notes = escape_csv_formula_cell(progress.get('notes', ''))
         difficulty = q.get('difficulty', 'Medium')
         
         writer.writerow([
