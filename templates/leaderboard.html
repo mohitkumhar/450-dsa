@@ -322,6 +322,15 @@ function avatarHTML(entry, size = 36) {
   return escapeHTML((entry.name || '?')[0].toUpperCase());
 }
 
+function renderLeaderboardError(error) {
+  const message = error && error.message ? error.message : 'Error loading leaderboard data.';
+  currentPage = 1;
+  totalPages = 1;
+  currentUserRank = null;
+  document.getElementById('lbBody').innerHTML = `<tr><td colspan="5" class="loading">${escapeHTML(message)}</td></tr>`;
+  renderPagination();
+}
+
 async function loadLeaderboard(page = 1) {
   if (isLoading) return;
   isLoading = true;
@@ -332,16 +341,24 @@ async function loadLeaderboard(page = 1) {
     const url = `/api/leaderboard?mode=${activeMode}&page=${page}&per_page=20&current_user_id=${CURRENT_USER_ID || ''}`;
     const response = await fetch(url);
     const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || `Leaderboard request failed (${response.status})`);
+    }
+
+    if (!Array.isArray(data.entries)) {
+      throw new Error('Leaderboard response was missing entries.');
+    }
     
-    totalPages = data.total_pages;
-    currentPage = data.page;
-    currentUserRank = data.current_user_rank;
+    totalPages = Number(data.total_pages) || 1;
+    currentPage = Number(data.page) || page;
+    currentUserRank = data.current_user_rank || null;
     
     renderTable(data.entries, activeMode);
     renderPagination();
   } catch (error) {
     console.error('Error loading leaderboard:', error);
-    document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading" aria-label="Error loading data">Error loading data</td></tr>';
+    renderLeaderboardError(error);
   }
   
   isLoading = false;
