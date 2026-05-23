@@ -213,7 +213,21 @@ def search_dsa_questions(raw_query, limit=40):
     }
 
 
-def compute_c_score(user_doc):
+EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder")
+
+
+def compute_total_solved(progress, external_totals, all_questions=None):
+    solved_items = {question_id: item for question_id, item in (progress or {}).items() if item.get("done")}
+    if all_questions is not None:
+        platforms = compute_user_platforms(solved_items, external_totals or {}, all_questions)
+        return sum(max(value, 0) for value in platforms.values())
+
+    dsa_done = len(solved_items)
+    external_total = sum(max(value, 0) for key, value in (external_totals or {}).items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
+    return max(dsa_done, external_total)
+
+
+def compute_c_score(user_doc, all_questions=None):
     """Compute composite C-Score (0-999) for a user document."""
     progress = user_doc.get("progress", {})
     dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
@@ -246,10 +260,7 @@ def compute_c_score(user_doc):
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
     c_score = min(c_score, 999)
 
-    global_total = max(
-        sum(max(value, 0) for key, value in ext.items() if key in ("LeetCode", "GFG", "Coding Ninjas", "HackerRank")),
-        0,
-    ) + dsa_done
+    global_total = compute_total_solved(progress, ext, all_questions)
 
     return {
         "c_score": c_score,
@@ -289,12 +300,13 @@ def build_leaderboard_data():
         )
     )
 
+    all_questions = list(db.question.find({}, {"url": 1}))
     entries = []
     for user in users:
         name = user.get("name", "Anonymous")
         if not name or name.strip() == "":
             continue
-        stats = compute_c_score(user)
+        stats = compute_c_score(user, all_questions=all_questions)
         entries.append(
             {
                 "user_id": str(user["_id"]),
@@ -397,10 +409,10 @@ def compute_user_platforms(solved_items, external_totals, all_questions):
                 platforms["Other"] += 1
 
     ext_totals = external_totals or {}
-    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0))
-    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0))
-    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0))
-    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0))
-    platforms["AtCoder"] = ext_totals.get("AtCoder", 0)
+    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0), 0)
+    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0), 0)
+    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0), 0)
+    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0), 0)
+    platforms["AtCoder"] = max(ext_totals.get("AtCoder", 0), 0)
 
     return platforms
