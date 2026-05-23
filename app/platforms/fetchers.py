@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import datetime
 
@@ -168,34 +169,60 @@ def fetch_github(username):
             count = 0 if count_str == "No" else int(count_str)
             result_calendar[date_str] = count
 
-        response_issues = requests.get(
+        token = os.environ.get("GITHUB_TOKEN")
+        auth = {"Authorization": f"token {token}"} if token else {}
+
+        r_issues = requests.get(
             f"https://api.github.com/search/issues?q=type:issue+author:{username}",
+            headers=auth,
             timeout=5,
-        ).json()
-        response_prs = requests.get(
+        )
+        if r_issues.status_code in (403, 429):
+            return {"error": "rate_limited", "calendar": result_calendar, "stats": None}
+        if r_issues.status_code != 200:
+            return {"error": "api_error", "calendar": result_calendar, "stats": None}
+
+        r_prs = requests.get(
             f"https://api.github.com/search/issues?q=type:pr+author:{username}",
+            headers=auth,
             timeout=5,
-        ).json()
-        response_merged = requests.get(
+        )
+        if r_prs.status_code in (403, 429):
+            return {"error": "rate_limited", "calendar": result_calendar, "stats": None}
+        if r_prs.status_code != 200:
+            return {"error": "api_error", "calendar": result_calendar, "stats": None}
+
+        r_merged = requests.get(
             f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
+            headers=auth,
             timeout=5,
-        ).json()
+        )
+        if r_merged.status_code in (403, 429):
+            return {"error": "rate_limited", "calendar": result_calendar, "stats": None}
+        if r_merged.status_code != 200:
+            return {"error": "api_error", "calendar": result_calendar, "stats": None}
+
         headers = {"Accept": "application/vnd.github.cloak-preview+json"}
-        response_commits = requests.get(
+        headers.update(auth)
+        r_commits = requests.get(
             f"https://api.github.com/search/commits?q=author:{username}",
             headers=headers,
             timeout=5,
-        ).json()
+        )
+        if r_commits.status_code in (403, 429):
+            return {"error": "rate_limited", "calendar": result_calendar, "stats": None}
+        if r_commits.status_code != 200:
+            return {"error": "api_error", "calendar": result_calendar, "stats": None}
 
         stats = {
-            "issues": response_issues.get("total_count", 0),
-            "prs": response_prs.get("total_count", 0),
-            "merged_prs": response_merged.get("total_count", 0),
-            "commits": response_commits.get("total_count", 0),
+            "issues": r_issues.json().get("total_count", 0),
+            "prs": r_prs.json().get("total_count", 0),
+            "merged_prs": r_merged.json().get("total_count", 0),
+            "commits": r_commits.json().get("total_count", 0),
         }
 
         return {"calendar": result_calendar, "stats": stats}
-    except Exception as exc:
+    except requests.exceptions.RequestException as exc:
         print("GH Error", exc)
         return {}
 
