@@ -185,7 +185,12 @@ def update_question(question_id):
         update_fields[f"progress.{question_id}.bookmark"] = data["bookmark"]
     
     if "notes" in data:
-        update_fields[f"progress.{question_id}.notes"] = data["notes"]
+        if not isinstance(data["notes"], str):
+            return jsonify({"success": False, "error": "notes must be a string"}), 400
+        notes = data["notes"].strip()
+        if len(notes) > 1000:
+            return jsonify({"success": False, "error": "notes must be 1000 characters or fewer"}), 400
+        update_fields[f"progress.{question_id}.notes"] = notes
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
 
     if update_fields:
