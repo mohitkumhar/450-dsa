@@ -178,6 +178,12 @@ const chips = document.querySelectorAll('.platform-chip');
 let activeToken = '';
 let debounceTimer = null;
 let controller = null;
+const platformLabels = {
+  leetcode: 'LeetCode',
+  gfg: 'GFG',
+  cn: 'Coding Ninjas',
+  hackerrank: 'HackerRank'
+};
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, ch => ({
@@ -207,12 +213,23 @@ function renderEmpty(icon, text) {
   results.innerHTML = `<div class="empty-search"><i class="bi ${icon}"></i><p>${escapeHtml(text)}</p></div>`;
 }
 
+function renderPlatformPrompt() {
+  const platform = platformLabels[activeToken] || 'selected platform';
+  meta.textContent = `${platform} filter selected`;
+  renderEmpty('bi-search-heart', `Type a search term to find ${platform} practice links.`);
+}
+
 function renderResults(payload) {
   const count = payload.results.length;
   const platforms = payload.requested_platforms || [];
   meta.textContent = count ? `${count} result${count === 1 ? '' : 's'}${platforms.length ? ' with ' + platforms.join(', ') : ''}` : '';
 
   if (!input.value.trim()) {
+    if (activeToken) {
+      renderPlatformPrompt();
+      return;
+    }
+
     meta.textContent = '';
     renderEmpty('bi-search', 'Start typing to search the DSA sheet.');
     return;
@@ -259,7 +276,12 @@ async function runSearch() {
   const query = currentQuery();
   if (controller) controller.abort();
 
-  if (!input.value.trim() && !activeToken) {
+  if (!input.value.trim()) {
+    if (activeToken) {
+      renderPlatformPrompt();
+      return;
+    }
+
     meta.textContent = '';
     renderEmpty('bi-search', 'Start typing to search the DSA sheet.');
     return;
