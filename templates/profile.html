@@ -127,11 +127,11 @@
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
       {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email"><i class="bi bi-envelope"></i></a>{% endif %}
-      {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" class="social-icon" title="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
-      {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" class="social-icon" title="Twitter/X"><i class="bi bi-twitter-x"></i></a>{% endif %}
-      {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" class="social-icon" title="Website"><i class="bi bi-globe"></i></a>{% endif %}
-      {% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" class="social-icon" title="GitHub"><i class="bi bi-github"></i></a>{% endif %}
-      {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" class="social-icon" title="Resume"><i class="bi bi-file-earmark-person"></i></a>{% endif %}
+      {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
+      {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X"><i class="bi bi-twitter-x"></i></a>{% endif %}
+      {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website"><i class="bi bi-globe"></i></a>{% endif %}
+      {% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub"><i class="bi bi-github"></i></a>{% endif %}
+      {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume"><i class="bi bi-file-earmark-person"></i></a>{% endif %}
     </div>
     {% if user.location or user.college %}
     <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)"></i> {{ user.location }}{% endif %}</div>
@@ -153,31 +153,31 @@
     <div class="platform-row">
       <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
       </span>
     </div>
     <button class="add-btn" onclick="openSyncModal()"><i class="bi bi-plus"></i> Add Platform</button>
@@ -185,7 +185,7 @@
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
       </span>
     </div>
   </div>
@@ -197,7 +197,7 @@
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem"></i>
       <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" class="view-lb-btn">View Leaderboard</a>
+    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
