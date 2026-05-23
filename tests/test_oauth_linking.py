@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from bson import ObjectId
-import pytest
 
 
 EXISTING_USER_ID = ObjectId()

@@ -73,9 +73,13 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
-        name = request.form.get("name")
+        name = (request.form.get("name") or "").strip()
         email = request.form.get("email")
         password = request.form.get("password")
+
+        if not name:
+            flash("Name is required", "danger")
+            return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
         if existing_user:
@@ -180,7 +184,7 @@ def authorize_github():
         if user_doc:
             db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"github_id": github_id}})
             user_doc["github_id"] = github_id
-            flash(f"Linked GitHub to your account! Welcome back!", "success")
+            flash("Linked GitHub to your account! Welcome back!", "success")
         else:
             result = db.user.insert_one(
                 {
@@ -193,7 +197,7 @@ def authorize_github():
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your GitHub account has been connected. 🎉", "success")
+            flash("Welcome! Your GitHub account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
@@ -231,7 +235,7 @@ def authorize_google():
         if user_doc:
             db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"google_id": google_id}})
             user_doc["google_id"] = google_id
-            flash(f"Linked Google to your account! Welcome back!", "success")
+            flash("Linked Google to your account! Welcome back!", "success")
         else:
             result = db.user.insert_one(
                 {
@@ -244,7 +248,7 @@ def authorize_google():
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your Google account has been connected. 🎉", "success")
+            flash("Welcome! Your Google account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
