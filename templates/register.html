@@ -94,10 +94,19 @@
                 <div class="strength-rules" id="strengthRules">
                     <div class="rule" id="rule-length"><i class="bi bi-circle"></i> At least 8 characters</div>
                     <div class="rule" id="rule-upper"><i class="bi bi-circle"></i> One uppercase letter</div>
+                    <div class="rule" id="rule-lower"><i class="bi bi-circle"></i> One lowercase letter</div>
                     <div class="rule" id="rule-number"><i class="bi bi-circle"></i> One number</div>
                     <div class="rule" id="rule-special"><i class="bi bi-circle"></i> One special character</div>
                 </div>
                 <div class="field-error" id="passwordError">Password must meet the requirements above.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <div class="input-wrap">
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
+                    <span class="field-icon" id="confirmPasswordIcon"></span>
+                </div>
+                <div class="field-error" id="confirmPasswordError">Passwords must match.</div>
             </div>
             <button type="submit" class="btn-primary-full" id="submitBtn">
                 <i class="bi bi-person-plus"></i> Create Account
@@ -163,10 +172,14 @@ const strengthLabel = document.getElementById('strengthLabel');
 const passwordError = document.getElementById('passwordError');
 const togglePassword = document.getElementById('togglePassword');
 const toggleIcon = document.getElementById('toggleIcon');
+const confirmPasswordInput = document.getElementById('confirm_password');
+const confirmPasswordIcon = document.getElementById('confirmPasswordIcon');
+const confirmPasswordError = document.getElementById('confirmPasswordError');
 
 const rules = {
     length: { el: document.getElementById('rule-length'), test: v => v.length >= 8 },
     upper:  { el: document.getElementById('rule-upper'),  test: v => /[A-Z]/.test(v) },
+    lower:  { el: document.getElementById('rule-lower'),  test: v => /[a-z]/.test(v) },
     number: { el: document.getElementById('rule-number'), test: v => /[0-9]/.test(v) },
     special:{ el: document.getElementById('rule-special'),test: v => /[^A-Za-z0-9]/.test(v) },
 };
@@ -199,18 +212,19 @@ passwordInput.addEventListener('input', () => {
         passwordError.classList.remove('show');
         passwordInput.classList.remove('is-valid', 'is-invalid');
     } else {
-        const lvl = levels[score - 1] || levels[0];
+        const lvl = levels[Math.min(score, levels.length) - 1] || levels[0];
         strengthFill.style.width = lvl.width;
         strengthFill.style.background = lvl.color;
         strengthLabel.textContent = lvl.label;
         strengthLabel.style.color = lvl.color;
-        if (score === 4) {
+        if (score === Object.keys(rules).length) {
             passwordInput.classList.add('is-valid'); passwordInput.classList.remove('is-invalid');
             passwordError.classList.remove('show');
         } else {
             passwordInput.classList.remove('is-valid', 'is-invalid');
         }
     }
+    validateConfirmPassword();
 });
 
 togglePassword.addEventListener('click', () => {
@@ -218,6 +232,16 @@ togglePassword.addEventListener('click', () => {
     passwordInput.type = show ? 'text' : 'password';
     toggleIcon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
 });
+
+function validateConfirmPassword() {
+    const empty = confirmPasswordInput.value === '';
+    const matches = confirmPasswordInput.value === passwordInput.value;
+    setFieldState(confirmPasswordInput, confirmPasswordIcon, confirmPasswordError, matches, empty);
+    return !empty && matches;
+}
+
+confirmPasswordInput.addEventListener('input', validateConfirmPassword);
+confirmPasswordInput.addEventListener('blur', validateConfirmPassword);
 
 document.getElementById('registerForm').addEventListener('submit', (e) => {
     let valid = true;
@@ -236,6 +260,7 @@ document.getElementById('registerForm').addEventListener('submit', (e) => {
         passwordError.classList.add('show');
         valid = false;
     }
+    if (!validateConfirmPassword()) valid = false;
     if (!valid) { e.preventDefault(); return; }
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
