@@ -12,6 +12,12 @@ auth_bp = Blueprint("auth", __name__)
 GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
 
 
+def normalize_email(email):
+    if not email:
+        return ""
+    return email.strip().lower()
+
+
 class UserWrapper(UserMixin):
     """Wrap a pymongo user dict for flask-login compatibility."""
 
@@ -57,7 +63,7 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
-        email = request.form.get("email")
+        email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
         user_doc = db.user.find_one({"email": email})
         if user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
@@ -74,7 +80,7 @@ def register():
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
         name = request.form.get("name")
-        email = request.form.get("email")
+        email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
 
         existing_user = db.user.find_one({"email": email})
@@ -170,7 +176,7 @@ def authorize_github():
     if response_emails.status_code == 200:
         for email_item in response_emails.json():
             if email_item["primary"] and email_item["verified"]:
-                email = email_item["email"]
+                email = normalize_email(email_item["email"])
                 break
 
     user_doc = db.user.find_one({"github_id": github_id})
@@ -180,7 +186,7 @@ def authorize_github():
         if user_doc:
             db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"github_id": github_id}})
             user_doc["github_id"] = github_id
-            flash(f"Linked GitHub to your account! Welcome back!", "success")
+            flash("Linked GitHub to your account! Welcome back!", "success")
         else:
             result = db.user.insert_one(
                 {
@@ -193,7 +199,7 @@ def authorize_github():
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your GitHub account has been connected. 🎉", "success")
+            flash("Welcome! Your GitHub account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
@@ -222,7 +228,7 @@ def authorize_google():
         return "Failed to fetch Google user info", 400
 
     google_id = user_info["sub"]
-    email = user_info.get("email")
+    email = normalize_email(user_info.get("email"))
 
     user_doc = db.user.find_one({"google_id": google_id})
     if not user_doc:
@@ -231,7 +237,7 @@ def authorize_google():
         if user_doc:
             db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"google_id": google_id}})
             user_doc["google_id"] = google_id
-            flash(f"Linked Google to your account! Welcome back!", "success")
+            flash("Linked Google to your account! Welcome back!", "success")
         else:
             result = db.user.insert_one(
                 {
@@ -244,7 +250,7 @@ def authorize_google():
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your Google account has been connected. 🎉", "success")
+            flash("Welcome! Your Google account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
