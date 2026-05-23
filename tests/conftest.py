@@ -24,3 +24,20 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if item.nodeid.startswith("tests/test_progress_card.py"):
             item.add_marker(skip_progress_card)
+
+
+# Add update_many to FakeCollection in both import paths to prevent double-import issues in pytest
+try:
+    from tests.test_tracker_routes import FakeCollection
+    FakeCollection.update_many = lambda self, *args, **kwargs: None
+except ImportError:
+    pass
+
+try:
+    # Temporarily adjust path to import relative to tests directory
+    sys.path.insert(0, 'tests')
+    from test_tracker_routes import FakeCollection
+    FakeCollection.update_many = lambda self, *args, **kwargs: None
+finally:
+    if 'tests' in sys.path:
+        sys.path.remove('tests')

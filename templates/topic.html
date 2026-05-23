@@ -356,7 +356,21 @@ modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 document.getElementById('saveNotesBtn').addEventListener('click', function() {
     const qId = document.getElementById('currentQuestionId').value;
     const notes = document.getElementById('notesTextarea').value;
-    updateQuestion(qId, {notes: notes}, () => {
+    fetch('/update_question/' + qId, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({notes: notes})
+    }).then(r => {
+        if (r.status === 400) {
+            return r.json().then(data => {
+                showUpdateError(data.error);
+            });
+        }
+        if (!r.ok) throw new Error('Request failed');
+        return r.json();
+    }).then(res => {
+        if (!res) return;
+        if (!res.success) throw new Error(res.error || 'Update failed');
         closeModal();
         const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
         if (btn) {
