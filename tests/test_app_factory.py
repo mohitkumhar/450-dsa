@@ -50,6 +50,7 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     flask_app = app_module.create_app()
 
     assert flask_app.config["MONGO_URI"] == "mongodb://localhost:27017/450_dsa"
+    assert flask_app.config["RATELIMIT_STORAGE_URI"] == "memory://"
     assert login_manager.login_view == "auth.login"
     assert registered_clients == ["github", "google"]
     assert {"auth", "tracker", "profile", "leaderboard", "search", "admin", "public"} <= set(flask_app.blueprints)
@@ -97,3 +98,31 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/sync_platforms" in spec["paths"]
     assert "/edit_profile" in spec["paths"]
     assert "/upload_photo" in spec["paths"]
+
+
+def test_create_app_uses_configured_rate_limit_storage(monkeypatch):
+    monkeypatch.setenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/0")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app()
+
+    assert flask_app.config["RATELIMIT_STORAGE_URI"] == "redis://localhost:6379/0"
+
+
+def test_create_app_requires_persistent_rate_limit_storage_in_production(monkeypatch):
+    monkeypatch.delenv("RATELIMIT_STORAGE_URI", raising=False)
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+
+    try:
+        app_module.create_app()
+    except RuntimeError as exc:
+        assert "RATELIMIT_STORAGE_URI" in str(exc)
+    else:
+        raise AssertionError("production startup should require persistent rate-limit storage")

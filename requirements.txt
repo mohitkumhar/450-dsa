@@ -13,6 +13,7 @@ cloudinary==1.39.1
 Pillow==10.3.0
 mongomock==4.1.2
 Flask-Limiter==3.5.0
+redis==5.0.4
 # pyjson5==1.6.2
 Flask-Caching==2.0.2
 flasgger==0.9.7.1

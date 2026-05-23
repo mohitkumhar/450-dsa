@@ -18,12 +18,24 @@ from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter
 
 
+def _is_production_environment():
+    return os.environ.get("FLASK_ENV") == "production" or os.environ.get("APP_ENV") == "production"
+
+
+def _configure_rate_limit_storage(app):
+    storage_uri = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
+    if storage_uri == "memory://" and _is_production_environment():
+        raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
+    app.config["RATELIMIT_STORAGE_URI"] = storage_uri
+
+
 def create_app():
     load_dotenv()
 
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
     app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://localhost:27017/450_dsa")
+    _configure_rate_limit_storage(app)
     app.config["CACHE_TYPE"] = "SimpleCache"
     app.config["CACHE_DEFAULT_TIMEOUT"] = 300
     app.config["SWAGGER"] = {
