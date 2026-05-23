@@ -17,7 +17,6 @@ from card_generator import generate_progress_card
 from app.extensions import db
 from app.extensions import limiter, cache
 from app.platforms.fetchers import (
-    fetch_atcoder,
     fetch_coding_ninjas,
     fetch_gfg,
     fetch_github,
@@ -26,8 +25,7 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
-from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now, compute_c_score, compute_user_platforms
-from streaks import compute_streak
+from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
 from profile_validation import build_profile_updates
 from progress_export import build_progress_csv
 
@@ -53,68 +51,9 @@ def build_sync_platforms_response(platform_status: dict):
 @login_required
 @limiter.limit("5 per minute")
 def sync_platforms():
-    """Sync coding platform statistics for the authenticated user.
-    ---
-    tags:
-      - Profile
-    parameters:
-      - name: body
-        in: body
-        required: false
-        schema:
-          type: object
-          properties:
-            leetcode:
-              type: string
-              description: LeetCode username.
-            github:
-              type: string
-              description: GitHub username.
-            gfg:
-              type: string
-              description: GeeksforGeeks username.
-            hackerrank:
-              type: string
-              description: HackerRank username.
-            codingninjas:
-              type: string
-              description: Coding Ninjas profile id or URL.
-    security:
-      - SessionAuth: []
-    responses:
-      200:
-        description: Platform sync result.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-            partial_success:
-              type: boolean
-            error:
-              type: string
-            platforms:
-              type: object
-              additionalProperties:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    enum:
-                      - synced
-                      - failed
-                      - skipped
-                  error:
-                    type: string
-      401:
-        description: Login required.
-      429:
-        description: Rate limit exceeded.
-    """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
-
     now = utc_now()
     user_id = current_user.id
 
@@ -135,7 +74,6 @@ def sync_platforms():
     gfg_user = current_user.gfg_username or ""
     hr_user = current_user.hackerrank_username or ""
     cn_user = current_user.codingninjas_username or ""
-    ac_user = current_user.atcoder_username or ""
 
     if "leetcode" in data:
         lc_user = data.get("leetcode", "").strip()
@@ -152,9 +90,6 @@ def sync_platforms():
     if "codingninjas" in data:
         cn_user = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
         update_fields["codingninjas_username"] = cn_user
-    if "atcoder" in data:
-        ac_user = data.get("atcoder", "").strip()
-        update_fields["atcoder_username"] = ac_user
 
     combined = {}
     totals = {}
@@ -262,20 +197,6 @@ def sync_platforms():
     else:
         _mark("hackerrank", "skipped")
 
-    if ac_user:
-        try:
-            ac = fetch_atcoder(ac_user)
-            if not ac:
-                _mark("atcoder", "failed", "No data returned (handle may be invalid or rate-limited).")
-            else:
-                _mark("atcoder", "synced")
-                if ac.get("total") is not None:
-                    totals["AtCoder"] = int(ac.get("total", 0))
-        except Exception:
-            _mark("atcoder", "failed", "Failed to fetch AtCoder stats.")
-    else:
-        _mark("atcoder", "skipped")
-
     update_fields["external_daily_counts"] = combined
     update_fields["external_totals"] = totals
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
@@ -288,68 +209,6 @@ def sync_platforms():
 @profile_bp.route("/edit_profile", methods=["POST"])
 @login_required
 def edit_profile():
-    """Update profile fields for the authenticated user.
-    ---
-    tags:
-      - Profile
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          properties:
-            name:
-              type: string
-              maxLength: 100
-            bio:
-              type: string
-              maxLength: 500
-            location:
-              type: string
-              maxLength: 100
-            college:
-              type: string
-              maxLength: 200
-            headline:
-              type: string
-              maxLength: 150
-            linkedin_url:
-              type: string
-              maxLength: 300
-            twitter_url:
-              type: string
-              maxLength: 300
-            website_url:
-              type: string
-              maxLength: 300
-            resume_url:
-              type: string
-              maxLength: 300
-    security:
-      - SessionAuth: []
-    responses:
-      200:
-        description: Profile updated successfully.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-              example: true
-      400:
-        description: Invalid profile payload.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-              example: false
-            error:
-              type: string
-      401:
-        description: Login required.
-    """
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "error": "No data"}), 400
@@ -385,24 +244,12 @@ def public_card(user_id):
             
     try:
         name = user.get("name", "Anonymous")
-        
-        # Calculate real stats
-        stats = compute_c_score(user)
-        c_score = stats["c_score"]
-        dsa_done = stats["dsa_done"]
-        
-        total_questions = db.question.count_documents({})
-        dsa_progress = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
-        
-        progress_data = user.get("progress", {})
-        current_streak, _ = compute_streak(progress_data)
-        
-        all_questions = list(db.question.find())
-        solved_items = {qid: p for qid, p in progress_data.items() if p.get("done")}
-        platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
-
-        from card_generator import generate_progress_card
+        c_score = user.get("c_score", 0)
+        dsa_progress = user.get("dsa_progress", 0)
+        current_streak = user.get("current_streak", 0)
+        platforms = user.get("platforms", {})        
         img_io = generate_progress_card(name, c_score, dsa_progress, current_streak, platforms)
+        img_io.seek(0)
         
         card_cache[user_id] = (current_time, img_io)
         return send_file(img_io, mimetype="image/png")
@@ -412,32 +259,6 @@ def public_card(user_id):
 
 @profile_bp.route("/search_universities")
 def search_universities():
-    """Search universities by name.
-    ---
-    tags:
-      - Profile
-    parameters:
-      - name: q
-        in: query
-        type: string
-        required: true
-        minLength: 2
-        description: University name search text.
-    responses:
-      200:
-        description: Matching universities.
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-              country:
-                type: string
-              label:
-                type: string
-    """
     query = request.args.get("q", "").strip()
     if len(query) < 2:
         return jsonify([])
@@ -468,46 +289,6 @@ def search_universities():
 @login_required
 @limiter.limit("10 per minute")
 def upload_photo():
-    """Upload a profile photo.
-    ---
-    tags:
-      - Profile
-    consumes:
-      - multipart/form-data
-    parameters:
-      - name: photo
-        in: formData
-        type: file
-        required: true
-        description: Profile image file.
-    security:
-      - SessionAuth: []
-    responses:
-      200:
-        description: Photo uploaded successfully when an uploader is configured.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-            photo_url:
-              type: string
-      401:
-        description: Login required.
-      429:
-        description: Rate limit exceeded.
-      500:
-        description: Photo upload is currently disabled or upload failed.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-              example: false
-            error:
-              type: string
-              example: Photo upload disabled (Cloudinary not configured)
-    """
     return jsonify({"success": False, "error": "Photo upload disabled (Cloudinary not configured)"}), 500
 
 
@@ -547,6 +328,18 @@ def profile():
 
         question_id = str(question["_id"])
         if question_id in solved_items:
+            url = (question.get("url") or "").lower()
+            if "leetcode.com" in url:
+                platforms["LeetCode"] += 1
+            elif "geeksforgeeks.org" in url:
+                platforms["GFG"] += 1
+            elif "codingninjas.com" in url:
+                platforms["Coding Ninjas"] += 1
+            elif "hackerrank.com" in url:
+                platforms["HackerRank"] += 1
+            else:
+                platforms["Other"] += 1
+
             solved_at = solved_items[question_id].get("timestamp") or utc_now()
             day = solved_at.strftime("%Y-%m-%d")
             daily_counts[day] = daily_counts.get(day, 0) + 1
@@ -568,7 +361,10 @@ def profile():
     dsa_done = len(solved_items)
 
     ext_totals = user.external_totals or {}
-    platforms = compute_user_platforms(solved_items, ext_totals, all_questions)
+    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0))
+    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0))
+    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0))
+    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0))
 
     # Use DSA difficulties for the chart
     lc_easy = dsa_easy

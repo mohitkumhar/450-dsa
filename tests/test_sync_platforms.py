@@ -5,7 +5,12 @@ from app.profile.routes import profile_bp
 
 def create_profile_test_app():
     app = Flask(__name__)
-    app.config.update(TESTING=True, LOGIN_DISABLED=True, SECRET_KEY="test-secret")
+    app.config.update(
+        TESTING=True,
+        LOGIN_DISABLED=True,
+        SECRET_KEY="test-secret",
+        WTF_CSRF_ENABLED=False,
+    )
     app.register_blueprint(profile_bp)
     return app
 
