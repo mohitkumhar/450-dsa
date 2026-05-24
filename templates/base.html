@@ -327,6 +327,63 @@
             align-items: center;
             gap: 10px;
         }
+        .app-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-modal.open {
+            display: flex;
+        }
+
+        .app-modal__dialog {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .app-modal__title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-modal__textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            outline: none;
+        }
+
+        .app-modal__textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .app-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
 
         .pill-btn {
             display: flex;
