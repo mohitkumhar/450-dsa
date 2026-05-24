@@ -12,8 +12,7 @@
 .avatar-ring img{position:relative;z-index:1}
 .prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
 .prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
-.card-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:12px}
-.card-btn:hover{background:var(--accent-hover);color:#fff;text-decoration:none}
+.card-btn{margin-bottom:12px}
 .prof-bio{text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px}
 .social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;padding:10px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
 .social-icon{color:var(--text-muted);font-size:1.1rem;text-decoration:none;transition:color 0.2s}
@@ -25,13 +24,11 @@
 .check-ok{color:var(--success);font-size:0.9rem}
 .link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
 .link-out:hover{color:var(--accent)}
-.add-btn{width:100%;padding:7px;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-top:4px}
-.add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.add-btn{margin-top:4px}
 .rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
 .rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
 .rank-label{font-size:0.75rem;color:var(--text-secondary)}
-.view-lb-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;margin-top:10px;text-decoration:none}
-.view-lb-btn:hover{background:var(--accent-hover);color:#fff;text-decoration:none}
+.view-lb-btn{margin-top:10px}
 .meta-footer{font-size:0.72rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-top:8px}
 .meta-footer span{display:flex;justify-content:space-between}
 /* stat cards */
@@ -121,8 +118,8 @@ body.modal-open {
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
       <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
-    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;" aria-label="Share progress image URL">
+    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn ui-btn ui-btn-success ui-btn-block" onclick="copyProgressCardUrl()" aria-label="Share progress image URL">
       <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
     <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
@@ -161,7 +158,7 @@ body.modal-open {
         });
       }
     </script>
-    <a class="card-btn" href="{{ url_for('tracker.export_csv') }}" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary)" aria-label="Export progress as CSV file">
+    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_csv') }}" aria-label="Export progress as CSV file">
       <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
     </a>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
@@ -180,8 +177,8 @@ body.modal-open {
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button onclick="openDeleteModal()" style="width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
+    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -220,7 +217,7 @@ body.modal-open {
         {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
-    <button class="add-btn" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+    <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
@@ -237,7 +234,7 @@ body.modal-open {
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
+    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>

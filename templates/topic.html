@@ -136,22 +136,22 @@
 
 <!-- Filter Buttons with ARIA labels -->
 <div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
         📋 All ({{ total_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
         🟢 Easy ({{ easy_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
         🟡 Medium ({{ medium_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
         🔴 Hard ({{ hard_count }})
     </button>
 </div>
 <!-- Practice Random Button -->
 <div style="margin-bottom: 16px;">
-    <button id="practiceRandomBtn" type="button" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+    <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn-primary ui-btn-pill">
         🎲 Practice Random
     </button>
 </div>
