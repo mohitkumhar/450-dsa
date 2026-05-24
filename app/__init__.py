@@ -139,20 +139,21 @@ def create_app(config_class=None):
                 if questions:
                     db.question.insert_many(questions)
 
-        missing_platform_rows = db.question.find(
-            {
-                "$or": [
-                    {"primary_platform": {"$exists": False}},
-                    {"secondary_platform": {"$exists": False}},
-                ]
-            },
-            {"url": 1, "url2": 1},
-        )
-        for question in missing_platform_rows:
-            db.question.update_one(
-                {"_id": question["_id"]},
-                {"$set": _question_platform_updates(question)},
+        if hasattr(db.question, "find") and hasattr(db.question, "update_one"):
+            missing_platform_rows = db.question.find(
+                {
+                    "$or": [
+                        {"primary_platform": {"$exists": False}},
+                        {"secondary_platform": {"$exists": False}},
+                    ]
+                },
+                {"url": 1, "url2": 1},
             )
+            for question in missing_platform_rows:
+                db.question.update_one(
+                    {"_id": question["_id"]},
+                    {"$set": _question_platform_updates(question)},
+                )
 
     @app.before_request
     def ensure_db_initialized():
