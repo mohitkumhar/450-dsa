@@ -179,7 +179,27 @@ def delete_account():
 @auth_bp.route("/delete_account/token", methods=["GET"])
 @login_required
 def delete_account_token():
-    """Generate and return a CSRF token for the delete account form."""
+    """Generate and return a CSRF token for the delete account form.
+    ---
+    tags:
+      - Auth
+    security:
+      - SessionAuth: []
+    responses:
+      200:
+        description: CSRF token for account deletion.
+        schema:
+          type: object
+          properties:
+            csrf_token:
+              type: string
+              description: Single-use CSRF token.
+            is_oauth:
+              type: boolean
+              description: Whether the user authenticated via OAuth.
+      401:
+        description: Login required.
+    """
     token = secrets.token_hex(32)
     session["delete_csrf_token"] = token
     from flask import jsonify

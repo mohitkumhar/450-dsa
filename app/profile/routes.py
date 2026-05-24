@@ -25,6 +25,12 @@ from profile_validation import build_profile_updates
 
 profile_bp = Blueprint("profile", __name__)
 
+SYNC_COOLDOWN_SECONDS = 600
+SYNC_RATE_LIMIT = "5 per minute"
+UPLOAD_PHOTO_RATE_LIMIT = "10 per minute"
+UNIVERSITY_SEARCH_TIMEOUT = 5
+UNIVERSITY_RESULT_LIMIT = 30
+
 
 def build_sync_platforms_response(platform_status: dict):
     attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
@@ -42,7 +48,7 @@ def build_sync_platforms_response(platform_status: dict):
 
 @profile_bp.route("/sync_platforms", methods=["POST"])
 @login_required
-@limiter.limit("5 per minute")
+@limiter.limit(SYNC_RATE_LIMIT)
 def sync_platforms():
     """Sync coding platform statistics for the authenticated user.
     ---
@@ -70,6 +76,9 @@ def sync_platforms():
             codingninjas:
               type: string
               description: Coding Ninjas profile id or URL.
+            atcoder:
+              type: string
+              description: AtCoder handle.
     security:
       - SessionAuth: []
     responses:
@@ -113,8 +122,8 @@ def sync_platforms():
     if last_sync:
         last_sync = ensure_utc_datetime(last_sync)
         diff = (now - last_sync).total_seconds()
-        if diff < 600:
-            remaining = int(600 - diff)
+        if diff < SYNC_COOLDOWN_SECONDS:
+            remaining = int(SYNC_COOLDOWN_SECONDS - diff)
             mins = remaining // 60
             secs = remaining % 60
             return json_error(f"Please wait {mins}m {secs}s before syncing again.", status_code=200)
@@ -436,13 +445,13 @@ def search_universities():
         response = requests.get(
             "https://universities.hipolabs.com/search",
             params={"name": query},
-            timeout=5,
+            timeout=UNIVERSITY_SEARCH_TIMEOUT,
         )
         if response.status_code == 200:
             data = response.json()
             seen = set()
             results = []
-            for university in data[:30]:
+            for university in data[:UNIVERSITY_RESULT_LIMIT]:
                 name = university.get("name", "")
                 country = university.get("country", "")
                 label = f"{name}, {country}" if country else name
@@ -457,7 +466,7 @@ def search_universities():
 
 @profile_bp.route("/upload_photo", methods=["POST"])
 @login_required
-@limiter.limit("10 per minute")
+@limiter.limit(UPLOAD_PHOTO_RATE_LIMIT)
 def upload_photo():
     """Upload a profile photo.
     ---
