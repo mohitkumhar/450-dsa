@@ -1,0 +1,30 @@
+{% macro question_link_badge(url, platform_name, aria_label='') -%}
+  {% set label = aria_label or ('Solve on ' ~ platform_name ~ ' (opens in new tab)') %}
+  <a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+     class="q-badge {% if platform_name=='LeetCode' %}badge-lc{% elif platform_name=='GFG' %}badge-gfg{% elif platform_name=='HackerRank' %}badge-hr{% elif platform_name=='Coding Ninjas' %}badge-cn{% elif platform_name=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+     aria-label="{{ label }}">
+     <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ platform_name }}
+  </a>
+{%- endmacro %}
+
+{% macro award_badge(title, label, icon_url=None, icon_class=None, icon_text=None, stars=0) -%}
+  <div class="award-badge" title="{{ title }}" role="listitem">
+    {% if icon_url %}
+      <img src="{{ icon_url }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ title }} badge">
+    {% elif icon_class %}
+      <i class="{{ icon_class }}" style="font-size:.9rem;color:#00bd6c" aria-hidden="true"></i>
+      {% if stars > 0 %}
+        <div class="hr-stars">
+          {% for i in range(stars) %}
+            <span class="s-on">★</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% elif icon_text %}
+      <span aria-hidden="true">{{ icon_text }}</span>
+    {% else %}
+      <span aria-hidden="true">🏅</span>
+    {% endif %}
+    <span class="a-lbl">{{ label }}</span>
+  </div>
+{%- endmacro %}
