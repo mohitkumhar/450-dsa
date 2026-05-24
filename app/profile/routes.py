@@ -128,34 +128,34 @@ def sync_platforms():
 
     update_fields = {"last_sync": now}
 
-    lc_user = current_user.leetcode_username or ""
-    gh_user = current_user.github_username or ""
-    gfg_user = current_user.gfg_username or ""
-    hr_user = current_user.hackerrank_username or ""
-    cn_user = current_user.codingninjas_username or ""
-    ac_user = current_user.atcoder_username or ""
+    leetcode_username = current_user.leetcode_username or ""
+    github_username = current_user.github_username or ""
+    gfg_username = current_user.gfg_username or ""
+    hackerrank_username = current_user.hackerrank_username or ""
+    codingninjas_username = current_user.codingninjas_username or ""
+    atcoder_username = current_user.atcoder_username or ""
 
     if "leetcode" in data:
-        lc_user = data.get("leetcode", "").strip()
-        update_fields["leetcode_username"] = lc_user
+        leetcode_username = data.get("leetcode", "").strip()
+        update_fields["leetcode_username"] = leetcode_username
     if "github" in data:
-        gh_user = data.get("github", "").strip()
-        update_fields["github_username"] = gh_user
+        github_username = data.get("github", "").strip()
+        update_fields["github_username"] = github_username
     if "gfg" in data:
-        gfg_user = data.get("gfg", "").strip()
-        update_fields["gfg_username"] = gfg_user
+        gfg_username = data.get("gfg", "").strip()
+        update_fields["gfg_username"] = gfg_username
     if "hackerrank" in data:
-        hr_user = data.get("hackerrank", "").strip()
-        update_fields["hackerrank_username"] = hr_user
+        hackerrank_username = data.get("hackerrank", "").strip()
+        update_fields["hackerrank_username"] = hackerrank_username
     if "codingninjas" in data:
-        cn_user = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
-        update_fields["codingninjas_username"] = cn_user
+        codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
+        update_fields["codingninjas_username"] = codingninjas_username
     if "atcoder" in data:
-        ac_user = data.get("atcoder", "").strip()
-        update_fields["atcoder_username"] = ac_user
+        atcoder_username = data.get("atcoder", "").strip()
+        update_fields["atcoder_username"] = atcoder_username
 
-    combined = {}
-    totals = {}
+    combined_daily_counts = {}
+    platform_totals = {}
     platform_status = {}
 
     def _mark(platform_key: str, status: str, error: str = None):
@@ -164,35 +164,35 @@ def sync_platforms():
             payload["error"] = error
         platform_status[platform_key] = payload
 
-    if lc_user:
+    if leetcode_username:
         try:
-            lc = fetch_leetcode(lc_user)
-            if not lc:
+            leetcode_data = fetch_leetcode(leetcode_username)
+            if not leetcode_data:
                 _mark("leetcode", "failed", "No data returned (username may be invalid or rate-limited).")
             else:
                 _mark("leetcode", "synced")
-                for key, value in lc.get("calendar", {}).items():
-                    combined[key] = combined.get(key, 0) + value
-                if lc.get("total") is not None:
-                    totals["LeetCode"] = lc.get("total")
-                if lc.get("difficulty"):
-                    totals["LeetCode_Easy"] = lc["difficulty"].get("Easy", 0)
-                    totals["LeetCode_Medium"] = lc["difficulty"].get("Medium", 0)
-                    totals["LeetCode_Hard"] = lc["difficulty"].get("Hard", 0)
-                if lc.get("contest"):
-                    totals["LeetCode_Contests"] = lc["contest"].get("attendedContestsCount", 0)
-                    totals["LeetCode_Rating"] = int(lc["contest"].get("rating", 0))
-                    totals["LeetCode_GlobalRank"] = lc["contest"].get("globalRanking", 0)
+                for key, value in leetcode_data.get("calendar", {}).items():
+                    combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+                if leetcode_data.get("total") is not None:
+                    platform_totals["LeetCode"] = leetcode_data.get("total")
+                if leetcode_data.get("difficulty"):
+                    platform_totals["LeetCode_Easy"] = leetcode_data["difficulty"].get("Easy", 0)
+                    platform_totals["LeetCode_Medium"] = leetcode_data["difficulty"].get("Medium", 0)
+                    platform_totals["LeetCode_Hard"] = leetcode_data["difficulty"].get("Hard", 0)
+                if leetcode_data.get("contest"):
+                    platform_totals["LeetCode_Contests"] = leetcode_data["contest"].get("attendedContestsCount", 0)
+                    platform_totals["LeetCode_Rating"] = int(leetcode_data["contest"].get("rating", 0))
+                    platform_totals["LeetCode_GlobalRank"] = leetcode_data["contest"].get("globalRanking", 0)
 
                 try:
-                    rating_history = fetch_leetcode_rating_history(lc_user)
+                    rating_history = fetch_leetcode_rating_history(leetcode_username)
                     if rating_history:
                         update_fields["rating_history"] = rating_history
                 except Exception:
                     pass
 
                 try:
-                    lc_badges = fetch_lc_badges(lc_user)
+                    lc_badges = fetch_lc_badges(leetcode_username)
                     update_fields["lc_badges_json"] = json.dumps(lc_badges)
                 except Exception:
                     pass
@@ -201,81 +201,81 @@ def sync_platforms():
     else:
         _mark("leetcode", "skipped")
 
-    if gh_user:
+    if github_username:
         try:
-            gh = fetch_github(gh_user)
-            if not gh:
+            github_data = fetch_github(github_username)
+            if not github_data:
                 _mark("github", "failed", "No data returned (username may be invalid or rate-limited).")
             else:
                 _mark("github", "synced")
-                for key, value in gh.get("calendar", {}).items():
-                    combined[key] = combined.get(key, 0) + value
-                if gh.get("stats"):
-                    totals["GitHub_Issues"] = gh["stats"]["issues"]
-                    totals["GitHub_PRs"] = gh["stats"]["prs"]
-                    totals["GitHub_Merged_PRs"] = gh["stats"]["merged_prs"]
-                    totals["GitHub_Commits"] = gh["stats"]["commits"]
+                for key, value in github_data.get("calendar", {}).items():
+                    combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+                if github_data.get("stats"):
+                    platform_totals["GitHub_Issues"] = github_data["stats"]["issues"]
+                    platform_totals["GitHub_PRs"] = github_data["stats"]["prs"]
+                    platform_totals["GitHub_Merged_PRs"] = github_data["stats"]["merged_prs"]
+                    platform_totals["GitHub_Commits"] = github_data["stats"]["commits"]
         except Exception:
             _mark("github", "failed", "Failed to fetch GitHub stats.")
     else:
         _mark("github", "skipped")
 
-    if gfg_user:
+    if gfg_username:
         try:
-            gfg = fetch_gfg(gfg_user)
-            if not gfg:
+            gfg_data = fetch_gfg(gfg_username)
+            if not gfg_data:
                 _mark("gfg", "failed", "No data returned (username may be invalid or rate-limited).")
             else:
                 _mark("gfg", "synced")
-                if gfg.get("total") is not None:
-                    totals["GFG"] = int(gfg.get("total", 0))
+                if gfg_data.get("total") is not None:
+                    platform_totals["GFG"] = int(gfg_data.get("total", 0))
         except Exception:
             _mark("gfg", "failed", "Failed to fetch GFG stats.")
     else:
         _mark("gfg", "skipped")
 
-    if cn_user:
+    if codingninjas_username:
         try:
-            cn = fetch_coding_ninjas(cn_user)
-            if not cn:
+            codingninjas_data = fetch_coding_ninjas(codingninjas_username)
+            if not codingninjas_data:
                 _mark("codingninjas", "failed", "No data returned (username may be invalid or rate-limited).")
             else:
                 _mark("codingninjas", "synced")
-                if cn.get("total") is not None:
-                    totals["Coding Ninjas"] = int(cn.get("total", 0))
+                if codingninjas_data.get("total") is not None:
+                    platform_totals["Coding Ninjas"] = int(codingninjas_data.get("total", 0))
         except Exception:
             _mark("codingninjas", "failed", "Failed to fetch Coding Ninjas stats.")
     else:
         _mark("codingninjas", "skipped")
 
-    if hr_user:
+    if hackerrank_username:
         try:
-            hr_badges, hr_solved = fetch_hr_badges(hr_user)
+            hr_badges, hr_solved = fetch_hr_badges(hackerrank_username)
             update_fields["hr_badges_json"] = json.dumps(hr_badges)
             if hr_solved > 0:
-                totals["HackerRank"] = hr_solved
+                platform_totals["HackerRank"] = hr_solved
             _mark("hackerrank", "synced")
         except Exception:
             _mark("hackerrank", "failed", "Failed to fetch HackerRank stats.")
     else:
         _mark("hackerrank", "skipped")
 
-    if ac_user:
+    if atcoder_username:
         try:
-            ac = fetch_atcoder(ac_user)
-            if not ac:
+            atcoder_data = fetch_atcoder(atcoder_username)
+            if not atcoder_data:
                 _mark("atcoder", "failed", "No data returned (handle may be invalid or rate-limited).")
             else:
                 _mark("atcoder", "synced")
-                if ac.get("total") is not None:
-                    totals["AtCoder"] = int(ac.get("total", 0))
+                if atcoder_data.get("total") is not None:
+                    platform_totals["AtCoder"] = int(atcoder_data.get("total", 0))
         except Exception:
             _mark("atcoder", "failed", "Failed to fetch AtCoder stats.")
     else:
         _mark("atcoder", "skipped")
 
-    update_fields["external_daily_counts"] = combined
-    update_fields["external_totals"] = totals
+    update_fields["external_daily_counts"] = combined_daily_counts
+    update_fields["external_totals"] = platform_totals
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
@@ -566,21 +566,21 @@ def profile():
     topic_progress = []
     dsa_done = len(solved_items)
 
-    ext_totals = user.external_totals or {}
-    platforms = compute_user_platforms(solved_items, ext_totals, all_questions)
+    ext_platform_totals = user.external_totals or {}
+    platforms = compute_user_platforms(solved_items, ext_platform_totals, all_questions)
 
     # Use DSA difficulties for the chart
     lc_easy = dsa_easy
     lc_medium = dsa_medium
     lc_hard = dsa_hard
     
-    lc_contests = ext_totals.get("LeetCode_Contests", 0)
-    lc_rating = ext_totals.get("LeetCode_Rating", 0)
-    lc_rank = ext_totals.get("LeetCode_GlobalRank", 0)
-    gh_issues = ext_totals.get("GitHub_Issues", 0)
-    gh_prs = ext_totals.get("GitHub_PRs", 0)
-    gh_merged = ext_totals.get("GitHub_Merged_PRs", 0)
-    gh_commits = ext_totals.get("GitHub_Commits", 0)
+    lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
+    lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
+    lc_rank = ext_platform_totals.get("LeetCode_GlobalRank", 0)
+    gh_issues = ext_platform_totals.get("GitHub_Issues", 0)
+    gh_prs = ext_platform_totals.get("GitHub_PRs", 0)
+    gh_merged = ext_platform_totals.get("GitHub_Merged_PRs", 0)
+    gh_commits = ext_platform_totals.get("GitHub_Commits", 0)
 
     global_total_solved = sum(platforms.values())
     total_questions = len(all_questions)
