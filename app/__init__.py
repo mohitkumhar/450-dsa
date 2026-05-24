@@ -89,11 +89,10 @@ def create_app():
         db.user.create_index("is_admin")
         db.topic.create_index("name", unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
+        # Lightweight schema backfill for legacy user documents.
+        db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
     except Exception:
         pass
-
-    # Lightweight schema backfill for legacy user documents.
-    db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
 
     data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
