@@ -1,6 +1,7 @@
 import json
 import os
 import secrets
+from pathlib import Path
 
 from dotenv import load_dotenv
 from flasgger import Swagger
@@ -96,12 +97,12 @@ def create_app():
     # Lightweight schema backfill for legacy user documents.
     db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
 
-    data_path = os.path.abspath(os.path.join(app.root_path, os.pardir, "data.json"))
+    data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
 
     def init_db():
         if db.topic.count_documents({}) == 0:
-            with open(data_path, "r", encoding="utf-8") as file_obj:
+            with data_path.open("r", encoding="utf-8") as file_obj:
                 data = json.load(file_obj)
             for topic in data:
                 result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})

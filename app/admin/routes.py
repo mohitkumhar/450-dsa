@@ -1,8 +1,8 @@
 import math
-import os
 import re
 from collections import deque
 from datetime import datetime, timezone
+from pathlib import Path
 
 from bson import ObjectId
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
@@ -24,25 +24,22 @@ def _safe_int(value, default):
 
 
 def _tail_file(file_path, max_lines=80):
-    with open(file_path, "r", encoding="utf-8", errors="replace") as file_obj:
+    with file_path.open("r", encoding="utf-8", errors="replace") as file_obj:
         return list(deque(file_obj, maxlen=max_lines))
 
 
 def _recent_error_logs(max_entries=120):
-    root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+    root_dir = Path(__file__).resolve().parents[2]
     candidates = [
-        os.path.join(root_dir, "logs", "error.log"),
-        os.path.join(root_dir, "logs", "app.log"),
-        os.path.join(root_dir, "instance", "error.log"),
-        os.path.join(root_dir, "instance", "app.log"),
+        root_dir / "logs" / "error.log",
+        root_dir / "logs" / "app.log",
+        root_dir / "instance" / "error.log",
+        root_dir / "instance" / "app.log",
     ]
 
-    existing = []
-    for file_path in candidates:
-        if os.path.isfile(file_path):
-            existing.append(file_path)
+    existing = [file_path for file_path in candidates if file_path.is_file()]
 
-    existing.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+    existing.sort(key=lambda path: path.stat().st_mtime, reverse=True)
 
     entries = []
     per_file_limit = max(10, max_entries // max(1, len(existing)))
@@ -51,7 +48,7 @@ def _recent_error_logs(max_entries=120):
             lines = _tail_file(file_path, max_lines=per_file_limit)
         except OSError:
             continue
-        rel_path = os.path.relpath(file_path, root_dir)
+        rel_path = file_path.relative_to(root_dir).as_posix()
         for line in lines:
             text = line.rstrip("\n")
             if not text:
