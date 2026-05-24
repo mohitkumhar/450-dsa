@@ -1,25 +1,9 @@
-import mongomock
-
-import app as app_module
 import app.auth.routes as auth_routes
-
-
-def create_test_app(monkeypatch):
-    test_db = mongomock.MongoClient().db
-
-    monkeypatch.setattr(app_module, "db", test_db)
-    monkeypatch.setattr(auth_routes, "db", test_db)
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
-    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
-
-    flask_app = app_module.create_app()
-    flask_app.config.update(TESTING=True)
-    flask_app._db_initialized = True
-    return flask_app, test_db
+from conftest import build_test_app
 
 
 def test_register_rejects_weak_password_before_insert(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch)
 
     response = flask_app.test_client().post(
         "/register",
@@ -37,7 +21,7 @@ def test_register_rejects_weak_password_before_insert(monkeypatch):
 
 
 def test_register_rejects_mismatched_confirmation(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch)
 
     response = flask_app.test_client().post(
         "/register",
@@ -55,7 +39,7 @@ def test_register_rejects_mismatched_confirmation(monkeypatch):
 
 
 def test_register_accepts_strong_confirmed_password(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch)
 
     response = flask_app.test_client().post(
         "/register",

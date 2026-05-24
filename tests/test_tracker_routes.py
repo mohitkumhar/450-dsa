@@ -1,40 +1,11 @@
-import mongomock
 from bson import ObjectId
 
-import app as app_module
-import app.auth.routes as auth_routes
 import app.tracker.routes as tracker_routes
-
-
-def create_test_app(monkeypatch):
-    test_db = mongomock.MongoClient().db
-
-    monkeypatch.setattr(app_module, "db", test_db)
-    monkeypatch.setattr(auth_routes, "db", test_db)
-    monkeypatch.setattr(tracker_routes, "db", test_db)
-
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
-    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
-
-    flask_app = app_module.create_app()
-    flask_app.config.update(TESTING=True)
-    flask_app._db_initialized = True
-
-    return flask_app, test_db
-
-
-def login_test_user(client, test_db):
-    user_id = test_db.user.insert_one(
-        {"email": "user@example.com", "progress": {}, "is_admin": False}
-    ).inserted_id
-    with client.session_transaction() as session:
-        session["_user_id"] = str(user_id)
-        session["_fresh"] = True
-    return user_id
+from conftest import build_test_app, login_test_user
 
 
 def test_topic_not_found_invalid_id(monkeypatch):
-    flask_app, _ = create_test_app(monkeypatch)
+    flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
 
     with flask_app.test_client() as client:
         response = client.get("/topic/invalid-object-id")
@@ -44,7 +15,7 @@ def test_topic_not_found_invalid_id(monkeypatch):
 
 
 def test_topic_not_found_missing_id(monkeypatch):
-    flask_app, _ = create_test_app(monkeypatch)
+    flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     non_existent_id = str(ObjectId())
 
     with flask_app.test_client() as client:
@@ -55,7 +26,7 @@ def test_topic_not_found_missing_id(monkeypatch):
 
 
 def test_topic_page_all_and_filtered_counts(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
 
     # Insert a test topic
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
@@ -141,7 +112,7 @@ def test_topic_page_all_and_filtered_counts(monkeypatch):
 
 
 def test_update_question_rejects_missing_json_body(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
 
     with flask_app.test_client() as client:
@@ -156,7 +127,7 @@ def test_update_question_rejects_missing_json_body(monkeypatch):
 
 
 def test_update_question_rejects_malformed_json(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
 
     with flask_app.test_client() as client:
@@ -172,7 +143,7 @@ def test_update_question_rejects_malformed_json(monkeypatch):
 
 
 def test_update_question_rejects_json_array(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
 
     with flask_app.test_client() as client:
@@ -184,7 +155,7 @@ def test_update_question_rejects_json_array(monkeypatch):
 
 
 def test_update_question_rejects_non_boolean_done(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
 
     with flask_app.test_client() as client:
@@ -199,7 +170,7 @@ def test_update_question_rejects_non_boolean_done(monkeypatch):
 
 
 def test_update_question_accepts_valid_boolean_update(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
 
     with flask_app.test_client() as client:

@@ -1,34 +1,15 @@
-import mongomock
 import werkzeug
 
-import app as app_module
-import app.auth.routes as auth_routes
 import app.web.routes as public_routes
+from conftest import build_test_app
 
 
 if not hasattr(werkzeug, "__version__"):
     werkzeug.__version__ = "3"
 
 
-def create_test_app(monkeypatch):
-    test_db = mongomock.MongoClient().db
-
-    monkeypatch.setattr(app_module, "db", test_db)
-    monkeypatch.setattr(auth_routes, "db", test_db)
-    monkeypatch.setattr(public_routes, "db", test_db)
-
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
-    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
-
-    flask_app = app_module.create_app()
-    flask_app.config.update(TESTING=True)
-    flask_app._db_initialized = True
-
-    return flask_app, test_db
-
-
 def test_public_profile_route_is_accessible_without_login(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(public_routes,))
     user_id = test_db.user.insert_one(
         {
             "name": "Public User",
@@ -63,7 +44,7 @@ def test_public_profile_route_is_accessible_without_login(monkeypatch):
 
 
 def test_public_profile_invalid_id_returns_400(monkeypatch):
-    flask_app, _ = create_test_app(monkeypatch)
+    flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(public_routes,))
 
     with flask_app.test_client() as client:
         response = client.get("/u/not-a-valid-objectid")
@@ -72,7 +53,7 @@ def test_public_profile_invalid_id_returns_400(monkeypatch):
 
 
 def test_public_profile_missing_user_returns_404(monkeypatch):
-    flask_app, _ = create_test_app(monkeypatch)
+    flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(public_routes,))
 
     with flask_app.test_client() as client:
         response = client.get("/u/64b64c3f8f1d2b3c4d5e6f70")
