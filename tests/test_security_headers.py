@@ -1,4 +1,4 @@
-from tests.test_tracker_routes import create_test_app
+from test_tracker_routes import create_test_app
 
 
 def test_base_template_does_not_load_blocked_jquery(monkeypatch):
