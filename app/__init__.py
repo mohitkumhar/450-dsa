@@ -14,6 +14,7 @@ from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth, cac
 from app.leaderboard import leaderboard_bp
 from app.web.routes import public_bp
 from app.profile import profile_bp
+from app.security import build_content_security_policy
 from app.search import search_bp
 from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter
@@ -191,13 +192,7 @@ def create_app():
 
     @app.after_request
     def add_security_headers(response):
-        response.headers['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
-            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
-            "img-src 'self' data: https:;"
-        )
+        response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
 
 
