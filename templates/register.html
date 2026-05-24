@@ -115,34 +115,17 @@
     </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/auth_forms.js') }}"></script>
 <script>
-function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-
-function setFieldState(input, iconEl, errorEl, valid, empty) {
-    if (empty) {
-        input.classList.remove('is-valid', 'is-invalid');
-        iconEl.innerHTML = '';
-        errorEl.classList.remove('show');
-    } else if (valid) {
-        input.classList.add('is-valid'); input.classList.remove('is-invalid');
-        iconEl.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#22c55e"></i>';
-        errorEl.classList.remove('show');
-    } else {
-        input.classList.add('is-invalid'); input.classList.remove('is-valid');
-        iconEl.innerHTML = '<i class="bi bi-x-circle-fill" style="color:#ef4444"></i>';
-        errorEl.classList.add('show');
-    }
-}
-
 const nameInput = document.getElementById('name');
 const nameIcon = document.getElementById('nameIcon');
 const nameError = document.getElementById('nameError');
 nameInput.addEventListener('input', () => {
     const v = nameInput.value.trim();
-    setFieldState(nameInput, nameIcon, nameError, v.length >= 2, v === '');
+    AuthForms.setFieldState(nameInput, nameIcon, nameError, v.length >= 2, v === '');
 });
 nameInput.addEventListener('blur', () => {
-    if (nameInput.value.trim().length === 0) setFieldState(nameInput, nameIcon, nameError, false, false);
+    if (nameInput.value.trim().length === 0) AuthForms.setFieldState(nameInput, nameIcon, nameError, false, false);
 });
 
 const emailInput = document.getElementById('email');
@@ -150,11 +133,11 @@ const emailIcon = document.getElementById('emailIcon');
 const emailError = document.getElementById('emailError');
 emailInput.addEventListener('input', () => {
     const v = emailInput.value.trim();
-    setFieldState(emailInput, emailIcon, emailError, validateEmail(v), v === '');
+    AuthForms.setFieldState(emailInput, emailIcon, emailError, AuthForms.validateEmail(v), v === '');
 });
 emailInput.addEventListener('blur', () => {
-    if (emailInput.value.trim() && !validateEmail(emailInput.value.trim()))
-        setFieldState(emailInput, emailIcon, emailError, false, false);
+    if (emailInput.value.trim() && !AuthForms.validateEmail(emailInput.value.trim()))
+        AuthForms.setFieldState(emailInput, emailIcon, emailError, false, false);
 });
 
 const passwordInput = document.getElementById('password');
@@ -213,20 +196,16 @@ passwordInput.addEventListener('input', () => {
     }
 });
 
-togglePassword.addEventListener('click', () => {
-    const show = passwordInput.type === 'password';
-    passwordInput.type = show ? 'text' : 'password';
-    toggleIcon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
-});
+AuthForms.setupPasswordToggle(togglePassword, passwordInput, toggleIcon);
 
 document.getElementById('registerForm').addEventListener('submit', (e) => {
     let valid = true;
     if (nameInput.value.trim().length < 2) {
-        setFieldState(nameInput, nameIcon, nameError, false, false);
+        AuthForms.setFieldState(nameInput, nameIcon, nameError, false, false);
         valid = false;
     }
-    if (!validateEmail(emailInput.value.trim())) {
-        setFieldState(emailInput, emailIcon, emailError, false, false);
+    if (!AuthForms.validateEmail(emailInput.value.trim())) {
+        AuthForms.setFieldState(emailInput, emailIcon, emailError, false, false);
         valid = false;
     }
     const v = passwordInput.value;
@@ -238,8 +217,7 @@ document.getElementById('registerForm').addEventListener('submit', (e) => {
     }
     if (!valid) { e.preventDefault(); return; }
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Creating account...';
+    AuthForms.setSubmitLoading(btn, 'Creating account...');
 });
 </script>
 {% endblock %}

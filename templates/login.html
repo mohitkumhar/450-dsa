@@ -89,6 +89,7 @@
     </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/auth_forms.js') }}"></script>
 <script>
 const emailInput = document.getElementById('email');
 const emailError = document.getElementById('emailError');
@@ -99,32 +100,14 @@ const togglePassword = document.getElementById('togglePassword');
 const toggleIcon = document.getElementById('toggleIcon');
 const submitBtn = document.getElementById('submitBtn');
 
-function validateEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 emailInput.addEventListener('input', () => {
     const val = emailInput.value.trim();
-    if (val === '') {
-        emailInput.classList.remove('is-valid', 'is-invalid');
-        emailIcon.innerHTML = '';
-        emailError.classList.remove('show');
-    } else if (validateEmail(val)) {
-        emailInput.classList.add('is-valid');
-        emailInput.classList.remove('is-invalid');
-        emailIcon.innerHTML = '<i class="bi bi-check-circle-fill valid"></i>';
-        emailError.classList.remove('show');
-    } else {
-        emailInput.classList.add('is-invalid');
-        emailInput.classList.remove('is-valid');
-        emailIcon.innerHTML = '<i class="bi bi-x-circle-fill invalid"></i>';
-        emailError.classList.add('show');
-    }
+    AuthForms.setFieldState(emailInput, emailIcon, emailError, AuthForms.validateEmail(val), val === '');
 });
 
 emailInput.addEventListener('blur', () => {
-    if (emailInput.value.trim() && !validateEmail(emailInput.value.trim())) {
-        emailError.classList.add('show');
+    if (emailInput.value.trim() && !AuthForms.validateEmail(emailInput.value.trim())) {
+        AuthForms.setFieldState(emailInput, emailIcon, emailError, false, false);
     }
 });
 
@@ -142,17 +125,12 @@ passwordInput.addEventListener('blur', () => {
     }
 });
 
-togglePassword.addEventListener('click', () => {
-    const isPassword = passwordInput.type === 'password';
-    passwordInput.type = isPassword ? 'text' : 'password';
-    toggleIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
-});
+AuthForms.setupPasswordToggle(togglePassword, passwordInput, toggleIcon);
 
 document.getElementById('loginForm').addEventListener('submit', (e) => {
     let valid = true;
-    if (!validateEmail(emailInput.value.trim())) {
-        emailInput.classList.add('is-invalid');
-        emailError.classList.add('show');
+    if (!AuthForms.validateEmail(emailInput.value.trim())) {
+        AuthForms.setFieldState(emailInput, emailIcon, emailError, false, false);
         valid = false;
     }
     if (passwordInput.value.length === 0) {
@@ -164,8 +142,7 @@ document.getElementById('loginForm').addEventListener('submit', (e) => {
         e.preventDefault();
         return;
     }
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Signing in...';
+    AuthForms.setSubmitLoading(submitBtn, 'Signing in...');
 });
 </script>
 {% endblock %}
