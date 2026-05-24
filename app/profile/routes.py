@@ -43,7 +43,7 @@ def build_sync_platforms_response(platform_status: dict):
 @login_required
 @limiter.limit("5 per minute")
 def sync_platforms():
-    """Sync coding platform statistics for the authenticated user.
+    """Sync linked coding platform statistics for the authenticated user.
     ---
     tags:
       - Profile
@@ -98,6 +98,8 @@ def sync_platforms():
                     type: string
       401:
         description: Login required.
+      400:
+        description: Request body must be a JSON object.
       429:
         description: Rate limit exceeded.
     """
@@ -278,7 +280,7 @@ def sync_platforms():
 @profile_bp.route("/edit_profile", methods=["POST"])
 @login_required
 def edit_profile():
-    """Update profile fields for the authenticated user.
+    """Update editable profile fields for the authenticated user.
     ---
     tags:
       - Profile
@@ -378,7 +380,7 @@ def public_card(user_id):
 
 @profile_bp.route("/search_universities")
 def search_universities():
-    """Search universities by name.
+    """Return matching universities for an autocomplete query.
     ---
     tags:
       - Profile
@@ -434,7 +436,7 @@ def search_universities():
 @login_required
 @limiter.limit("10 per minute")
 def upload_photo():
-    """Upload a profile photo.
+    """Upload and save a profile photo for the authenticated user.
     ---
     tags:
       - Profile

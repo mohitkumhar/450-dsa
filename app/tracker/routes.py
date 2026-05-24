@@ -106,7 +106,7 @@ def export_topic_notes(topic_id):
 @tracker_bp.route("/update_question/<question_id>", methods=["POST"])
 @login_required
 def update_question(question_id):
-    """Update the authenticated user's progress for a question.
+    """Update the authenticated user's saved progress for one question.
     ---
     tags:
       - Tracker
@@ -144,6 +144,8 @@ def update_question(question_id):
               example: true
       401:
         description: Login required.
+      400:
+        description: Invalid JSON payload.
       404:
         description: Question not found.
         schema:

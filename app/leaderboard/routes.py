@@ -56,7 +56,7 @@ def leaderboard():
 @leaderboard_bp.route("/api/leaderboard")
 @cache.cached(timeout=300, query_string=True)
 def api_leaderboard():
-    """Get leaderboard rankings.
+    """Return paginated leaderboard rankings for the selected mode.
     ---
     tags:
       - Leaderboard
