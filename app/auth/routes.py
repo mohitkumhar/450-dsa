@@ -1,3 +1,4 @@
+import re
 import secrets
 
 from bson import ObjectId
@@ -10,6 +11,40 @@ from app.utils import utc_now
 
 auth_bp = Blueprint("auth", __name__)
 GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
+COMMON_WEAK_PASSWORDS = {
+    "12345678",
+    "123456789",
+    "password",
+    "password1",
+    "qwerty123",
+    "admin123",
+    "letmein",
+    "welcome1",
+}
+
+
+def validate_registration_password(password, confirm_password):
+    """Return user-facing validation errors for local password registration."""
+    password = password or ""
+    confirm_password = confirm_password or ""
+    errors = []
+
+    if password != confirm_password:
+        errors.append("Password and confirm password must match.")
+    if len(password) < 8:
+        errors.append("Password must be at least 8 characters long.")
+    if not re.search(r"[A-Z]", password):
+        errors.append("Password must include at least one uppercase letter.")
+    if not re.search(r"[a-z]", password):
+        errors.append("Password must include at least one lowercase letter.")
+    if not re.search(r"\d", password):
+        errors.append("Password must include at least one number.")
+    if not re.search(r"[^A-Za-z0-9]", password):
+        errors.append("Password must include at least one special character.")
+    if password.lower() in COMMON_WEAK_PASSWORDS:
+        errors.append("Password is too common. Please choose a stronger password.")
+
+    return errors
 
 
 class UserWrapper(UserMixin):
@@ -76,6 +111,12 @@ def register():
         name = request.form.get("name")
         email = request.form.get("email")
         password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+
+        password_errors = validate_registration_password(password, confirm_password)
+        if password_errors:
+            flash(" ".join(password_errors), "danger")
+            return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
         if existing_user:
@@ -180,7 +221,7 @@ def authorize_github():
         if user_doc:
             db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"github_id": github_id}})
             user_doc["github_id"] = github_id
-            flash(f"Linked GitHub to your account! Welcome back!", "success")
+            flash("Linked GitHub to your account! Welcome back!", "success")
         else:
             result = db.user.insert_one(
                 {
@@ -193,7 +234,7 @@ def authorize_github():
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your GitHub account has been connected. 🎉", "success")
+            flash("Welcome! Your GitHub account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
@@ -231,7 +272,7 @@ def authorize_google():
         if user_doc:
             db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"google_id": google_id}})
             user_doc["google_id"] = google_id
-            flash(f"Linked Google to your account! Welcome back!", "success")
+            flash("Linked Google to your account! Welcome back!", "success")
         else:
             result = db.user.insert_one(
                 {
@@ -244,7 +285,7 @@ def authorize_google():
                 }
             )
             user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your Google account has been connected. 🎉", "success")
+            flash("Welcome! Your Google account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))

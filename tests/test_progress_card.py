@@ -240,7 +240,7 @@ def test_public_card_caching(client, app):
 
 
 def test_public_card_exception_handling(client, app):
-    """Test that exceptions during card generation are handled."""
+    """Test that card generation errors do not expose raw exception text."""
     user_id = ObjectId()
     user_data = {
         "_id": user_id,
@@ -254,11 +254,12 @@ def test_public_card_exception_handling(client, app):
     app.mock_db.user.data[str(user_id)] = user_data
     
     with patch('app.profile.routes.db', app.mock_db), \
-         patch('card_generator.generate_progress_card', side_effect=Exception("Test error")):
+         patch('card_generator.generate_progress_card', side_effect=Exception("Secret path leak")):
         response = client.get(f"/u/{user_id}/card.png")
         
         assert response.status_code == 500
-        assert b"Test error" in response.data
+        assert b"Unable to generate progress card" in response.data
+        assert b"Secret path leak" not in response.data
 
 
 def test_card_generator_with_long_name(client, app):
