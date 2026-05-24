@@ -1,10 +1,8 @@
 import json
-import os
 
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
-from card_generator import generate_progress_card
 
 from app.extensions import db
 from app.extensions import limiter, cache
@@ -19,11 +17,12 @@ from app.platforms.fetchers import (
     fetch_leetcode_rating_history,
 )
 from app.profile.card_service import CACHE_TTL, card_cache, get_public_card_image
-from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_c_score, compute_user_platforms
-from streaks import compute_streak
+from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
 from profile_validation import build_profile_updates
 
 profile_bp = Blueprint("profile", __name__)
+
+__all__ = ["CACHE_TTL", "card_cache", "get_public_card_image"]
 
 
 def build_sync_platforms_response(platform_status: dict):
