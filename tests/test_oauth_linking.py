@@ -237,3 +237,83 @@ def test_google_missing_userinfo_returns_400(monkeypatch):
         with patch("app.auth.routes.google", new=mock):
             resp = client.get("/login/google/authorize")
             assert resp.status_code == 400
+
+
+def test_resolve_oauth_user_returns_existing_provider_match(monkeypatch):
+    import app.auth.routes as auth_routes
+
+    existing = {
+        "_id": EXISTING_USER_ID,
+        "email": "test@example.com",
+        "github_id": str(GITHUB_USER_INFO["id"]),
+        "progress": {},
+    }
+    class FakeUserCollection:
+        @staticmethod
+        def find_one(q):
+            if q.get("github_id") == str(GITHUB_USER_INFO["id"]):
+                return existing
+            return None
+
+        @staticmethod
+        def update_one(*args, **kwargs):
+            raise AssertionError("provider-matched users should not be relinked")
+
+        @staticmethod
+        def insert_one(*args, **kwargs):
+            raise AssertionError("provider-matched users should not be recreated")
+
+    class FakeDB:
+        user = FakeUserCollection()
+
+    db = FakeDB()
+    monkeypatch.setattr(auth_routes, "db", db)
+
+    user_doc, action = auth_routes.resolve_oauth_user(
+        "github_id",
+        str(GITHUB_USER_INFO["id"]),
+        "Ignored Name",
+        email="other@example.com",
+    )
+
+    assert action == "existing"
+    assert user_doc["_id"] == EXISTING_USER_ID
+    assert user_doc["github_id"] == str(GITHUB_USER_INFO["id"])
+
+
+def test_resolve_oauth_user_links_existing_email_match(monkeypatch):
+    import app.auth.routes as auth_routes
+
+    existing = {"_id": EXISTING_USER_ID, "email": "test@example.com", "progress": {}}
+    db = make_fake_db(existing=existing)
+    monkeypatch.setattr(auth_routes, "db", db)
+
+    user_doc, action = auth_routes.resolve_oauth_user(
+        "google_id",
+        GOOGLE_USER_INFO["sub"],
+        GOOGLE_USER_INFO["name"],
+        email=GOOGLE_USER_INFO["email"],
+    )
+
+    assert action == "linked"
+    assert user_doc["_id"] == EXISTING_USER_ID
+    assert user_doc["google_id"] == GOOGLE_USER_INFO["sub"]
+
+
+def test_resolve_oauth_user_creates_new_user_without_email(monkeypatch):
+    import app.auth.routes as auth_routes
+
+    inserted = {}
+    db = make_fake_db(inserted=inserted)
+    monkeypatch.setattr(auth_routes, "db", db)
+
+    user_doc, action = auth_routes.resolve_oauth_user(
+        "github_id",
+        str(GITHUB_USER_INFO["id"]),
+        GITHUB_USER_INFO["login"],
+        email=None,
+    )
+
+    assert action == "created"
+    assert user_doc["github_id"] == str(GITHUB_USER_INFO["id"])
+    assert user_doc["email"] is None

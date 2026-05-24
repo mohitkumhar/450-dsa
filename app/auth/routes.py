@@ -23,6 +23,38 @@ COMMON_WEAK_PASSWORDS = {
 }
 
 
+def resolve_oauth_user(provider_field, provider_id, name, email=None):
+    """Find, link, or create an OAuth-backed user record.
+
+    Returns a tuple of `(user_doc, action)` where action is one of
+    `existing`, `linked`, or `created`.
+    """
+    user_doc = db.user.find_one({provider_field: provider_id})
+    if user_doc:
+        return user_doc, "existing"
+
+    if email:
+        user_doc = db.user.find_one({"email": email})
+
+    if user_doc:
+        db.user.update_one({"_id": user_doc["_id"]}, {"$set": {provider_field: provider_id}})
+        user_doc[provider_field] = provider_id
+        return user_doc, "linked"
+
+    result = db.user.insert_one(
+        {
+            "name": name,
+            "email": email,
+            provider_field: provider_id,
+            "progress": {},
+            "is_admin": False,
+            "created_at": utc_now(),
+        }
+    )
+    user_doc = db.user.find_one({"_id": result.inserted_id})
+    return user_doc, "created"
+
+
 def validate_registration_password(password, confirm_password):
     """Return user-facing validation errors for local password registration."""
     password = password or ""
@@ -218,27 +250,16 @@ def authorize_github():
                 email = email_item["email"]
                 break
 
-    user_doc = db.user.find_one({"github_id": github_id})
-    if not user_doc:
-        if email:
-            user_doc = db.user.find_one({"email": email})
-        if user_doc:
-            db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"github_id": github_id}})
-            user_doc["github_id"] = github_id
-            flash("Linked GitHub to your account! Welcome back!", "success")
-        else:
-            result = db.user.insert_one(
-                {
-                    "name": user_info.get("name", user_info.get("login", "GitHub User")),
-                    "email": email,
-                    "github_id": github_id,
-                    "progress": {},
-                    "is_admin": False,
-                    "created_at": utc_now(),
-                }
-            )
-            user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash("Welcome! Your GitHub account has been connected. 🎉", "success")
+    user_doc, action = resolve_oauth_user(
+        "github_id",
+        github_id,
+        user_info.get("name", user_info.get("login", "GitHub User")),
+        email=email,
+    )
+    if action == "linked":
+        flash("Linked GitHub to your account! Welcome back!", "success")
+    elif action == "created":
+        flash("Welcome! Your GitHub account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
@@ -269,27 +290,16 @@ def authorize_google():
     google_id = user_info["sub"]
     email = user_info.get("email")
 
-    user_doc = db.user.find_one({"google_id": google_id})
-    if not user_doc:
-        if email:
-            user_doc = db.user.find_one({"email": email})
-        if user_doc:
-            db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"google_id": google_id}})
-            user_doc["google_id"] = google_id
-            flash("Linked Google to your account! Welcome back!", "success")
-        else:
-            result = db.user.insert_one(
-                {
-                    "name": user_info.get("name", "Google User"),
-                    "email": email,
-                    "google_id": google_id,
-                    "progress": {},
-                    "is_admin": False,
-                    "created_at": utc_now(),
-                }
-            )
-            user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash("Welcome! Your Google account has been connected. 🎉", "success")
+    user_doc, action = resolve_oauth_user(
+        "google_id",
+        google_id,
+        user_info.get("name", "Google User"),
+        email=email,
+    )
+    if action == "linked":
+        flash("Linked Google to your account! Welcome back!", "success")
+    elif action == "created":
+        flash("Welcome! Your Google account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
