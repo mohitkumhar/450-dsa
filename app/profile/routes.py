@@ -1,6 +1,5 @@
 import json
 import os
-import time
 
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
@@ -19,6 +18,7 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
+from app.profile.card_service import CACHE_TTL, card_cache, get_public_card_image
 from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_c_score, compute_user_platforms
 from streaks import compute_streak
 from profile_validation import build_profile_updates
@@ -353,48 +353,24 @@ def edit_profile():
     return json_success()
 
 
-card_cache = {}
-CACHE_TTL = 3600
-
 @profile_bp.route("/u/<user_id>/card.png")
 def public_card(user_id):
     from bson.objectid import ObjectId
     try:
-        user = db.user.find_one({"_id": ObjectId(user_id)})
+        object_id = ObjectId(user_id)
     except Exception:
         return "Invalid User ID", 400
-        
-    if not user:
-        return "User not found", 404
-        
-    current_time = time.time()
-    if user_id in card_cache:
-        cached_time, cached_image = card_cache[user_id]
-        if current_time - cached_time < CACHE_TTL:
-            cached_image.seek(0)
-            return send_file(cached_image, mimetype="image/png")
-            
-    try:
-        name = user.get("name", "Anonymous")
-        
-        stats = compute_c_score(user)
-        c_score = stats["c_score"]
-        dsa_done = stats["dsa_done"]
-        
-        total_questions = db.question.count_documents({})
-        dsa_progress = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
-        
-        progress_data = user.get("progress", {})
-        current_streak, _ = compute_streak(progress_data)
-        
-        all_questions = list(db.question.find())
-        solved_items = {qid: p for qid, p in progress_data.items() if p.get("done")}
-        platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
 
-        from card_generator import generate_progress_card
-        img_io = generate_progress_card(name, c_score, dsa_progress, current_streak, platforms)
-        
-        card_cache[user_id] = (current_time, img_io)
+    try:
+        img_io = get_public_card_image(user_id, object_id, db_handle=db)
+    except LookupError:
+        return "User not found", 404
+    except Exception:
+        current_app.logger.exception("Failed to generate public progress card")
+        return "Unable to generate progress card", 500
+
+    try:
+        img_io.seek(0)
         return send_file(img_io, mimetype="image/png")
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
