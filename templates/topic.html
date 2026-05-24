@@ -128,7 +128,7 @@
 </div>
 <!-- Practice Random Button -->
 <div style="margin-bottom: 16px;">
-    <button id="practiceRandomBtn" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+    <button id="practiceRandomBtn" type="button" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
         🎲 Practice Random
     </button>
 </div>
@@ -325,7 +325,7 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
 });
 
 // Difficulty Filtering
-document.querySelectorAll('.filter-btn').forEach(btn => {
+document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
     btn.addEventListener('click', function() {
         const difficulty = this.dataset.difficulty;
         const currentUrl = new URL(window.location.href);
