@@ -1,9 +1,9 @@
 import app.auth.routes as auth_routes
-from test_tracker_routes import create_test_app
+from conftest import build_test_app
 
 
 def test_register_rejects_blank_display_name(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch)
     monkeypatch.setattr(auth_routes, "db", test_db)
 
     with flask_app.test_client() as client:
