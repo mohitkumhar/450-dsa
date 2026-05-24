@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.isort]
+profile = "black"
+known_first_party = ["app", "card_generator", "notes_export", "progress_export", "profile_validation", "streaks"]
+known_third_party = [
+    "authlib",
+    "bson",
+    "cloudinary",
+    "dotenv",
+    "flasgger",
+    "flask",
+    "flask_bcrypt",
+    "flask_caching",
+    "flask_limiter",
+    "flask_login",
+    "flask_pymongo",
+    "mongomock",
+    "PIL",
+    "pymongo",
+    "requests",
+    "werkzeug",
+]
+force_sort_within_sections = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "card_generator", "notes_export", "progress_export", "profile_validation", "streaks"]
+known-third-party = [
+    "authlib",
+    "bson",
+    "cloudinary",
+    "dotenv",
+    "flasgger",
+    "flask",
+    "flask_bcrypt",
+    "flask_caching",
+    "flask_limiter",
+    "flask_login",
+    "flask_pymongo",
+    "mongomock",
+    "PIL",
+    "pymongo",
+    "requests",
+    "werkzeug",
+]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
