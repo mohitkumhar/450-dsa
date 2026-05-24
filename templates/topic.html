@@ -89,6 +89,11 @@
 }
 </style>
 
+<div id="topic-endpoints"
+     data-update-question-url-template="{{ url_for('tracker.update_question', question_id='__QUESTION_ID__') }}"
+     data-login-url="{{ url_for('auth.login') }}"
+     hidden></div>
+
 <a href="{{ url_for('tracker.index') }}" class="back-btn" aria-label="Back to Topics">
     <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Topics
 </a>
@@ -259,7 +264,7 @@ function setBookmarkState(btn, isBookmarked) {
 }
 
 function updateQuestion(id, data, callback) {
-    return fetch('/update_question/' + id, {
+    return fetch(buildUpdateQuestionUrl(id), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -273,12 +278,19 @@ function updateQuestion(id, data, callback) {
     });
 }
 
+const topicEndpoints = document.getElementById('topic-endpoints');
+const loginUrl = topicEndpoints?.dataset.loginUrl || "{{ url_for('auth.login') }}";
+
+function buildUpdateQuestionUrl(id) {
+    return topicEndpoints.dataset.updateQuestionUrlTemplate.replace('__QUESTION_ID__', encodeURIComponent(id));
+}
+
 // Update the checkbox event listener
 document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
         if (!isAuthenticated) { 
             this.checked = !this.checked; 
-            window.location.href = "{{ url_for('auth.login') }}"; 
+            window.location.href = loginUrl;
             return; 
         }
         const row = document.getElementById('row-' + this.dataset.id);
@@ -306,7 +318,7 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
 document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         if (!isAuthenticated) { 
-            window.location.href = "{{ url_for('auth.login') }}"; 
+            window.location.href = loginUrl;
             return; 
         }
         const isBookmarked = this.dataset.bookmarked === 'true';
@@ -376,7 +388,7 @@ function trapFocus(e) {
 
 document.querySelectorAll('.notes-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-        if (!isAuthenticated) { window.location.href = "{{ url_for('auth.login') }}"; return; }
+        if (!isAuthenticated) { window.location.href = loginUrl; return; }
         document.getElementById('currentQuestionId').value = this.dataset.id;
         document.getElementById('notesTextarea').value = this.dataset.notes || '';
         openModal(this);

@@ -96,6 +96,13 @@ body.modal-open {
 }
 </style>
 
+<div id="profile-endpoints"
+     data-edit-profile-url="{{ url_for('profile.edit_profile') }}"
+     data-sync-platforms-url="{{ url_for('profile.sync_platforms') }}"
+     data-upload-photo-url="{{ url_for('profile.upload_photo') }}"
+     data-search-universities-url="{{ url_for('profile.search_universities') }}"
+     hidden></div>
+
 <div class="prof-layout">
 
 <!-- ── LEFT SIDEBAR ── -->
@@ -568,6 +575,8 @@ body.modal-open {
 
 {% block scripts %}
 <script>
+const profileEndpoints = document.getElementById('profile-endpoints');
+
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');
@@ -584,7 +593,7 @@ window.handleSaveProfile = function(btn){
   };
   btn.disabled=true;
   contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
-  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  fetch(profileEndpoints.dataset.editProfileUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -623,7 +632,7 @@ window.handleQuickSync = function(btn) {
   icon.className = 'bi bi-arrow-clockwise btn-spinner';
   showToast('⏳ Syncing profiles...');
   
-  fetch('/sync_platforms', {
+  fetch(profileEndpoints.dataset.syncPlatformsUrl, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
@@ -681,7 +690,7 @@ window.handleSyncProfile = function(btn){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),90000);
 
-  fetch('/sync_platforms',{
+  fetch(profileEndpoints.dataset.syncPlatformsUrl,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
@@ -791,7 +800,7 @@ function handlePhotoUpload(e){
   const fd=new FormData();
   fd.append('photo',file);
   showToast('⏳ Uploading photo...');
-  fetch('/upload_photo',{method:'POST',body:fd})
+  fetch(profileEndpoints.dataset.uploadPhotoUrl,{method:'POST',body:fd})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -850,7 +859,7 @@ function handlePhotoUpload(e){
     const q = this.value.trim();
     if(q.length < 2){ dd.style.display='none'; return; }
     timer = setTimeout(() => {
-      fetch('/search_universities?q=' + encodeURIComponent(q))
+      fetch(profileEndpoints.dataset.searchUniversitiesUrl + '?q=' + encodeURIComponent(q))
         .then(r => r.json())
         .then(data => renderItems(data))
         .catch(() => { dd.style.display='none'; });

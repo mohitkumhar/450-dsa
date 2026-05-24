@@ -322,6 +322,10 @@
   }
 </style>
 
+<div id="bookmarks-endpoints"
+     data-update-question-url-template="{{ url_for('tracker.update_question', question_id='__QUESTION_ID__') }}"
+     hidden></div>
+
 <a href="{{ url_for('tracker.index') }}" class="back-btn"><i class="bi bi-arrow-left"></i> Back to Topics</a>
 <div class="page-title">Bookmarks</div>
 <div class="page-sub">Your saved questions for quick review</div>
@@ -430,9 +434,14 @@
   }
 
   function updateQuestion(id, data, callback) {
-    fetch('/update_question/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    fetch(buildUpdateQuestionUrl(id), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       .then(r => r.json()).then(res => { if (res.success) callback(); })
       .catch(() => alert('Error updating.'));
+  }
+
+  const bookmarksEndpoints = document.getElementById('bookmarks-endpoints');
+  function buildUpdateQuestionUrl(id) {
+    return bookmarksEndpoints.dataset.updateQuestionUrlTemplate.replace('__QUESTION_ID__', encodeURIComponent(id));
   }
   document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function () { updateQuestion(this.dataset.id, { done: this.checked }, () => { }); });
