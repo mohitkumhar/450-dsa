@@ -303,6 +303,11 @@
 {% block scripts %}
 <script>
 // Pre-loaded data from server (avoids extra API calls)
+function escapeHtml(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 const DATA = {
   cscore: {{ by_cscore | tojson }},
   questions: {{ by_questions | tojson }},
@@ -365,8 +370,8 @@ function renderPodium(entries, mode) {
       <div class="podium-card ${medals[i]}">
         <div class="podium-medal ${medalClasses[i]}">${i + 1}</div>
         <div class="podium-avatar">${avatarHTML(e)}</div>
-        <div class="podium-name">${e.name}${e.user_id === CURRENT_USER_ID ? '<span class="me-tag">YOU</span>' : ''}</div>
-        <div class="podium-college">${subtitle}</div>
+        <div class="podium-name">${escapeHtml(e.name)}${e.user_id === CURRENT_USER_ID ? '<span class="me-tag">YOU</span>' : ''}</div>
+        <div class="podium-college">${escapeHtml(subtitle)}</div>
         <div class="podium-score">${score}</div>
         <div class="podium-score-label">${label}</div>
       </div>`;
@@ -400,11 +405,11 @@ function renderTable(entries, mode) {
     const score = getScoreValue(e, mode);
     const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
     const nameHTML = isCollegeMode
-      ? `${e.college}<span class="top-user-note">Top coder: ${e.top_user ? e.top_user.name : 'N/A'}</span>`
-      : `${e.name}${isMe ? '<span class="me-tag">YOU</span>' : ''}`;
+      ? `${escapeHtml(e.college)}<span class="top-user-note">Top coder: ${escapeHtml(e.top_user ? e.top_user.name : 'N/A')}</span>`
+      : `${escapeHtml(e.name)}${isMe ? '<span class="me-tag">YOU</span>' : ''}`;
     const subtitleHTML = isCollegeMode
       ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'}`
-      : (e.college || '');
+      : escapeHtml(e.college || '');
     const dsaHTML = isCollegeMode
       ? `<span class="stat-badge dsa">${e.dsa_done} total</span>`
       : `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;

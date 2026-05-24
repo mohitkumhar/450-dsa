@@ -775,7 +775,14 @@ function handlePhotoUpload(e){
     items.forEach((item, i) => {
       const div = document.createElement('div');
       div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;transition:background .15s';
-      div.innerHTML = '<span style="font-weight:600;color:var(--text-primary)">' + item.name + '</span><span style="font-size:.72rem;color:var(--text-muted)">' + item.country + '</span>';
+      const spanName = document.createElement('span');
+      spanName.style.cssText = 'font-weight:600;color:var(--text-primary)';
+      spanName.textContent = item.name;
+      const spanCountry = document.createElement('span');
+      spanCountry.style.cssText = 'font-size:.72rem;color:var(--text-muted)';
+      spanCountry.textContent = item.country;
+      div.appendChild(spanName);
+      div.appendChild(spanCountry);
       div.dataset.label = item.label;
       div.addEventListener('mouseenter', () => { setActive(i); });
       div.addEventListener('click', () => { inp.value = item.label; dd.style.display='none'; });
