@@ -1,7 +1,7 @@
 name: 🧹 Chore / Maintenance
 description: Maintenance tasks, tooling, configs, cleanup, or internal changes
 title: "chore: "
-labels: ["chore"]
+labels: ["gssoc", "gssoc:approved", "level:beginner", "type:enhancement"]
 
 body:
   - type: textarea

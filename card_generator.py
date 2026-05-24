@@ -1,6 +1,7 @@
 import io
 from PIL import Image, ImageDraw, ImageFont
 
+
 def generate_progress_card(name, c_score, dsa_progress, current_streak, platforms):
     width, height = 800, 400
     bg_color = (24, 24, 27) # zinc-900

@@ -1,6 +1,36 @@
 import time
+from unittest.mock import MagicMock, patch
 
 from platform_fetcher import run_fetch_jobs
+from app.platforms.fetchers import fetch_atcoder
+
+
+def test_fetch_atcoder_returns_total_on_success():
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'count': 42}
+
+    with patch('app.platforms.fetchers.requests.get', return_value=mock_response):
+        result = fetch_atcoder('tourist')
+
+    assert result == {'total': 42}
+
+
+def test_fetch_atcoder_returns_empty_on_non_200():
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+
+    with patch('app.platforms.fetchers.requests.get', return_value=mock_response):
+        result = fetch_atcoder('unknown_user')
+
+    assert result == {}
+
+
+def test_fetch_atcoder_returns_empty_on_exception():
+    with patch('app.platforms.fetchers.requests.get', side_effect=Exception('timeout')):
+        result = fetch_atcoder('tourist')
+
+    assert result == {}
 
 
 def test_run_fetch_jobs_executes_jobs_concurrently():

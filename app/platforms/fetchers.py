@@ -7,13 +7,41 @@ import requests
 from app.utils import normalize_coding_ninjas_profile_id
 
 
+LEETCODE_PROFILE_QUERY = """
+query userProfile($username: String!) {
+  matchedUser(username: $username) {
+    submitStatsGlobal {
+      acSubmissionNum {
+        difficulty
+        count
+      }
+    }
+    userCalendar {
+      submissionCalendar
+    }
+  }
+  userContestRanking(username: $username) {
+    attendedContestsCount
+    rating
+    globalRanking
+    topPercentage
+  }
+}
+"""
+
+
+def build_leetcode_profile_payload(username):
+    return {
+        "query": LEETCODE_PROFILE_QUERY,
+        "variables": {"username": username},
+    }
+
+
 def fetch_leetcode(username):
     try:
         response = requests.post(
             "https://leetcode.com/graphql",
-            json={
-                "query": f'{{ matchedUser(username: "{username}") {{ submitStatsGlobal {{ acSubmissionNum {{ difficulty count }} }} userCalendar {{ submissionCalendar }} }} userContestRanking(username: "{username}") {{ attendedContestsCount rating globalRanking topPercentage }} }}'
-            },
+            json=build_leetcode_profile_payload(username),
             timeout=8,
         )
         response_json = response.json().get("data", {})
@@ -219,6 +247,18 @@ def fetch_gfg(username):
     except Exception as exc:
         print("GFG Error", exc)
         return {}
+
+
+def fetch_atcoder(handle):
+    try:
+        r = requests.get(
+            'https://kenkoooo.com/atcoder/atcoder-api/v3/user/acceptance_count',
+            params={'user': handle}, timeout=8)
+        if r.status_code == 200:
+            return {'total': r.json().get('count', 0)}
+    except Exception as e:
+        print(f'AtCoder Error: {e}')
+    return {}
 
 
 def fetch_coding_ninjas(username):

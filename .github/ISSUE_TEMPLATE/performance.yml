@@ -1,7 +1,7 @@
 name: ⚡ Performance Issue
 description: Report slowness, high memory/CPU usage, or inefficiency
 title: "perf: "
-labels: ["performance"]
+labels: ["gssoc", "gssoc:approved", "level:intermediate", "type:enhancement"]
 
 body:
   - type: textarea

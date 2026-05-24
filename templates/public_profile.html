@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block head %}
+<meta property="og:title"
+      content="{{ user.username }}'s DSA Profile 450 DSA Tracker" />
+<meta property="og:description"
+      content="{{ user.username }} has solved {{ stats.dsa_done }} DSA problems
+               with a C-Score of {{ stats.c_score }}. Check their full stats!" />
+<meta property="og:type" content="profile" />
+<meta property="og:url" content="{{ request.url }}" />
+<title>{{ user.username }}'s Profile | 450 DSA</title>
+{% endblock %}
+
+{% block content %}
+<style>
+.prof-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start;max-width:1100px;margin:0 auto}
+.prof-main{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px;color:var(--text-primary)}
+.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color);overflow:hidden}
+.prof-name{font-size:1.5rem;font-weight:800;text-align:center;margin-bottom:4px}
+.prof-handle{text-align:center;font-size:0.85rem;color:var(--accent);margin-bottom:12px}
+.sec-title{font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.big-num{font-size:2.8rem;font-weight:900;line-height:1;color:var(--text-primary)}
+.sub-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
+.stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
+.stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+@media(max-width:520px){.stat-row{grid-template-columns:1fr}}
+</style>
+
+<div class="prof-layout">
+  <div class="prof-main">
+    <div class="card" style="text-align:center">
+      <div class="avatar-ring" style="margin-bottom:16px">
+        {% if user.avatar_url %}
+        <img src="{{ user.avatar_url }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.username }}">
+        {% else %}
+        {{ (user.username or 'U')[0]|upper }}
+        {% endif %}
+      </div>
+      <div class="prof-name">{{ user.username }}</div>
+      <div class="prof-handle">Public DSA Profile</div>
+      <div class="sec-title" style="margin-top:18px">C-Score</div>
+      <div class="big-num" style="color:var(--accent)">{{ stats.c_score or 0 }}</div>
+      <div class="sub-label">Composite public score</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">DSA Progress</div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-lbl">DSA Done</div>
+          <div class="stat-num">{{ stats.dsa_done or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Total Solved</div>
+          <div class="stat-num">{{ stats.total_solved or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Active Days</div>
+          <div class="stat-num">{{ stats.active_days or 0 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">LeetCode</div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-lbl">Total</div>
+          <div class="stat-num">{{ stats.lc_total or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Easy</div>
+          <div class="stat-num">{{ stats.lc_easy or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Medium</div>
+          <div class="stat-num">{{ stats.lc_medium or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Hard</div>
+          <div class="stat-num">{{ stats.lc_hard or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Rating</div>
+          <div class="stat-num">{{ stats.lc_rating or 0 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-title">Other Platforms</div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-lbl">GFG</div>
+          <div class="stat-num">{{ stats.gfg_total or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">HackerRank</div>
+          <div class="stat-num">{{ stats.hr_total or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Coding Ninjas</div>
+          <div class="stat-num">{{ stats.cn_total or 0 }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center;color:var(--text-secondary);font-size:.82rem">
+      This is a public profile page.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}{% endblock %}

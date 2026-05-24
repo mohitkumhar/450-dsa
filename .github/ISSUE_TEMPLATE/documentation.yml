@@ -1,7 +1,7 @@
 name: 📚 Documentation Issue
 description: Report missing, incorrect, or unclear documentation
 title: "docs: "
-labels: ["documentation"]
+labels: ["gssoc", "gssoc:approved", "level:beginner", "type:documentation"]
 
 body:
   - type: textarea

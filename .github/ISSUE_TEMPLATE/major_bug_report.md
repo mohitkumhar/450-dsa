@@ -2,7 +2,7 @@
 name: Major Bug Report
 about: Create a report for a critical issue or major bug
 title: '[CRITICAL] '
-labels: bug, critical
+labels: gssoc, gssoc:approved, level:advanced, type:bug
 assignees: ''
 ---
 

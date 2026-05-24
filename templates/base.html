@@ -7,11 +7,16 @@
     <title>450 DSA Tracker</title>
     <meta name="description"
         content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
+   
+    <link rel="stylesheet" href="{{ url_for('static', filename='js/css/main.css') }}">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -55,6 +60,65 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
+        
+        /* Skip to main content link - for keyboard users */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--accent);
+            color: white;
+            padding: 8px 16px;
+            z-index: 10000;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 0 0 8px 0;
+            transition: top 0.2s ease;
+        }
+        
+        .skip-link:focus {
+            top: 0;
+            outline: 2px solid white;
+            outline-offset: 2px;
+        }
+        
+        /* Focus indicators for keyboard navigation */
+        :focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        /* Remove outline for mouse users but keep for keyboard */
+        :focus:not(:focus-visible) {
+            outline: none;
+        }
+        
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Better focus for interactive elements */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible,
+        [tabindex]:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            :focus-visible {
+                outline: 3px solid var(--accent);
+                outline-offset: 3px;
+            }
         }
 
         /* ─── Left Sidebar ─── */
@@ -290,6 +354,7 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             padding: 18px;
+            color: var(--text-primary);
             transition: var(--transition);
         }
 
@@ -297,7 +362,141 @@
             border-color: #333;
         }
 
-        /* ─── Flash Messages ─── */
+        .card,
+        .stat-card {
+            color: var(--text-primary);
+        }
+
+        .stat-num,
+        .big-num,
+        .metric-value,
+        .rating-num,
+        .rank-num,
+        .donut-inner {
+            color: var(--text-primary);
+        }
+
+        .stat-lbl,
+        .metric-label,
+        .sub-label,
+        .rating-sub {
+            color: var(--text-secondary);
+        }
+
+        /* ─── Toast Notifications - TOP RIGHT ─── */
+        .toast-container {
+            position: fixed;
+            top: calc(var(--topbar-height) + 12px);
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 380px;
+        }
+
+        .toast-notification {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid;
+            animation: toastSlideIn 0.3s ease;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .toast-notification:hover {
+            transform: translateX(-4px);
+        }
+
+        .toast-notification.success {
+            border-left-color: var(--success);
+            background: linear-gradient(135deg, var(--bg-card), rgba(34, 197, 94, 0.05));
+        }
+        .toast-notification.success .toast-icon { color: var(--success); }
+
+        .toast-notification.error {
+            border-left-color: var(--danger);
+            background: linear-gradient(135deg, var(--bg-card), rgba(239, 68, 68, 0.05));
+        }
+        .toast-notification.error .toast-icon { color: var(--danger); }
+
+        .toast-notification.info {
+            border-left-color: var(--info);
+            background: linear-gradient(135deg, var(--bg-card), rgba(59, 130, 246, 0.05));
+        }
+        .toast-notification.info .toast-icon { color: var(--info); }
+
+        .toast-notification.warning {
+            border-left-color: var(--warning);
+            background: linear-gradient(135deg, var(--bg-card), rgba(245, 158, 11, 0.05));
+        }
+        .toast-notification.warning .toast-icon { color: var(--warning); }
+
+        .toast-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .toast-message {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 2px;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .toast-close:hover {
+            color: var(--text-primary);
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
+
+        /* Flash messages (legacy, kept for backward compatibility) */
         .flash-messages {
             position: fixed;
             top: calc(var(--topbar-height) + 12px);
@@ -321,36 +520,11 @@
             cursor: pointer;
         }
 
-        .flash-alert.success {
-            background: rgba(34, 197, 94, 0.15);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: #4ade80;
-        }
-
-        .flash-alert.danger {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #f87171;
-        }
-
-        .flash-alert.warning {
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            color: #fbbf24;
-        }
-
-        .flash-alert.info {
-            background: rgba(59, 130, 246, 0.15);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            color: #60a5fa;
-        }
-
         @keyframes slideIn {
             from {
                 opacity: 0;
                 transform: translateX(20px);
             }
-
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -498,13 +672,8 @@
                 padding: 5px 10px;
             }
         }
-
-            {
-            # page-specific CSS only #
-        }
     </style>
     {% block head %}{% endblock %}
-    <!-- Prevent flash of wrong theme -->
     <script>
         if (localStorage.getItem('theme') === 'light') {
             document.documentElement.style.setProperty('--bg-primary', '#f0f2f5');
@@ -519,51 +688,56 @@
 
 <body>
 
+    <!-- Skip to main content link - Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- ─── Left Sidebar ─── -->
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
-        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA">D</a>
+        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
         <nav class="sidebar-nav">
-            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}"
-                id="nav-home">
-                <i class="bi bi-house-fill"></i>
+            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
+                <i class="bi bi-house-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Home</span>
             </a>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}"
-                class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile">
-                <i class="bi bi-person-circle"></i>
+            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
+                <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="tooltip-label">Profile</span>
             </a>
-            <a href="{{ url_for('tracker.bookmarks') }}"
-                class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks">
-                <i class="bi bi-bookmark-fill"></i>
+            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
+                <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Bookmarks</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('search.search') }}"
-                class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search">
-                <i class="bi bi-search"></i>
+            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
+                <i class="bi bi-search" aria-hidden="true"></i>
                 <span class="tooltip-label">Search</span>
             </a>
-            <a href="#" class="sidebar-link" id="nav-stats">
-                <i class="bi bi-bar-chart-fill"></i>
+            <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
+                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Stats</span>
             </a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}"
-                class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard">
-                <i class="bi bi-trophy-fill"></i>
+            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
+                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Leaderboard</span>
             </a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}"
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Admin</span>
+            </a>
+            {% endif %}
         </nav>
         <div class="sidebar-bottom">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link" title="Logout" id="nav-logout">
-                <i class="bi bi-box-arrow-right"></i>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                 <span class="tooltip-label">Logout</span>
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login">
-                <i class="bi bi-box-arrow-in-right"></i>
+            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login" aria-label="Login">
+                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                 <span class="tooltip-label">Login</span>
             </a>
             {% endif %}
@@ -571,44 +745,45 @@
     </aside>
 
     <!-- ─── Top Bar ─── -->
-    <header class="topbar">
+    <header class="topbar" role="banner">
         <div class="topbar-left">
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="#" class="pill-btn" id="monthly-rewind-btn">
-                <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
+            <a href="#" class="pill-btn" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+                <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent"
-                id="company-kit-btn" target="_blank">
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
-                <i class="bi bi-moon-fill" id="theme-icon"></i>
+            <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark/light theme">
+                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}">
+            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn">
-                <i class="bi bi-person"></i>
+            <a href="{{ url_for('auth.login') }}" class="pill-btn" aria-label="Login">
+                <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
             {% endif %}
         </div>
     </header>
 
-    <!-- ─── Flash Messages ─── -->
+    <!-- ─── Toast Container (TOP RIGHT) ─── -->
+    <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
+
+    <!-- ─── Flash Messages (legacy) ─── -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-messages" id="flash-container">
+    <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
         {% for category, message in messages %}
-        <div class="flash-alert {{ category }}" onclick="this.remove()">
-            <i
-                class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        <div class="flash-alert {{ category }}" onclick="this.remove()" role="alert">
+            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -617,14 +792,14 @@
     {% endwith %}
 
     <!-- ─── Main Content ─── -->
-    <main class="main-wrapper">
+    <main class="main-wrapper" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
     <!-- ─── Footer ─── -->
-    <footer class="site-footer">
+    <footer class="site-footer" role="contentinfo">
         <div class="footer-links">
-            <a href="#">FAQ</a>
+            <a href="/faq">FAQ</a>
             <a href="#">Contact Us</a>
             <a href="#">Privacy</a>
             <a href="#">Timeline</a>
@@ -632,20 +807,76 @@
             <a href="#">Refund Policy</a>
         </div>
         <div class="footer-socials">
-            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>
+            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>
+            <a href="#" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>
         </div>
         <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
     </footer>
 
     <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        
         // Theme Toggle
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
         const root = document.documentElement;
+
+        const toastConfig = {
+            success: { title: 'Success', icon: 'bi-check-circle-fill' },
+            error: { title: 'Error', icon: 'bi-x-circle-fill' },
+            danger: { title: 'Error', icon: 'bi-x-circle-fill' },
+            warning: { title: 'Warning', icon: 'bi-exclamation-triangle-fill' },
+            info: { title: 'Info', icon: 'bi-info-circle-fill' },
+        };
+
+        window.showToast = function(message, type = 'info', timeout = 4000) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const normalizedType = type === 'danger' ? 'error' : type;
+            const variant = toastConfig[normalizedType] || toastConfig.info;
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${normalizedType}`;
+            toast.setAttribute('role', 'alert');
+
+            const icon = document.createElement('i');
+            icon.className = `bi ${variant.icon} toast-icon`;
+
+            const content = document.createElement('div');
+            content.className = 'toast-content';
+
+            const title = document.createElement('div');
+            title.className = 'toast-title';
+            title.textContent = variant.title;
+
+            const body = document.createElement('div');
+            body.className = 'toast-message';
+            body.textContent = message;
+
+            const close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'toast-close';
+            close.setAttribute('aria-label', 'Dismiss notification');
+            close.innerHTML = '<i class="bi bi-x-lg"></i>';
+
+            content.append(title, body);
+            toast.append(icon, content, close);
+            container.appendChild(toast);
+
+            const removeToast = () => {
+                toast.style.animation = 'toastSlideOut 0.25s ease forwards';
+                setTimeout(() => toast.remove(), 250);
+            };
+
+            close.addEventListener('click', (event) => {
+                event.stopPropagation();
+                removeToast();
+            });
+            toast.addEventListener('click', removeToast);
+            setTimeout(removeToast, timeout);
+        };
 
         function applyTheme(theme) {
             if (theme === 'light') {
@@ -681,6 +912,7 @@
             const next = curr === 'dark' ? 'light' : 'dark';
             localStorage.setItem('theme', next);
             applyTheme(next);
+            showToast(`Switched to ${next} mode`, 'info');
         });
 
         // Auto-dismiss flash messages

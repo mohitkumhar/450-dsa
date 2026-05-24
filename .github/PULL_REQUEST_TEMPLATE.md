@@ -24,3 +24,12 @@ Please delete options that are not relevant.
 Please describe the tests that you ran to verify your changes.
 
 - [ ] Tested in Local
+
+## Checklist
+- [ ] I have starred this repository.
+- [ ] My PR references the issue number.
+- [ ] I placed files in the correct location.
+- [ ] I added or updated tests where useful.
+
+## Screenshots Or Logs
+Add screenshots, terminal output, or test results if relevant.

@@ -1,32 +1,33 @@
-name: 📌 General Issue
+name: General Issue
 description: Create a general issue
 title: "[Issue]: "
+labels: ["gssoc", "gssoc:approved", "level:beginner", "type:enhancement"]
 
 body:
   - type: textarea
     id: description
     attributes:
-      label: 📄 Issue Description
+      label: Issue Description
     validations:
       required: true
 
   - type: textarea
     id: context
     attributes:
-      label: 🔄 Context / Steps
+      label: Context / Steps
     validations:
       required: true
 
   - type: textarea
     id: expected
     attributes:
-      label: ✅ Expected Outcome
+      label: Expected Outcome
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: ❌ Actual Outcome
+      label: Actual Outcome
     validations:
       required: false

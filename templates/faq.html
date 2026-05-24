@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+    .accordion-item {
+        background-color: var(--bg-card) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-primary) !important;
+    }
+
+    .accordion-button {
+        background-color: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+        font-weight: 600;
+        box-shadow: none !important;
+    }
+
+    .accordion-button:not(.collapsed) {
+        background-color: var(--bg-card-hover) !important;
+        color: var(--accent) !important;
+    }
+
+    .accordion-button::after {
+        filter: invert(1);
+    }
+
+    .accordion-body {
+        background-color: var(--bg-card) !important;
+        color: var(--text-secondary) !important;
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="text-center mb-2 fw-bold">Frequently Asked Questions</h1>
+            <p class="text-center text-secondary mb-5">Everything you need to know about 450 DSA Tracker</p>
+
+            <div class="accordion accordion-flush" id="faqAccordion">
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a1">
+                            What is 450 DSA Tracker?
+                        </button>
+                    </h2>
+                    <div id="a1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            450 DSA Tracker helps you track your progress through 450 curated
+                            Data Structures and Algorithms problems, making your prep structured and measurable.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a2">
+                            Do I need an account to track progress?
+                        </button>
+                    </h2>
+                    <div id="a2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Yes, creating an account lets you save and sync your progress across devices.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a3">
+                            How do I connect my LeetCode / GFG account?
+                        </button>
+                    </h2>
+                    <div id="a3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Go to your Profile settings and enter your LeetCode or GFG username.
+                            The platform will automatically fetch and sync your solved problems.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a4">
+                            What is the C-Score and how is it calculated?
+                        </button>
+                    </h2>
+                    <div id="a4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            The C-Score (Consistency Score) is calculated based on your daily
+                            solving streak, problem difficulty, and total problems solved.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a5">
+                            How often does the platform data sync?
+                        </button>
+                    </h2>
+                    <div id="a5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Data syncs every 24 hours automatically. You can also trigger a
+                            manual sync from your profile page.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a6">
+                            Is my data private?
+                        </button>
+                    </h2>
+                    <div id="a6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Yes. Your data is private by default. Only you can see your progress
+                            unless you choose to make your profile public.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a7">
+                            How do I report a bug?
+                        </button>
+                    </h2>
+                    <div id="a7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            You can report bugs by opening an issue on our
+                            <a href="https://github.com/mohitkumhar/450-dsa/issues" target="_blank" rel="noopener noreferrer">
+                                GitHub Issues page</a>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item bg-transparent border mb-3 rounded-3 overflow-hidden">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-semibold collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#a8">
+                            How can I contribute?
+                        </button>
+                    </h2>
+                    <div id="a8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body text-muted">
+                            Check out our
+                            <a href="https://github.com/mohitkumhar/450-dsa/blob/main/CONTRIBUTING.md"
+                               target="_blank" rel="noopener noreferrer">Contributing Guidelines</a>
+                            and pick any open issue tagged <strong>good first issue</strong>!
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

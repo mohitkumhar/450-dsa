@@ -1,7 +1,7 @@
 name: ♻️ Refactoring Request
 description: Suggest code cleanup or restructuring
 title: "refactor: "
-labels: ["refactor"]
+labels: ["gssoc", "gssoc:approved", "level:intermediate", "type:enhancement"]
 
 body:
   - type: textarea

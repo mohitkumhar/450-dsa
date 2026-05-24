@@ -1,7 +1,7 @@
 name: 🤖 CI / Build Issue
 description: Report CI, build, or test failures
 title: "ci: "
-labels: ["ci", "build"]
+labels: ["gssoc", "gssoc:approved", "level:intermediate", "type:bug"]
 
 body:
   - type: textarea

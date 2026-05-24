@@ -6,7 +6,7 @@
 <style>
 .prof-layout{display:grid;grid-template-columns:240px 1fr 260px;gap:16px;align-items:start}
 .prof-sidebar,.prof-main,.prof-right{display:flex;flex-direction:column;gap:14px}
-.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px}
+.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px;color:var(--text-primary)}
 .avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color)}
 .prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
 .prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
@@ -34,8 +34,8 @@
 .meta-footer span{display:flex;justify-content:space-between}
 /* stat cards */
 .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:12px}
-.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px}
-.stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
+.stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
 .stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
 /* heatmap */
 .heatmap-grid{display:grid;grid-template-rows:repeat(7,10px);grid-auto-flow:column;gap:2px;overflow-x:auto;padding-bottom:4px}
@@ -51,9 +51,9 @@
 .award-badge .a-lbl{font-size:.58rem;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px;text-align:center}
 .hr-stars{display:flex;gap:1px;align-items:center;justify-content:center;flex-wrap:nowrap;line-height:1}
 .hr-stars .s-on{color:#fbbf24;font-size:.65rem}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:14px 20px;font-size:.85rem;z-index:9998;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none}
-.toast.show{transform:translateY(0);opacity:1}
-.big-num{font-size:2.8rem;font-weight:900;line-height:1}
+.big-num{font-size:2.8rem;font-weight:900;line-height:1;color:var(--text-primary)}
+.metric-value{font-weight:900;line-height:1;color:var(--text-primary)}
+.metric-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
 .sub-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
 /* topic bars */
 .t-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.78rem}
@@ -63,12 +63,12 @@
 /* right panel */
 .section-title{font-size:0.88rem;font-weight:700;text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
 .donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px}
-.donut-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900}
-.legend-item{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;background:var(--bg-secondary);margin-bottom:5px;font-size:0.8rem}
+.donut-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:var(--text-primary)}
+.legend-item{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;background:var(--bg-secondary);margin-bottom:5px;font-size:0.8rem;color:var(--text-primary)}
 .legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
 .rating-wrap{display:flex;align-items:center;gap:14px;padding:10px 0}
-.shield-icon{font-size:3.5rem;color:#444}
-.rating-num{font-size:2rem;font-weight:900;line-height:1}
+.shield-icon{font-size:3.5rem;color:var(--text-muted)}
+.rating-num{font-size:2rem;font-weight:900;line-height:1;color:var(--text-primary)}
 .rating-sub{font-size:0.75rem;color:var(--text-secondary)}
 /* modal */
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
@@ -90,6 +90,10 @@
 @media(max-width:1100px){.prof-layout{grid-template-columns:200px 1fr 220px}}
 @media(max-width:860px){.prof-layout{grid-template-columns:1fr}.prof-right{order:-1}.stat-row{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:520px){.stat-row{grid-template-columns:1fr 1fr}.contest-grid{grid-template-columns:1fr}}
+/* Modal focus trap - prevent background scroll */
+body.modal-open {
+    overflow: hidden;
+}
 </style>
 
 <div class="prof-layout">
@@ -97,50 +101,80 @@
 <!-- ── LEFT SIDEBAR ── -->
 <div class="prof-sidebar">
   <div class="card" style="text-align:center">
-    <div class="avatar-ring" id="avatarRing">
+    <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
       {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="Profile">
+        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
       {% else %}
-        {{ user.name[0]|upper }}
+        <span aria-hidden="true">{{ user.name[0]|upper }}</span>
+        <span class="visually-hidden">{{ user.name }}'s profile initial</span>
       {% endif %}
     </div>
     <div class="prof-name">{{ user.name }}</div>
     <div class="prof-handle">
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
-      <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem"></i>
+      <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn" onclick="showCodelioCard()">Get your Codolio Card</button>
-    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;">
-      <i class="bi bi-share-fill" style="margin-right:6px"></i> Share Progress (Image)
+    <button class="card-btn" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;" aria-label="Share progress image URL">
+      <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
+    <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
+      <input id="progress-card-copy-url" type="text" readonly aria-label="Progress image URL"
+             style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-secondary);font-size:.75rem">
+    </div>
     <script>
+      function showProgressCardUrlFallback(url) {
+        const fallback = document.getElementById('progress-card-copy-fallback');
+        const input = document.getElementById('progress-card-copy-url');
+        if (!fallback || !input) return;
+
+        input.value = url;
+        fallback.style.display = 'block';
+        input.focus();
+        input.select();
+
+        if (typeof showToast === 'function') {
+          showToast('Could not copy automatically. The URL is selected below.', 'warning');
+        }
+      }
+
       function copyProgressCardUrl() {
         const url = window.location.origin + '/u/{{ user.id }}/card.png';
+        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+          showProgressCardUrlFallback(url);
+          return;
+        }
+
         navigator.clipboard.writeText(url).then(() => {
-          showToast('✅ Progress Image URL copied!');
+          if (typeof showToast === 'function') {
+            showToast('Progress Image URL copied!', 'success');
+          }
+        }).catch(() => {
+          showProgressCardUrlFallback(url);
         });
       }
     </script>
-    <a class="card-btn" href="{{ url_for('export_csv') }}" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary)">
-      <i class="bi bi-download" style="margin-right:6px"></i> Export Progress CSV
+    <a class="card-btn" href="{{ url_for('tracker.export_csv') }}" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary)" aria-label="Export progress as CSV file">
+      <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
     </a>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
-      {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email"><i class="bi bi-envelope"></i></a>{% endif %}
-      {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" class="social-icon" title="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
-      {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" class="social-icon" title="Twitter/X"><i class="bi bi-twitter-x"></i></a>{% endif %}
-      {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" class="social-icon" title="Website"><i class="bi bi-globe"></i></a>{% endif %}
-      {% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" class="social-icon" title="GitHub"><i class="bi bi-github"></i></a>{% endif %}
-      {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" class="social-icon" title="Resume"><i class="bi bi-file-earmark-person"></i></a>{% endif %}
+      {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
+      {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
+      {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
+      {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe" aria-hidden="true"></i></a>{% endif %}
+      {% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
+      {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}
     </div>
     {% if user.location or user.college %}
-    <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)"></i> {{ user.location }}{% endif %}</div>
-    <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)"></i> {{ user.college }}{% endif %}</div>
+    <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
+    <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> {{ user.college }}{% endif %}</div>
     {% else %}
-    <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)"></i> India</div>
-    <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)"></i> Computer Science</div>
+    <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
+    <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'"><i class="bi bi-pencil-square"></i> Edit Profile</button>
+    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button onclick="openDeleteModal()" style="width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -150,35 +184,41 @@
     </div>
     <div class="sec-title">Problem Solving Stats</div>
     <div class="platform-row">
-      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px"></i>LeetCode</span>
+      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px"></i>GeeksForGeeks</span>
+      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px"></i>Coding Ninjas</span>
+      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px"></i>HackerRank</span>
+      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
-    <button class="add-btn" onclick="openSyncModal()"><i class="bi bi-plus"></i> Add Platform</button>
+    <div class="platform-row">
+      <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+      </span>
+    </div>
+    <button class="add-btn" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
-      <span><i class="bi bi-github" style="margin-right:6px"></i>GitHub</span>
+      <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
   </div>
@@ -187,10 +227,10 @@
     <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Leaderboard</div>
     <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
     <div style="display:flex;align-items:center;gap:8px">
-      <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem"></i>
+      <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" class="view-lb-btn">View Leaderboard</a>
+    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
@@ -220,11 +260,11 @@
       <div class="hm-meta">
         <span>Submissions <strong>{{ global_total_solved }}</strong></span>
         <span>Active Days <strong>{{ total_active_days }}</strong></span>
-        <select style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit">
+        <select style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit" aria-label="Select time period">
           <option>Current</option>
         </select>
       </div>
-      <div class="heatmap-grid" id="heatmap"></div>
+      <div class="heatmap-grid" id="heatmap" aria-label="Activity heatmap showing submission history"></div>
     </div>
   </div>
 
@@ -234,7 +274,7 @@
       <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
       <div class="big-num" style="text-align:center">{{ lc_contests }}</div>
       <div style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
-        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode</span>
+        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px" aria-hidden="true"></i>LeetCode</span>
         <strong>{{ lc_contests }}</strong>
       </div>
     </div>
@@ -242,14 +282,14 @@
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
         <div>
           <div class="stat-lbl">Rating</div>
-          <div style="font-size:1.6rem;font-weight:900">{{ lc_rating }}</div>
+          <div class="metric-value" style="font-size:1.6rem">{{ lc_rating }}</div>
         </div>
         <div style="text-align:right;font-size:.75rem;color:var(--text-secondary)">
           <div>Rank: {{ lc_rank }}</div>
           <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%</div>
         </div>
       </div>
-      <div style="height:130px;margin-top:4px"><canvas id="progressChart"></canvas></div>
+      <div style="height:130px;margin-top:4px"><canvas id="progressChart" aria-label="Rating progress chart"></canvas></div>
     </div>
   </div>
 
@@ -259,12 +299,12 @@
       <span style="font-weight:700">Awards</span>
       <span style="font-size:.75rem;color:var(--text-muted)">from LeetCode &amp; HackerRank</span>
     </div>
-    <div class="awards-grid" id="awardsGrid">
+    <div class="awards-grid" id="awardsGrid" role="list" aria-label="Achievements and badges">
       {# Real LC badges #}
       {% for badge in lc_badges %}
-      <div class="award-badge" title="{{ badge.name }}">
+      <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }}">
+          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -272,8 +312,8 @@
       {# Real HR badges — only earned stars shown, no empty placeholders #}
       {% for badge in hr_badges %}
       {% set earned = badge.stars|int if badge.stars else 0 %}
-      <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}">
-        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c"></i>
+      <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}" role="listitem">
+        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c" aria-hidden="true"></i>
         <div class="hr-stars">
           {% for i in range(earned) %}
             <span class="s-on">★</span>
@@ -283,15 +323,15 @@
       </div>
       {% endfor %}
       {# DSA milestone badges (always shown) #}
-      {% if dsa_done >= 200 %}<div class="award-badge" title="200 DSA Solved">🔥<span class="a-lbl">200 Solved</span></div>
-      {% elif dsa_done >= 100 %}<div class="award-badge" title="100 DSA Solved">💯<span class="a-lbl">100 Solved</span></div>
-      {% elif dsa_done >= 50 %}<div class="award-badge" title="50 DSA Solved">🏆<span class="a-lbl">50 Solved</span></div>{% endif %}
-      {% if lc_contests > 0 %}<div class="award-badge" title="LeetCode Contestant">⚔️<span class="a-lbl">Contestant</span></div>{% endif %}
-      {% if lc_rating > 1400 %}<div class="award-badge" title="Rating 1400+">⭐<span class="a-lbl">1400+ Rating</span></div>{% endif %}
-      {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days">🗓️<span class="a-lbl">100 Days</span></div>
-      {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days">📅<span class="a-lbl">30 Days</span></div>{% endif %}
+      {% if dsa_done >= 200 %}<div class="award-badge" title="200 DSA Solved" role="listitem">🔥<span class="a-lbl">200 Solved</span></div>
+      {% elif dsa_done >= 100 %}<div class="award-badge" title="100 DSA Solved" role="listitem">💯<span class="a-lbl">100 Solved</span></div>
+      {% elif dsa_done >= 50 %}<div class="award-badge" title="50 DSA Solved" role="listitem">🏆<span class="a-lbl">50 Solved</span></div>{% endif %}
+      {% if lc_contests > 0 %}<div class="award-badge" title="LeetCode Contestant" role="listitem">⚔️<span class="a-lbl">Contestant</span></div>{% endif %}
+      {% if lc_rating > 1400 %}<div class="award-badge" title="Rating 1400+" role="listitem">⭐<span class="a-lbl">1400+ Rating</span></div>{% endif %}
+      {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days" role="listitem">🗓️<span class="a-lbl">100 Days</span></div>
+      {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days" role="listitem">📅<span class="a-lbl">30 Days</span></div>{% endif %}
       {% if lc_badges|length == 0 and hr_badges|length == 0 and dsa_done < 50 %}
-      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit">Connect Now</button></div>
+      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit" aria-label="Connect platforms to see awards">Connect Now</button></div>
       {% endif %}
     </div>
   </div>
@@ -300,7 +340,7 @@
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <span style="font-weight:700">DSA Topic Analysis</span>
-      <i class="bi bi-info-circle" style="color:var(--text-muted)"></i>
+      <i class="bi bi-info-circle" style="color:var(--text-muted)" aria-label="Information about topic analysis"></i>
     </div>
     {% if topic_progress and topic_progress[0].done > 0 %}
     <div style="overflow-y:auto;max-height:300px;padding-right:4px">
@@ -318,7 +358,7 @@
     </div>
     {% else %}
     <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:.85rem">
-      <i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px"></i>
+      <i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px" aria-hidden="true"></i>
       Start solving questions to see topic analysis
     </div>
     {% endif %}
@@ -330,14 +370,14 @@
   <div class="card">
     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Problems Solved</span>
-      <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">
-        <i class="bi bi-arrow-clockwise" id="quickSyncIcon"></i>
+      <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Sync connected platforms">
+        <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
       </button>
     </div>
 
     <!-- Fundamentals -->
     <div class="donut-wrap">
-      <canvas id="platformsChart"></canvas>
+      <canvas id="platformsChart" aria-label="Platforms solved distribution chart"></canvas>
       <div class="donut-inner">{{ global_total_solved }}</div>
     </div>
     <div>
@@ -358,6 +398,10 @@
         <strong>{{ platforms['HackerRank'] }}</strong>
       </div>
       <div class="legend-item">
+        <span><span class="legend-dot" style="background:#f97316"></span><span style="color:#f97316;font-weight:700">AtCoder</span></span>
+        <strong>{{ platforms['AtCoder'] }}</strong>
+      </div>
+      <div class="legend-item">
         <span><span class="legend-dot" style="background:#6c757d"></span><span style="color:#6c757d;font-weight:700">Other</span></span>
         <strong>{{ platforms['Other'] }}</strong>
       </div>
@@ -368,7 +412,7 @@
     <!-- DSA difficulty -->
     <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
     <div class="donut-wrap">
-      <canvas id="difficultyChart"></canvas>
+      <canvas id="difficultyChart" aria-label="Difficulty distribution chart"></canvas>
       <div class="donut-inner">{{ lc_easy + lc_medium + lc_hard }}</div>
     </div>
     <div>
@@ -392,7 +436,7 @@
     <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:4px">Contest Rankings</div>
     <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">LEETCODE</div>
     <div class="rating-wrap">
-      <i class="bi bi-shield-shaded shield-icon"></i>
+      <i class="bi bi-shield-shaded shield-icon" aria-hidden="true"></i>
       <div>
         <div class="rating-num">{{ lc_rating }}</div>
         <div class="rating-sub">(max: {{ lc_rating }})</div>
