@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import app as app_module
+import app.faq.routes as faq_routes
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 from app.extensions import login_manager
 
@@ -99,6 +100,37 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/sync_platforms" in spec["paths"]
     assert "/edit_profile" in spec["paths"]
     assert "/upload_photo" in spec["paths"]
+
+
+def test_create_app_caches_faq_page_render(monkeypatch):
+    rendered_templates = []
+
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        faq_routes,
+        "render_template",
+        lambda template_name: rendered_templates.append(template_name) or "faq page",
+    )
+
+    flask_app = app_module.create_app()
+    app_module.cache.clear()
+    client = flask_app.test_client()
+
+    first_response = client.get("/faq")
+    second_response = client.get("/faq")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.get_data(as_text=True) == "faq page"
+    assert second_response.get_data(as_text=True) == "faq page"
+    assert rendered_templates == ["faq.html"]
+
 
 def test_create_app_sets_secure_session_cookie_defaults(monkeypatch):
     monkeypatch.delenv("FLASK_ENV", raising=False)
