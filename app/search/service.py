@@ -67,13 +67,38 @@ def build_external_searches(query, requested_platforms=None):
     ]
 
 
+def platform_name_filter(url):
+    if not url:
+        return None
+    url = url.lower()
+    if "leetcode.com" in url:
+        return "LeetCode"
+    if "geeksforgeeks.org" in url:
+        return "GFG"
+    if "codingninjas.com" in url or "naukri.com/code360" in url:
+        return "Coding Ninjas"
+    if "youtube.com" in url or "youtu.be" in url:
+        return "YouTube"
+    if "hackerrank.com" in url:
+        return "HackerRank"
+    return "Link"
+
+
+def derive_question_platforms(question):
+    primary = question.get("primary_platform") or platform_name_filter(question.get("url"))
+    secondary = question.get("secondary_platform") or platform_name_filter(question.get("url2"))
+    return primary, secondary
+
+
 def question_links(question):
     links = []
-    for field in ("url", "url2"):
+    for field, platform in (
+        ("url", derive_question_platforms(question)[0]),
+        ("url2", derive_question_platforms(question)[1]),
+    ):
         url = question.get(field)
         if not url:
             continue
-        platform = platform_name_filter(url)
         links.append(
             {
                 "platform": platform,
@@ -104,6 +129,8 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
                 "topic": 1,
                 "url": 1,
                 "url2": 1,
+                "primary_platform": 1,
+                "secondary_platform": 1,
                 "score": {"$meta": "textScore"},
             },
         )
@@ -150,20 +177,3 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
         "results": results,
         "external_searches": build_external_searches(query, requested_platforms),
     }
-
-
-def platform_name_filter(url):
-    if not url:
-        return None
-    url = url.lower()
-    if "leetcode.com" in url:
-        return "LeetCode"
-    if "geeksforgeeks.org" in url:
-        return "GFG"
-    if "codingninjas.com" in url or "naukri.com/code360" in url:
-        return "Coding Ninjas"
-    if "youtube.com" in url or "youtu.be" in url:
-        return "YouTube"
-    if "hackerrank.com" in url:
-        return "HackerRank"
-    return "Link"
