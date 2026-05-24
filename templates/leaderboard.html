@@ -278,6 +278,9 @@
 {% block scripts %}
 <script>
 const CURRENT_USER_ID = {{ current_user_id | tojson }};
+const endpointConfig = {{ {
+  "publicProfileBase": url_for('public.public_profile', user_id='__USER_ID__'),
+}|tojson }};
 let activeMode = 'cscore';
 let currentPage = 1;
 let totalPages = 1;
@@ -386,7 +389,9 @@ function renderTable(entries, mode) {
     else if (mode === 'rating') score = e.lc_rating;
     else if (mode === 'college') score = e.c_score;
     
-    const profileURL = !isCollegeMode && e.user_id ? `/u/${encodeURIComponent(e.user_id)}` : '';
+    const profileURL = !isCollegeMode && e.user_id
+      ? endpointConfig.publicProfileBase.replace('__USER_ID__', encodeURIComponent(e.user_id))
+      : '';
     const nameHTML = isCollegeMode
       ? `${escapeHTML(e.college)}`
       : `<a href="${profileURL}" aria-label="View profile of ${escapeHTML(e.name)}">${escapeHTML(e.name)}</a>${isMe ? '<span class="me-tag" aria-label="This is you">YOU</span>' : ''}`;

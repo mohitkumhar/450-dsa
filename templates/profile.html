@@ -146,7 +146,7 @@ body.modal-open {
       }
 
       function copyProgressCardUrl() {
-        const url = window.location.origin + '/u/{{ user.id }}/card.png';
+        const url = window.location.origin + endpointConfig.publicCardPath;
         if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
           showProgressCardUrlFallback(url);
           return;
@@ -580,6 +580,13 @@ body.modal-open {
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "editProfile": url_for('profile.edit_profile'),
+  "syncPlatforms": url_for('profile.sync_platforms'),
+  "searchUniversities": url_for('profile.search_universities'),
+  "publicCardPath": url_for('profile.public_card', user_id=user.id),
+}|tojson }};
+
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');
@@ -596,7 +603,7 @@ window.handleSaveProfile = function(btn){
   };
   btn.disabled=true;
   contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
-  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -635,7 +642,7 @@ window.handleQuickSync = function(btn) {
   icon.className = 'bi bi-arrow-clockwise btn-spinner';
   showToast('⏳ Syncing profiles...');
   
-  fetch('/sync_platforms', {
+  fetch(endpointConfig.syncPlatforms, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
@@ -693,7 +700,7 @@ window.handleSyncProfile = function(btn){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),90000);
 
-  fetch('/sync_platforms',{
+  fetch(endpointConfig.syncPlatforms,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
@@ -868,7 +875,7 @@ function handlePhotoUpload(e){
     const q = this.value.trim();
     if(q.length < 2){ dd.style.display='none'; return; }
     timer = setTimeout(() => {
-      fetch('/search_universities?q=' + encodeURIComponent(q))
+      fetch(endpointConfig.searchUniversities + '?q=' + encodeURIComponent(q))
         .then(r => r.json())
         .then(data => renderItems(data))
         .catch(() => { dd.style.display='none'; });

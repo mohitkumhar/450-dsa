@@ -263,6 +263,9 @@
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+}|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -283,7 +286,7 @@ function setBookmarkState(btn, isBookmarked) {
 }
 
 function updateQuestion(id, data, callback) {
-    return fetch('/update_question/' + id, {
+    return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
