@@ -7,6 +7,11 @@ import requests
 
 from app.utils import normalize_coding_ninjas_profile_id
 
+# Request timeouts (seconds)
+DEFAULT_TIMEOUT = 8
+LEETCODE_RATING_TIMEOUT = 10
+GITHUB_TIMEOUT = 5
+GFG_API_TIMEOUT = 6
 
 LEETCODE_PROFILE_QUERY = """
 query userProfile($username: String!) {
@@ -43,7 +48,7 @@ def fetch_leetcode(username):
         response = requests.post(
             "https://leetcode.com/graphql",
             json=build_leetcode_profile_payload(username),
-            timeout=8,
+            timeout=DEFAULT_TIMEOUT,
         )
         response_json = response.json().get("data", {})
         data = response_json.get("matchedUser", {})
@@ -90,7 +95,7 @@ def fetch_leetcode_rating_history(username):
         response = requests.post(
             "https://leetcode.com/graphql",
             json={"query": query, "variables": {"username": username}},
-            timeout=10,
+            timeout=LEETCODE_RATING_TIMEOUT,
             headers={"Content-Type": "application/json", "Referer": "https://leetcode.com"},
         )
         history_raw = response.json().get("data", {}).get("userContestRankingHistory", [])
@@ -119,7 +124,7 @@ def fetch_lc_badges(username):
         response = requests.post(
             "https://leetcode.com/graphql",
             json={"query": query, "variables": {"username": username}},
-            timeout=8,
+            timeout=DEFAULT_TIMEOUT,
             headers={"Content-Type": "application/json", "Referer": "https://leetcode.com"},
         )
         badges_raw = response.json().get("data", {}).get("matchedUser", {}).get("badges", [])
@@ -142,7 +147,7 @@ def fetch_hr_badges(username):
     try:
         response = requests.get(
             f"https://www.hackerrank.com/rest/hackers/{username}/badges",
-            timeout=8,
+            timeout=DEFAULT_TIMEOUT,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
         )
         if response.status_code == 200:
@@ -162,7 +167,7 @@ def fetch_hr_badges(username):
 
 def fetch_github(username):
     try:
-        response = requests.get(f"https://github.com/users/{username}/contributions", timeout=5)
+        response = requests.get(f"https://github.com/users/{username}/contributions", timeout=GITHUB_TIMEOUT)
         matches = re.findall(r"(\d+|No)\s+contributions?\s+on\s+(\d{4}-\d{2}-\d{2})", response.text)
         result_calendar = {}
         for count_str, date_str in matches:
@@ -171,21 +176,21 @@ def fetch_github(username):
 
         response_issues = requests.get(
             f"https://api.github.com/search/issues?q=type:issue+author:{username}",
-            timeout=5,
+            timeout=GITHUB_TIMEOUT,
         ).json()
         response_prs = requests.get(
             f"https://api.github.com/search/issues?q=type:pr+author:{username}",
-            timeout=5,
+            timeout=GITHUB_TIMEOUT,
         ).json()
         response_merged = requests.get(
             f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
-            timeout=5,
+            timeout=GITHUB_TIMEOUT,
         ).json()
         headers = {"Accept": "application/vnd.github.cloak-preview+json"}
         response_commits = requests.get(
             f"https://api.github.com/search/commits?q=author:{username}",
             headers=headers,
-            timeout=5,
+            timeout=GITHUB_TIMEOUT,
         ).json()
 
         stats = {
@@ -207,7 +212,7 @@ def fetch_gfg(username):
         try:
             response = requests.get(
                 f"https://geeks-for-geeks-stats-api.vercel.app/?raw=Y&userName={username}",
-                timeout=6,
+                timeout=GFG_API_TIMEOUT,
             )
             if response.status_code == 200:
                 data = response.json()
@@ -222,7 +227,7 @@ def fetch_gfg(username):
             response = requests.get(
                 f"https://practiceapi.geeksforgeeks.org/api/v1/user/practice/stats/?user={username}",
                 headers=headers,
-                timeout=6,
+                timeout=GFG_API_TIMEOUT,
             )
             if response.status_code == 200:
                 data = response.json()
@@ -233,7 +238,7 @@ def fetch_gfg(username):
             print("GFG Error", exc)
 
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120"}
-        response = requests.get(f"https://www.geeksforgeeks.org/user/{username}/", timeout=8, headers=headers)
+        response = requests.get(f"https://www.geeksforgeeks.org/user/{username}/", timeout=DEFAULT_TIMEOUT, headers=headers)
         for pattern in [
             r'"total_problems_solved"\s*[:=]\s*(\d+)',
             r'"totalProblemsSolved"\s*[:=]\s*(\d+)',
@@ -254,7 +259,7 @@ def fetch_atcoder(handle):
     try:
         r = requests.get(
             'https://kenkoooo.com/atcoder/atcoder-api/v3/user/acceptance_count',
-            params={'user': handle}, timeout=8)
+            params={'user': handle}, timeout=DEFAULT_TIMEOUT)
         if r.status_code == 200:
             return {'total': r.json().get('count', 0)}
     except Exception as e:
@@ -275,7 +280,7 @@ def fetch_coding_ninjas(username):
 
     try:
         api_url = "https://www.naukri.com/code360/api/v3/public_section/profile/user_details"
-        response = requests.get(api_url, params={"uuid": profile_id}, headers=headers, timeout=8)
+        response = requests.get(api_url, params={"uuid": profile_id}, headers=headers, timeout=DEFAULT_TIMEOUT)
         if response.status_code == 200:
             data = response.json().get("data") or {}
             total = 0
@@ -305,7 +310,7 @@ def fetch_coding_ninjas(username):
     try:
         for url in urls:
             try:
-                response = requests.get(url, headers=headers, timeout=8)
+                response = requests.get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
                 if response.status_code != 200:
                     continue
                 for pattern in patterns:

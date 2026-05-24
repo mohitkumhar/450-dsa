@@ -7,10 +7,16 @@ from app.utils import build_college_leaderboard_data, build_leaderboard_data
 
 leaderboard_bp = Blueprint("leaderboard", __name__)
 
+LEADERBOARD_RATE_LIMIT = "20 per minute"
+LEADERBOARD_CACHE_TIMEOUT = 300
+API_LEADERBOARD_CACHE_TIMEOUT = 300
+API_DEFAULT_PER_PAGE = 20
+API_MAX_PER_PAGE = 100
+
 
 @leaderboard_bp.route("/leaderboard")
-@limiter.limit("20 per minute")
-@cache.cached(timeout=300)
+@limiter.limit(LEADERBOARD_RATE_LIMIT)
+@cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT)
 def leaderboard():
     entries = build_leaderboard_data()
 
@@ -51,7 +57,7 @@ def leaderboard():
 
 
 @leaderboard_bp.route("/api/leaderboard")
-@cache.cached(timeout=300, query_string=True)
+@cache.cached(timeout=API_LEADERBOARD_CACHE_TIMEOUT, query_string=True)
 def api_leaderboard():
     """Get leaderboard rankings.
     ---
@@ -133,7 +139,7 @@ def api_leaderboard():
     """
     mode = request.args.get("mode", "cscore")
     page = int(request.args.get("page", 1))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    per_page = min(int(request.args.get("per_page", API_DEFAULT_PER_PAGE)), API_MAX_PER_PAGE)
     
     entries = build_leaderboard_data()
 

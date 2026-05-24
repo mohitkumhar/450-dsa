@@ -18,6 +18,9 @@ from app.search import search_bp
 from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter
 
+RATE_LIMIT_RETRY_SECONDS = 60
+CSRF_TOKEN_BYTES = 32
+
 
 def create_app():
     load_dotenv()
@@ -134,7 +137,7 @@ def create_app():
         def csrf_token():
             token = session.get("csrf_token")
             if not token:
-                token = secrets.token_urlsafe(32)
+                token = secrets.token_urlsafe(CSRF_TOKEN_BYTES)
                 session["csrf_token"] = token
             return token
 
@@ -151,7 +154,7 @@ def create_app():
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        retry_after = getattr(e, 'retry_after', 60)
+        retry_after = getattr(e, 'retry_after', RATE_LIMIT_RETRY_SECONDS)
         from flask import jsonify
         response = jsonify({
             'error': 'Too many requests',

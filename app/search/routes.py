@@ -6,6 +6,11 @@ from app.utils import search_dsa_questions
 
 search_bp = Blueprint("search", __name__)
 
+SEARCH_RATE_LIMIT = "30 per minute"
+SEARCH_DEFAULT_LIMIT = 40
+SEARCH_MIN_LIMIT = 1
+SEARCH_MAX_LIMIT = 80
+
 
 @search_bp.route("/search")
 def search():
@@ -14,7 +19,7 @@ def search():
 
 
 @search_bp.route("/api/search_questions")
-@limiter.limit("30 per minute")
+@limiter.limit(SEARCH_RATE_LIMIT)
 def api_search_questions():
     """Search DSA questions.
     ---
@@ -85,9 +90,9 @@ def api_search_questions():
     """
     raw_query = request.args.get("q", "")
     try:
-        limit = min(max(int(request.args.get("limit", 40)), 1), 80)
+        limit = min(max(int(request.args.get("limit", SEARCH_DEFAULT_LIMIT)), SEARCH_MIN_LIMIT), SEARCH_MAX_LIMIT)
     except ValueError:
-        limit = 40
+        limit = SEARCH_DEFAULT_LIMIT
 
     payload = search_dsa_questions(raw_query, limit=limit)
     return jsonify(payload)

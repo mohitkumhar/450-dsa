@@ -15,6 +15,11 @@ from app.extensions import db
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
+TAIL_DEFAULT_LINES = 80
+MAX_LOG_ENTRIES = 120
+MIN_PER_FILE_LIMIT = 10
+ADMIN_PER_PAGE = 10
+
 
 def _safe_int(value, default):
     try:
@@ -23,12 +28,12 @@ def _safe_int(value, default):
         return default
 
 
-def _tail_file(file_path, max_lines=80):
+def _tail_file(file_path, max_lines=TAIL_DEFAULT_LINES):
     with file_path.open("r", encoding="utf-8", errors="replace") as file_obj:
         return list(deque(file_obj, maxlen=max_lines))
 
 
-def _recent_error_logs(max_entries=120):
+def _recent_error_logs(max_entries=MAX_LOG_ENTRIES):
     root_dir = Path(__file__).resolve().parents[2]
     candidates = [
         root_dir / "logs" / "error.log",
@@ -42,7 +47,7 @@ def _recent_error_logs(max_entries=120):
     existing.sort(key=lambda path: path.stat().st_mtime, reverse=True)
 
     entries = []
-    per_file_limit = max(10, max_entries // max(1, len(existing)))
+    per_file_limit = max(MIN_PER_FILE_LIMIT, max_entries // max(1, len(existing)))
     for file_path in existing:
         try:
             lines = _tail_file(file_path, max_lines=per_file_limit)
@@ -112,7 +117,7 @@ def _build_user_query(search_term):
 def dashboard():
     search_term = request.args.get("q", "").strip()
     page = max(_safe_int(request.args.get("page", 1), 1), 1)
-    per_page = 10
+    per_page = ADMIN_PER_PAGE
     query_filter = _build_user_query(search_term)
 
     total_matching = db.user.count_documents(query_filter)
@@ -130,7 +135,7 @@ def dashboard():
     )
 
     stats = _compute_system_stats()
-    logs = _recent_error_logs(max_entries=80)
+    logs = _recent_error_logs(max_entries=TAIL_DEFAULT_LINES)
 
     return render_template(
         "admin/dashboard.html",

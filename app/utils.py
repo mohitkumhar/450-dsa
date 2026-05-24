@@ -6,6 +6,7 @@ from flask import jsonify
 
 from app.extensions import db
 
+SEARCH_DEFAULT_LIMIT = 40
 
 PLATFORM_SEARCHES = {
     "LeetCode": {
@@ -155,7 +156,7 @@ def question_links(question):
     return links
 
 
-def search_dsa_questions(raw_query, limit=40):
+def search_dsa_questions(raw_query, limit=SEARCH_DEFAULT_LIMIT):
     query, requested_platforms = parse_search_query(raw_query)
     query_tokens = tokenize_search_text(query)
     if not query_tokens:
