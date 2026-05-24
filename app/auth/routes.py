@@ -22,6 +22,20 @@ COMMON_WEAK_PASSWORDS = {
     "welcome1",
 }
 
+SESSION_USER_PROJECTION = {
+    "name": 1,
+    "email": 1,
+    "progress": 1,
+    "is_admin": 1,
+    "last_sync": 1,
+    "leetcode_username": 1,
+    "github_username": 1,
+    "gfg_username": 1,
+    "hackerrank_username": 1,
+    "codingninjas_username": 1,
+    "atcoder_username": 1,
+}
+
 
 def resolve_oauth_user(provider_field, provider_id, name, email=None):
     """Find, link, or create an OAuth-backed user record.
@@ -113,7 +127,7 @@ class UserWrapper(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        doc = db.user.find_one({"_id": ObjectId(user_id)})
+        doc = db.user.find_one({"_id": ObjectId(user_id)}, SESSION_USER_PROJECTION)
         return UserWrapper(doc) if doc else None
     except Exception:
         return None
