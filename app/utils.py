@@ -2,6 +2,8 @@ import re
 from datetime import datetime, timezone
 from urllib.parse import quote_plus
 
+from flask import jsonify
+
 from app.extensions import db
 
 
@@ -31,6 +33,21 @@ PLATFORM_SEARCHES = {
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+def json_response(payload=None, status_code=200, **fields):
+    body = dict(payload or {})
+    body.update(fields)
+    response = jsonify(body)
+    return response if status_code == 200 else (response, status_code)
+
+
+def json_success(status_code=200, **fields):
+    return json_response({"success": True}, status_code=status_code, **fields)
+
+
+def json_error(error, status_code=400, **fields):
+    return json_response({"success": False, "error": error}, status_code=status_code, **fields)
 
 
 def ensure_utc_datetime(value):

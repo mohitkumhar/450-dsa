@@ -3,7 +3,7 @@ from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.utils import utc_now
+from app.utils import json_error, json_success, utc_now
 from notes_export import build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
 
@@ -159,9 +159,9 @@ def update_question(question_id):
     try:
         question = db.question.find_one({"_id": ObjectId(question_id)})
     except Exception:
-        return jsonify({"success": False, "error": "Question not found"}), 404
+        return json_error("Question not found", status_code=404)
     if not question:
-        return jsonify({"success": False, "error": "Question not found"}), 404
+        return json_error("Question not found", status_code=404)
 
     data = request.json
     user_id = current_user.id
@@ -192,9 +192,9 @@ def update_question(question_id):
     if update_fields:
         db.user.update_one({"_id": user_id}, {"$set": update_fields})
         current_user.reload()
-        return jsonify({"success": True, "message": message})
+        return json_success(message=message)
 
-    return jsonify({"success": True, "message": "No changes made"})
+    return json_success(message="No changes made")
 
 
 @tracker_bp.route("/bookmarks")

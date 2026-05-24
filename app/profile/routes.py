@@ -25,7 +25,7 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
-from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now, compute_c_score, compute_user_platforms
+from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_c_score, compute_user_platforms
 from streaks import compute_streak
 from profile_validation import build_profile_updates
 
@@ -111,7 +111,7 @@ def sync_platforms():
     """
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
-        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
+        return json_error("Request body must be a JSON object.", status_code=400)
 
     now = utc_now()
     user_id = current_user.id
@@ -124,7 +124,7 @@ def sync_platforms():
             remaining = int(600 - diff)
             mins = remaining // 60
             secs = remaining % 60
-            return jsonify({"success": False, "error": f"Please wait {mins}m {secs}s before syncing again."})
+            return json_error(f"Please wait {mins}m {secs}s before syncing again.", status_code=200)
 
     update_fields = {"last_sync": now}
 
@@ -350,14 +350,14 @@ def edit_profile():
     """
     data = request.get_json()
     if not data:
-        return jsonify({"success": False, "error": "No data"}), 400
+        return json_error("No data", status_code=400)
     update_fields, error = build_profile_updates(data)
     if error:
-        return jsonify({"success": False, "error": error}), 400
+        return json_error(error, status_code=400)
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
-    return jsonify({"success": True})
+    return json_success()
 
 
 card_cache = {}
@@ -507,7 +507,7 @@ def upload_photo():
               type: string
               example: Photo upload disabled (Cloudinary not configured)
     """
-    return jsonify({"success": False, "error": "Photo upload disabled (Cloudinary not configured)"}), 500
+    return json_error("Photo upload disabled (Cloudinary not configured)", status_code=500)
 
 
 @profile_bp.route("/profile")
