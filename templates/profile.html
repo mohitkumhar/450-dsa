@@ -110,7 +110,7 @@ body.modal-open {
   <div class="card" style="text-align:center">
     <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
       {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
+        <img src="{{ user.profile_photo }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
       {% else %}
         <span aria-hidden="true">{{ user.name[0]|upper }}</span>
         <span class="visually-hidden">{{ user.name }}'s profile initial</span>
@@ -314,7 +314,7 @@ body.modal-open {
       {% for badge in lc_badges %}
       <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
+          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -519,7 +519,7 @@ body.modal-open {
     <div style="text-align:center;margin-bottom:20px">
       <div style="position:relative;display:inline-block">
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
-          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover">{% else %}{{ user.name[0]|upper }}{% endif %}
+          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
         <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
           <i class="bi bi-camera"></i> Upload Photo
