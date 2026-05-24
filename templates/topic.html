@@ -126,6 +126,12 @@
         🔴 Hard ({{ hard_count }})
     </button>
 </div>
+<!-- Practice Random Button -->
+<div style="margin-bottom: 16px;">
+    <button id="practiceRandomBtn" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+        🎲 Practice Random
+    </button>
+</div>
 
 <div class="topic-status" id="topicStatus" role="status" aria-live="polite"></div>
 
@@ -397,5 +403,21 @@ document.getElementById('saveNotesBtn').addEventListener('click', function() {
         showUpdateError('Unable to save notes. Please try again.');
     });
 });
+//  Practice Random Button
+document.getElementById('practiceRandomBtn').addEventListener('click', function() {
+    const rows = Array.from(document.querySelectorAll('#questions-table tbody tr:not(#empty-state-row)'))
+        .filter(row => row.style.display !== 'none');
+    
+    if (rows.length === 0) {
+        alert('No questions available!');
+        return;
+    }
+    
+    const randomRow = rows[Math.floor(Math.random() * rows.length)];
+    randomRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    randomRow.style.outline = '2px solid var(--accent)';
+    setTimeout(() => { randomRow.style.outline = ''; }, 2000);
+});
+
 </script>
 {% endblock %}
