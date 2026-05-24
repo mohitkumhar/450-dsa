@@ -16,7 +16,7 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
-from app.profile.card_service import get_public_card_image
+from app.profile.card_service import CACHE_TTL, card_cache, get_public_card_image
 from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
 from profile_validation import build_profile_updates
 
