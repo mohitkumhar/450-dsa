@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui_bits.html" import question_link_badge %}
 {% block content %}
 <style>
 .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
@@ -190,19 +191,11 @@
                     <div class="q-links">
                         {% if q.url %}
                             {% set p1 = q.url|platform_name %}
-                            <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
-                               aria-label="Solve on {{ p1 }} (opens in new tab)">
-                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
-                            </a>
+                            {{ question_link_badge(q.url, p1) }}
                         {% endif %}
                         {% if q.url2 %}
                             {% set p2 = q.url2|platform_name %}
-                            <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
-                               aria-label="Solve on {{ p2 }} (opens in new tab)">
-                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
-                            </a>
+                            {{ question_link_badge(q.url2, p2) }}
                         {% endif %}
                     </div>
                 </td>

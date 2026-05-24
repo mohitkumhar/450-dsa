@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/ui_bits.html" import question_link_badge %}
 {% block content %}
 <style>
   .back-btn {
@@ -353,12 +354,8 @@
         <td>
           <div class="q-name">{{ q.problem }}</div>
           <div class="q-links">
-            {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-              class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i
-                class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
-            {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-              class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{
-              q.url2|platform_name }}</a>{% endif %}
+            {% if q.url %}{{ question_link_badge(q.url, q.url|platform_name, 'Solve on ' ~ (q.url|platform_name) ~ ' (opens in new tab)') }}{% endif %}
+            {% if q.url2 %}{{ question_link_badge(q.url2, q.url2|platform_name, 'Solve on ' ~ (q.url2|platform_name) ~ ' (opens in new tab)') }}{% endif %}
           </div>
         </td>
         <td>

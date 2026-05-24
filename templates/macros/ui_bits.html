@@ -1,0 +1,19 @@
+{% macro question_link_badge(url, platform_name, aria_label='') -%}
+  {% set label = aria_label or ('Solve on ' ~ platform_name ~ ' (opens in new tab)') %}
+  <a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+     class="q-badge {% if platform_name=='LeetCode' %}badge-lc{% elif platform_name=='GFG' %}badge-gfg{% elif platform_name=='HackerRank' %}badge-hr{% elif platform_name=='Coding Ninjas' %}badge-cn{% elif platform_name=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+     aria-label="{{ label }}">
+     <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ platform_name }}
+  </a>
+{%- endmacro %}
+
+{% macro award_badge(title, label, icon=None) -%}
+  <div class="award-badge" title="{{ title }}" role="listitem">
+    {% if icon %}
+      {{ icon | safe }}
+    {% else %}
+      <span aria-hidden="true">🏅</span>
+    {% endif %}
+    <span class="a-lbl">{{ label }}</span>
+  </div>
+{%- endmacro %}
