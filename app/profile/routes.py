@@ -4,8 +4,7 @@ import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.extensions import limiter, cache
+from app.extensions import cache, db, limiter
 from app.platforms.fetchers import (
     fetch_atcoder,
     fetch_coding_ninjas,
