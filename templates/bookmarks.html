@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import external_link_badge %}
 {% block content %}
 <style>
   .back-btn {
@@ -353,12 +354,34 @@
         <td>
           <div class="q-name">{{ q.problem }}</div>
           <div class="q-links">
-            {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-              class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i
-                class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
-            {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-              class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{
-              q.url2|platform_name }}</a>{% endif %}
+            {% if q.url %}
+              {% set p1 = q.url|platform_name %}
+              {{ external_link_badge(
+                q.url,
+                p1,
+                'badge-lc' if p1 == 'LeetCode' else
+                'badge-gfg' if p1 == 'GFG' else
+                'badge-hr' if p1 == 'HackerRank' else
+                'badge-cn' if p1 == 'Coding Ninjas' else
+                'badge-yt' if p1 == 'YouTube' else
+                'badge-link',
+                'Open ' ~ p1 ~ ' problem link (opens in new tab)'
+              ) }}
+            {% endif %}
+            {% if q.url2 %}
+              {% set p2 = q.url2|platform_name %}
+              {{ external_link_badge(
+                q.url2,
+                p2,
+                'badge-lc' if p2 == 'LeetCode' else
+                'badge-gfg' if p2 == 'GFG' else
+                'badge-hr' if p2 == 'HackerRank' else
+                'badge-cn' if p2 == 'Coding Ninjas' else
+                'badge-yt' if p2 == 'YouTube' else
+                'badge-link',
+                'Open ' ~ p2 ~ ' problem link (opens in new tab)'
+              ) }}
+            {% endif %}
           </div>
         </td>
         <td>

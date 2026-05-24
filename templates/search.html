@@ -260,6 +260,12 @@ function renderPlatformPrompt() {
   renderEmpty('bi-search-heart', `Type a search term to find ${platform} practice links.`);
 }
 
+function renderExternalLinkBadge({ url, label, color, icon, ariaLabel }) {
+  return `<a class="q-badge ${badgeClass(color)}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(ariaLabel)}">
+    <i class="bi ${icon}" aria-hidden="true"></i>${escapeHtml(label)}
+  </a>`;
+}
+
 function renderResults(payload) {
   const count = payload.results.length;
   const platforms = payload.requested_platforms || [];
@@ -278,9 +284,13 @@ function renderResults(payload) {
 
   if (!count) {
     const external = (payload.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for your query (opens new tab)">
-        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderExternalLinkBadge({
+        url: link.url,
+        label: link.platform,
+        color: link.color,
+        icon: 'bi-box-arrow-up-right',
+        ariaLabel: `Search ${link.platform} for your query (opens new tab)`,
+      })
     ).join('');
     results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart" aria-hidden="true"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
     return;
@@ -288,14 +298,22 @@ function renderResults(payload) {
 
   results.innerHTML = payload.results.map(item => {
     const directLinks = (item.links || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="View on ${escapeHtml(link.platform)} (opens new tab)">
-        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderExternalLinkBadge({
+        url: link.url,
+        label: link.platform,
+        color: link.color,
+        icon: 'bi-box-arrow-up-right',
+        ariaLabel: `View on ${link.platform} (opens new tab)`,
+      })
     ).join('');
     const platformSearches = (item.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for this problem (opens new tab)">
-        <i class="bi bi-search" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderExternalLinkBadge({
+        url: link.url,
+        label: link.platform,
+        color: link.color,
+        icon: 'bi-search',
+        ariaLabel: `Search ${link.platform} for this problem (opens new tab)`,
+      })
     ).join('');
     const topicUrl = `/topic/${encodeURIComponent(item.topic_id)}`;
 
