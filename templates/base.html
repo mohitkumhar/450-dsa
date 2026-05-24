@@ -121,7 +121,7 @@
             }
         }
 
-        /* ─── Left Sidebar ─── */
+        /* --- Left Sidebar --- */
         .sidebar {
             position: fixed;
             left: 0;
@@ -221,7 +221,7 @@
             padding-bottom: 8px;
         }
 
-        /* ─── Top Bar ─── */
+        /* --- Top Bar --- */
         .topbar {
             position: fixed;
             top: 0;
@@ -340,7 +340,7 @@
             text-decoration: none;
         }
 
-        /* ─── Main Content ─── */
+        /* --- Main Content --- */
         .main-wrapper {
             margin-left: var(--sidebar-width);
             margin-top: var(--topbar-height);
@@ -348,7 +348,7 @@
             padding: 24px;
         }
 
-        /* ─── Cards ─── */
+        /* --- Cards --- */
         .card-dark {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -361,7 +361,7 @@
             border-color: #333;
         }
 
-        /* ─── Toast Notifications - TOP RIGHT ─── */
+        /* --- Toast Notifications - TOP RIGHT --- */
         .toast-container {
             position: fixed;
             top: calc(var(--topbar-height) + 12px);
@@ -509,7 +509,7 @@
             }
         }
 
-        /* ─── Footer ─── */
+        /* --- Footer --- */
         .site-footer {
             background: var(--bg-secondary);
             border-top: 1px solid var(--border-color);
@@ -568,7 +568,7 @@
             font-size: 0.78rem;
         }
 
-        /* ─── Scrollbars ─── */
+        /* --- Scrollbars --- */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -587,7 +587,7 @@
             background: #444;
         }
 
-        /* ─── Mobile Responsive ─── */
+        /* --- Mobile Responsive --- */
         @media (max-width: 768px) {
             .sidebar {
                 bottom: 0;
@@ -669,7 +669,7 @@
     <!-- Skip to main content link - Accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <!-- ─── Left Sidebar ─── -->
+    <!-- --- Left Sidebar --- -->
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
         <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
         <nav class="sidebar-nav">
@@ -722,7 +722,7 @@
         </div>
     </aside>
 
-    <!-- ─── Top Bar ─── -->
+    <!-- --- Top Bar --- -->
     <header class="topbar" role="banner">
         <div class="topbar-left">
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
@@ -752,10 +752,10 @@
         </div>
     </header>
 
-    <!-- ─── Toast Container (TOP RIGHT) ─── -->
+    <!-- --- Toast Container (TOP RIGHT) --- -->
     <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
-    <!-- ─── Flash Messages (legacy) ─── -->
+    <!-- --- Flash Messages (legacy) --- -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
@@ -769,12 +769,12 @@
     {% endif %}
     {% endwith %}
 
-    <!-- ─── Main Content ─── -->
+    <!-- --- Main Content --- -->
     <main class="main-wrapper" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- ─── Footer ─── -->
+    <!-- --- Footer --- -->
     <footer class="site-footer" role="contentinfo">
         <div class="footer-links">
             <a href="/faq">FAQ</a>
