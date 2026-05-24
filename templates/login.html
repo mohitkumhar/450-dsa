@@ -1,42 +1,9 @@
 {% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
 {% block content %}
-<style>
-.auth-wrap { min-height: calc(100vh - 56px - 120px); display: flex; align-items: center; justify-content: center; }
-.auth-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
-.auth-logo { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; color: white; margin: 0 auto 24px; }
-.auth-card h2 { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--text-primary); }
-.auth-card p.subtitle { text-align: center; color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 28px; }
-.form-group { margin-bottom: 16px; position: relative; }
-.form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
-.input-wrap { position: relative; }
-.form-control { width: 100%; padding: 11px 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; transition: all 0.2s; outline: none; box-sizing: border-box; }
-.form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-.form-control::placeholder { color: var(--text-muted); }
-.form-control.is-valid { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
-.form-control.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
-.field-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; pointer-events: none; }
-.field-icon.valid { color: #22c55e; }
-.field-icon.invalid { color: #ef4444; }
-.field-error { font-size: 0.75rem; color: #f87171; margin-top: 5px; display: none; }
-.field-error.show { display: block; }
-.password-wrap { position: relative; }
-.toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; font-size: 1rem; }
-.toggle-password:hover { color: var(--text-primary); }
-.btn-primary-full { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 0.95rem; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-primary-full:hover { background: var(--accent-hover); transform: translateY(-1px); }
-.btn-primary-full:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--text-muted); font-size: 0.8rem; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
-.oauth-btn { width: 100%; padding: 11px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: all 0.2s; margin-bottom: 10px; }
-.oauth-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-.auth-footer { text-align: center; margin-top: 24px; font-size: 0.84rem; color: var(--text-secondary); }
-.auth-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
-.auth-footer a:hover { text-decoration: underline; }
-.flash-inline { padding: 10px 14px; border-radius: 8px; font-size: 0.83rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.flash-inline.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
-.flash-inline.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
-</style>
-
 <div class="auth-wrap">
     <div class="auth-card">
         <div class="auth-logo">D</div>
