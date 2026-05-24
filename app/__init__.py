@@ -18,7 +18,7 @@ from app.profile import profile_bp
 from app.security import build_content_security_policy
 from app.search import search_bp
 from app.tracker import tracker_bp
-from app.utils import platform_color_filter, platform_name_filter
+from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
 
 
 def _configure_rate_limit_storage(app, config_class):
@@ -138,6 +138,7 @@ def create_app(config_class=None):
 
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
+    app.add_template_filter(platform_profile_url, "platform_url")
 
     @app.context_processor
     def inject_csrf_token():
