@@ -3,6 +3,7 @@ import os
 import secrets
 from pathlib import Path
 
+from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
 from flask import Flask, session
@@ -20,45 +21,24 @@ from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter
 
 
-def _env_flag(name, default=False):
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _is_local_environment():
-    app_env = os.environ.get("FLASK_ENV") or os.environ.get("APP_ENV") or os.environ.get("ENV") or ""
-    return app_env.strip().lower() in {"development", "dev", "local", "test", "testing"} or _env_flag("FLASK_DEBUG")
-
-
-def _is_production_environment():
-    return os.environ.get("FLASK_ENV") == "production" or os.environ.get("APP_ENV") == "production"
-
-
-def _configure_rate_limit_storage(app):
-    storage_uri = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
-    if storage_uri == "memory://" and _is_production_environment():
+def _configure_rate_limit_storage(app, config_class):
+    storage_uri = app.config["RATELIMIT_STORAGE_URI"]
+    if storage_uri == "memory://" and config_class is ProductionConfig:
         raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
-    app.config["RATELIMIT_STORAGE_URI"] = storage_uri
 
 
-def create_app():
+def create_app(config_class=None):
     load_dotenv()
 
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
-    app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://localhost:27017/450_dsa")
-    _configure_rate_limit_storage(app)
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
-    app.config["SESSION_COOKIE_SECURE"] = _env_flag("SESSION_COOKIE_SECURE", default=not _is_local_environment())
-    app.config["CACHE_TYPE"] = "SimpleCache"
-    app.config["CACHE_DEFAULT_TIMEOUT"] = 300
-    app.config["SWAGGER"] = {
-        "title": "450 DSA Tracker API",
-        "uiversion": 3,
-    }
+    config_class = config_class or resolve_config_class()
+    app.config.from_object(config_class)
+    config_class.apply_environment_overrides(app)
+    _configure_rate_limit_storage(app, config_class)
+    app.config["SESSION_COOKIE_SECURE"] = env_flag(
+        "SESSION_COOKIE_SECURE",
+        default=app.config["SESSION_COOKIE_SECURE"],
+    )
     
     cache.init_app(app)
     Swagger(

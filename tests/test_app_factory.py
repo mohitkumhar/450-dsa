@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import app as app_module
+from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
 from app.extensions import login_manager
 
 
@@ -164,3 +165,48 @@ def test_create_app_requires_persistent_rate_limit_storage_in_production(monkeyp
         assert "RATELIMIT_STORAGE_URI" in str(exc)
     else:
         raise AssertionError("production startup should require persistent rate-limit storage")
+
+
+def test_create_app_uses_testing_config_class(monkeypatch):
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app(config_class=TestingConfig)
+
+    assert flask_app.config["TESTING"] is True
+    assert flask_app.config["SESSION_COOKIE_SECURE"] is False
+
+
+def test_create_app_uses_production_config_class(monkeypatch):
+    monkeypatch.setenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/0")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app(config_class=ProductionConfig)
+
+    assert flask_app.config["SESSION_COOKIE_SECURE"] is True
+    assert flask_app.config["RATELIMIT_STORAGE_URI"] == "redis://localhost:6379/0"
+
+
+def test_create_app_uses_development_config_class(monkeypatch):
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app(config_class=DevelopmentConfig)
+
+    assert flask_app.config["SESSION_COOKIE_SECURE"] is False
