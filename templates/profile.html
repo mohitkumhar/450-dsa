@@ -96,7 +96,7 @@ body.modal-open {
 
 <div class="prof-layout">
 
-<!-- ── LEFT SIDEBAR ── -->
+<!-- --- LEFT SIDEBAR --- -->
 <div class="prof-sidebar">
   <div class="card" style="text-align:center">
     <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
@@ -210,7 +210,7 @@ body.modal-open {
   </div>
 </div>
 
-<!-- ── MIDDLE / MAIN ── -->
+<!-- --- MIDDLE / MAIN --- -->
 <div class="prof-main">
 
   <!-- Stat cards + Heatmap -->
@@ -337,7 +337,7 @@ body.modal-open {
   </div>
 </div>
 
-<!-- ── RIGHT PANEL ── -->
+<!-- --- RIGHT PANEL --- -->
 <div class="prof-right">
   <div class="card">
     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -540,7 +540,7 @@ body.modal-open {
 
 {% block scripts %}
 <script>
-// ── Event Listeners (registered first so Chart.js failure can't break them) ──
+// -- Event Listeners (registered first so Chart.js failure can't break them) --
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');
   const payload={
@@ -687,7 +687,7 @@ window.handleSyncProfile = function(btn){
   });
 };
 
-// ── Chart & Visualization Code ──
+// -- Chart & Visualization Code --
 const dailyCounts = {{ daily_counts | tojson }};
 const heatmap = document.getElementById('heatmap');
 const today = new Date();
@@ -777,7 +777,7 @@ function handlePhotoUpload(e){
     }).catch(()=>showToast('❌ Upload failed'));
 }
 
-// ── College/University Autocomplete ──
+// -- College/University Autocomplete --
 (function(){
   const inp = document.getElementById('ep_college');
   const dd = document.getElementById('collegeDropdown');
