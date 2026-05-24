@@ -14,7 +14,7 @@ def test_external_blank_links_use_noopener_noreferrer():
     missing_rel = []
 
     for template_path in TEMPLATE_DIR.rglob("*.html"):
-        template = template_path.read_text()
+        template = template_path.read_text(encoding="utf-8")
         for match in TARGET_BLANK_LINK_RE.finditer(template):
             attrs = match.group("attrs")
             rel_match = REL_RE.search(attrs)
