@@ -18,11 +18,13 @@ class FakeUserCollection:
 class FakeQuestionCollection:
     def __init__(self, questions):
         self.questions = list(questions)
+        self.find_calls = []
 
     def count_documents(self, query):
         return len(self.questions)
 
     def find(self, *args, **kwargs):
+        self.find_calls.append((args, kwargs))
         return list(self.questions)
 
 
@@ -84,3 +86,37 @@ def test_get_public_card_image_raises_for_missing_user(monkeypatch):
         assert "User not found" in str(exc)
     else:
         raise AssertionError("Expected LookupError for missing user")
+
+
+def test_get_public_card_image_projects_question_fields(monkeypatch):
+    user_id = ObjectId()
+    user = {
+        "_id": user_id,
+        "name": "Projection User",
+        "progress": {"q1": {"done": True}},
+        "external_totals": {},
+    }
+    fake_db = FakeDB(user, [{"_id": "q1", "url": "https://leetcode.com/problems/two-sum", "problem": "Two Sum"}])
+
+    monkeypatch.setattr("app.profile.card_service.db", fake_db)
+    monkeypatch.setattr(
+        "app.profile.card_service.compute_c_score",
+        lambda user_doc: {"c_score": 50, "dsa_done": 1},
+    )
+    monkeypatch.setattr("app.profile.card_service.compute_streak", lambda progress: (1, 1))
+    monkeypatch.setattr(
+        "app.profile.card_service.compute_user_platforms",
+        lambda solved, totals, all_questions: {"LeetCode": 1},
+    )
+    monkeypatch.setattr(
+        "app.profile.card_service.card_generator.generate_progress_card",
+        lambda *args, **kwargs: BytesIO(b"projection-png"),
+    )
+
+    card_cache.clear()
+    result = get_public_card_image(str(user_id), user_id)
+
+    assert result.read() == b"projection-png"
+    assert fake_db.question.find_calls == [
+        (({}, {"url": 1}), {}),
+    ]

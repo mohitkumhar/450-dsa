@@ -12,6 +12,7 @@ from streaks import compute_streak
 
 card_cache = {}
 CACHE_TTL = 3600
+PUBLIC_CARD_QUESTION_PROJECTION = {"url": 1}
 
 
 def get_public_card_image(user_id, object_id=None, db_handle=None):
@@ -40,7 +41,7 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     progress_data = user.get("progress", {})
     current_streak, _ = compute_streak(progress_data)
 
-    all_questions = list(db_handle.question.find())
+    all_questions = list(db_handle.question.find({}, PUBLIC_CARD_QUESTION_PROJECTION))
     solved_items = {qid: progress for qid, progress in progress_data.items() if progress.get("done")}
     platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
 
