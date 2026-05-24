@@ -23,6 +23,7 @@ class BaseConfig:
     MONGO_URI = "mongodb://localhost:27017/450_dsa"
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
+    SEND_FILE_MAX_AGE_DEFAULT = 86400
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = True
