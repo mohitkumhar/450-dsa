@@ -12,14 +12,21 @@
 .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
 .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 
-/* Difficulty badges */
-.difficulty-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
+/* Difficulty badges - improved for color contrast */
+.difficulty-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
 .difficulty-easy { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
 .difficulty-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
 .difficulty-hard { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
 
-.questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
-.q-table { width: 100%; border-collapse: collapse; }
+/* High contrast mode support for difficulty badges */
+@media (prefers-contrast: high) {
+    .difficulty-easy { background: #10b981; color: black; border: 2px solid black; }
+    .difficulty-medium { background: #f59e0b; color: black; border: 2px solid black; }
+    .difficulty-hard { background: #ef4444; color: white; border: 2px solid white; }
+}
+
+.questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow-x: auto; }
+.q-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .q-table thead th { background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
 .q-table tbody tr { border-bottom: 1px solid var(--border-subtle); transition: background 0.15s; }
 .q-table tbody tr:last-child { border-bottom: none; }
@@ -50,7 +57,7 @@
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
-/* Modal */
+/* Modal focus management */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
 .modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
@@ -82,13 +89,13 @@
 }
 </style>
 
-<a href="{{ url_for('tracker.index') }}" class="back-btn">
-    <i class="bi bi-arrow-left"></i> Back to Topics
+<a href="{{ url_for('tracker.index') }}" class="back-btn" aria-label="Back to Topics">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Topics
 </a>
 
 <div class="topic-header">
     <div class="topic-header-main">
-        <div class="topic-title">{{ topic.name }}</div>
+        <h1 class="topic-title">{{ topic.name }}</h1>
         <div class="topic-subtitle">
             {% if difficulty_filter == 'all' %}
                 {{ total_count }} questions in this topic
@@ -98,29 +105,37 @@
         </div>
     </div>
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn">
-        <i class="bi bi-download"></i> Export Notes
+    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
+        <i class="bi bi-download" aria-hidden="true"></i> Export Notes
     </a>
     {% endif %}
 </div>
 
-<!-- Filter Buttons -->
-<div class="filter-buttons">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all">📋 All ({{ total_count }})</button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy">🟢 Easy ({{ easy_count }})</button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium">🟡 Medium ({{ medium_count }})</button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard">🔴 Hard ({{ hard_count }})</button>
+<!-- Filter Buttons with ARIA labels -->
+<div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
+    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+        📋 All ({{ total_count }})
+    </button>
+    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+        🟢 Easy ({{ easy_count }})
+    </button>
+    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+        🟡 Medium ({{ medium_count }})
+    </button>
+    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+        🔴 Hard ({{ hard_count }})
+    </button>
 </div>
 
 <div class="topic-status" id="topicStatus" role="status" aria-live="polite"></div>
 
 <div class="questions-table-wrap">
     <table class="q-table" id="questions-table" aria-label="Questions for {{ topic.name }}">
-        <caption class="visually-hidden">Questions for {{ topic.name }}</caption>
+        <caption class="visually-hidden">Questions for {{ topic.name }} topic - {{ total_count }} total questions</caption>
         <thead>
             <tr>
                 <th scope="col">#</th>
-                <th scope="col">Done</th>
+                <th scope="col">Status</th>
                 <th scope="col">Problem</th>
                 <th scope="col">Difficulty</th>
                 <th scope="col">Save</th>
@@ -138,7 +153,7 @@
                     <input type="checkbox" class="q-checkbox status-checkbox"
                         id="check_{{ q_id_str }}"
                         data-id="{{ q_id_str }}"
-                        aria-label="Mark '{{ q.problem }}' as done"
+                        aria-label="Mark '{{ q.problem }}' as {% if p and p.done %}incomplete{% else %}complete{% endif %}"
                         {% if p and p.done %}checked{% endif %}>
                 </td>
                 <td>
@@ -147,21 +162,24 @@
                         {% if q.url %}
                             {% set p1 = q.url|platform_name %}
                             <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}">
-                               <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i> {{ p1 }}
+                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               aria-label="Solve on {{ p1 }} (opens in new tab)">
+                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
                             </a>
                         {% endif %}
                         {% if q.url2 %}
                             {% set p2 = q.url2|platform_name %}
                             <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}">
-                               <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i> {{ p2 }}
+                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               aria-label="Solve on {{ p2 }} (opens in new tab)">
+                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
                             </a>
                         {% endif %}
                     </div>
                 </td>
                 <td>
-                    <span class="difficulty-badge difficulty-{{ difficulty|lower }}">
+                    <span class="difficulty-badge difficulty-{{ difficulty|lower }}" aria-label="{{ difficulty }} difficulty question">
+                        <span aria-hidden="true">{% if difficulty == 'Easy' %}🟢{% elif difficulty == 'Medium' %}🟡{% else %}🔴{% endif %}</span>
                         {{ difficulty }}
                     </span>
                 </td>
@@ -169,7 +187,7 @@
                     <button class="action-icon bookmark-btn {% if p and p.bookmark %}bookmarked{% endif %}"
                         data-id="{{ q_id_str }}"
                         data-bookmarked="{{ 'true' if p and p.bookmark else 'false' }}"
-                        aria-label="{% if p and p.bookmark %}Remove bookmark for {{ q.problem }}{% else %}Bookmark {{ q.problem }}{% endif %}"
+                        aria-label="{% if p and p.bookmark %}Remove bookmark for '{{ q.problem }}'{% else %}Bookmark '{{ q.problem }}'{% endif %}"
                         aria-pressed="{{ 'true' if p and p.bookmark else 'false' }}">
                         <i class="bi {% if p and p.bookmark %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}" aria-hidden="true"></i>
                     </button>
@@ -178,7 +196,7 @@
                     <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn"
                         data-id="{{ q_id_str }}"
                         data-notes="{{ p.notes if p and p.notes else '' }}"
-                        aria-label="{% if p and p.notes %}Edit notes for {{ q.problem }}{% else %}Add notes for {{ q.problem }}{% endif %}">
+                        aria-label="{% if p and p.notes %}Edit notes for '{{ q.problem }}'{% else %}Add notes for '{{ q.problem }}'{% endif %}">
                         <i class="bi bi-journal-text" aria-hidden="true"></i>
                         {% if p and p.notes %}Edit{% else %}Add{% endif %}
                     </button>
@@ -187,15 +205,15 @@
             {% endfor %}
             <tr id="empty-state-row" style="display:none;">
                 <td colspan="6" class="text-center" style="padding: 2rem;">
-                <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
-                    No questions match the selected difficulty.
-                </p>
-                <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()">
-                    Clear filter &amp; show all
-                </button>
-            </td>
-        </tr>
-    </tbody>
+                    <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
+                        No questions match the selected difficulty.
+                    </p>
+                    <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()" aria-label="Clear filter and show all questions">
+                        Clear filter &amp; show all
+                    </button>
+                </td>
+            </tr>
+        </tbody>
     </table>
 </div>
 
@@ -203,11 +221,11 @@
 <div class="modal-overlay" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
     <div class="modal-box">
         <h3 id="notesModalTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes</h3>
-        <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes"></textarea>
+        <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes for this question"></textarea>
         <input type="hidden" id="currentQuestionId">
         <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modalCancel">Cancel</button>
-            <button class="btn-modal-save" id="saveNotesBtn">Save Notes</button>
+            <button class="btn-modal-cancel" id="modalCancel" aria-label="Cancel editing notes">Cancel</button>
+            <button class="btn-modal-save" id="saveNotesBtn" aria-label="Save notes">Save Notes</button>
         </div>
     </div>
 </div>
@@ -249,7 +267,7 @@ function updateQuestion(id, data, callback) {
     });
 }
 
-// Update the checkbox event listener in topic.html
+// Update the checkbox event listener
 document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
         if (!isAuthenticated) { 
@@ -261,6 +279,11 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
         const previousChecked = !this.checked;
         const nextChecked = this.checked;
         this.disabled = true;
+        
+        // Update ARIA label
+        const problemName = row.querySelector('.q-name')?.textContent || 'Question';
+        this.setAttribute('aria-label', nextChecked ? `Mark '${problemName}' as incomplete` : `Mark '${problemName}' as complete`);
+        
         row.classList.toggle('row-done', nextChecked);
         updateQuestion(this.dataset.id, {done: nextChecked})
             .catch(() => {
@@ -313,7 +336,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     }
 })();
 
-// Notes Modal
+// Notes Modal with focus trap
 const modal = document.getElementById('notesModal');
 const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 
@@ -323,6 +346,11 @@ function openModal(triggerEl) {
     const focusable = modal.querySelectorAll(FOCUSABLE);
     if (focusable.length) focusable[0].focus();
     modal.addEventListener('keydown', trapFocus);
+    // Announce modal open to screen readers
+    const modalTitle = document.getElementById('notesModalTitle');
+    if (modalTitle) {
+        modalTitle.setAttribute('aria-live', 'polite');
+    }
 }
 
 function closeModal() {

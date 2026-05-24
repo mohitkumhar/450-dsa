@@ -183,6 +183,12 @@
     color: #4ade80;
     border-color: rgba(34, 197, 94, 0.35);
 }
+/* Focus indicator for topic cards */
+.topic-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    transform: translateY(-2px);
+}
 </style>
 {% endblock %}
 
@@ -197,18 +203,18 @@
     {% set percentage = (done_questions / total_questions * 100) | round(1) %}
 {% endif %}
 
-<div class="overall-progress-bar-wrap">
+<div class="overall-progress-bar-wrap" role="region" aria-label="Overall progress">
     <div class="progress-info">
         <div class="label">Overall Progress</div>
         <div class="numbers">{{ done_questions }} / {{ total_questions }}</div>
         <div class="pct">{{ percentage }}% completed</div>
     </div>
-    <div class="progress-track">
-        <div class="progress-fill" style="width: {{ percentage }}%;"></div>
+    <div class="progress-track" aria-label="Progress bar">
+        <div class="progress-fill" style="width: {{ percentage }}%;" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
     </div>
 </div>
 
-<div class="topics-grid">
+<div class="topics-grid" role="list" aria-label="DSA topics list">
     {% for topic in topics %}
     {% set t_id_str = topic._id | string %}
     {% set t_done = topic_progress[t_id_str]['done'] %}
@@ -217,20 +223,23 @@
     {% if t_total > 0 %}
         {% set t_percent = (t_done / t_total * 100) | round(1) %}
     {% endif %}
-    <a href="{{ url_for('tracker.topic', topic_id=t_id_str) }}" class="topic-card">
+    
+    {% set status_text = "Completed" if t_percent == 100 else "In progress" if t_percent > 0 else "Not started" %}
+    
+    <a href="{{ url_for('tracker.topic', topic_id=t_id_str) }}" class="topic-card" role="listitem" aria-label="{{ topic.name }} topic, {{ status_text }}, {{ t_done }} of {{ t_total }} questions completed">
         <div class="card-top">
             <div class="topic-card-name">{{ topic.name }}</div>
             {% if t_percent == 100 %}
-            <span class="status-badge completed">Completed</span>
+            <span class="status-badge completed" aria-label="Completed">Completed</span>
             {% elif t_percent > 0 %}
-            <span class="status-badge in-progress">In progress</span>
+            <span class="status-badge in-progress" aria-label="In progress">In progress</span>
             {% else %}
-            <span class="status-badge not-started">Not started</span>
+            <span class="status-badge not-started" aria-label="Not started">Not started</span>
             {% endif %}
         </div>
         <div class="topic-progress-row">
-            <div class="topic-track">
-                <div class="topic-fill {% if t_percent == 100 %}done{% elif t_percent > 0 %}partial{% else %}empty{% endif %}" style="width: {{ t_percent }}%;"></div>
+            <div class="topic-track" aria-label="Progress bar for {{ topic.name }}">
+                <div class="topic-fill {% if t_percent == 100 %}done{% elif t_percent > 0 %}partial{% else %}empty{% endif %}" style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
             <div class="progress-meta">
                 <span>{{ t_done }} / {{ t_total }} questions</span>
@@ -239,15 +248,15 @@
         </div>
         <div class="card-footer">
             <span class="question-count">
-                <i class="bi bi-list-ul"></i> {{ t_total }} qs
+                <i class="bi bi-list-ul" aria-hidden="true"></i> {{ t_total }} qs
             </span>
-            <span class="topic-action-btn {% if t_percent == 100 %}completed{% elif t_percent > 0 %}started{% endif %}">
+            <span class="topic-action-btn {% if t_percent == 100 %}completed{% elif t_percent > 0 %}started{% endif %}" aria-hidden="true">
                 {% if t_percent == 100 %}
-                <i class="bi bi-check-circle-fill"></i> Completed
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Completed
                 {% elif t_percent > 0 %}
-                <i class="bi bi-arrow-right-circle"></i> Continue
+                <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Continue
                 {% else %}
-                <i class="bi bi-play-circle"></i> Start
+                <i class="bi bi-play-circle" aria-hidden="true"></i> Start
                 {% endif %}
             </span>
         </div>

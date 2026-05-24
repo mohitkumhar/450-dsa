@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,6 +60,65 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
+        
+        /* Skip to main content link - for keyboard users */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--accent);
+            color: white;
+            padding: 8px 16px;
+            z-index: 10000;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 0 0 8px 0;
+            transition: top 0.2s ease;
+        }
+        
+        .skip-link:focus {
+            top: 0;
+            outline: 2px solid white;
+            outline-offset: 2px;
+        }
+        
+        /* Focus indicators for keyboard navigation */
+        :focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        /* Remove outline for mouse users but keep for keyboard */
+        :focus:not(:focus-visible) {
+            outline: none;
+        }
+        
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Better focus for interactive elements */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible,
+        [tabindex]:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            :focus-visible {
+                outline: 3px solid var(--accent);
+                outline-offset: 3px;
+            }
         }
 
         /* ─── Left Sidebar ─── */
@@ -608,53 +666,56 @@
 
 <body>
 
+    <!-- Skip to main content link - Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- ─── Left Sidebar ─── -->
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
-        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA">D</a>
+        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
         <nav class="sidebar-nav">
-            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home">
-                <i class="bi bi-house-fill"></i>
+            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
+                <i class="bi bi-house-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Home</span>
             </a>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile">
-                <i class="bi bi-person-circle"></i>
+            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
+                <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="tooltip-label">Profile</span>
             </a>
-            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks">
-                <i class="bi bi-bookmark-fill"></i>
+            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
+                <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Bookmarks</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search">
-                <i class="bi bi-search"></i>
+            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
+                <i class="bi bi-search" aria-hidden="true"></i>
                 <span class="tooltip-label">Search</span>
             </a>
-            <a href="#" class="sidebar-link" id="nav-stats">
-                <i class="bi bi-bar-chart-fill"></i>
+            <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
+                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Stats</span>
             </a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard">
-                <i class="bi bi-trophy-fill"></i>
+            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
+                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Leaderboard</span>
             </a>
             {% if current_user.is_authenticated and current_user.is_admin %}
             <a href="{{ url_for('admin.dashboard') }}"
-                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin">
-                <i class="bi bi-shield-lock-fill"></i>
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Admin</span>
             </a>
             {% endif %}
         </nav>
         <div class="sidebar-bottom">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link" title="Logout" id="nav-logout">
-                <i class="bi bi-box-arrow-right"></i>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                 <span class="tooltip-label">Logout</span>
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login">
-                <i class="bi bi-box-arrow-in-right"></i>
+            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login" aria-label="Login">
+                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                 <span class="tooltip-label">Login</span>
             </a>
             {% endif %}
@@ -662,29 +723,29 @@
     </aside>
 
     <!-- ─── Top Bar ─── -->
-    <header class="topbar">
+    <header class="topbar" role="banner">
         <div class="topbar-left">
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="#" class="pill-btn" id="monthly-rewind-btn">
-                <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
+            <a href="#" class="pill-btn" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+                <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
             <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
-                <i class="bi bi-moon-fill" id="theme-icon"></i>
+            <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark/light theme">
+                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}">
+            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn">
-                <i class="bi bi-person"></i>
+            <a href="{{ url_for('auth.login') }}" class="pill-btn" aria-label="Login">
+                <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
             {% endif %}
@@ -697,10 +758,10 @@
     <!-- ─── Flash Messages (legacy) ─── -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-messages" id="flash-container">
+    <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
         {% for category, message in messages %}
-        <div class="flash-alert {{ category }}" onclick="this.remove()">
-            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        <div class="flash-alert {{ category }}" onclick="this.remove()" role="alert">
+            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -709,12 +770,12 @@
     {% endwith %}
 
     <!-- ─── Main Content ─── -->
-    <main class="main-wrapper">
+    <main class="main-wrapper" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
     <!-- ─── Footer ─── -->
-    <footer class="site-footer">
+    <footer class="site-footer" role="contentinfo">
         <div class="footer-links">
             <a href="/faq">FAQ</a>
             <a href="#">Contact Us</a>
@@ -724,9 +785,9 @@
             <a href="#">Refund Policy</a>
         </div>
         <div class="footer-socials">
-            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>
+            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>
+            <a href="#" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>
         </div>
         <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
     </footer>

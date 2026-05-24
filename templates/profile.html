@@ -88,6 +88,10 @@
 @media(max-width:1100px){.prof-layout{grid-template-columns:200px 1fr 220px}}
 @media(max-width:860px){.prof-layout{grid-template-columns:1fr}.prof-right{order:-1}.stat-row{grid-template-columns:1fr 1fr 1fr}}
 @media(max-width:520px){.stat-row{grid-template-columns:1fr 1fr}.contest-grid{grid-template-columns:1fr}}
+/* Modal focus trap - prevent background scroll */
+body.modal-open {
+    overflow: hidden;
+}
 </style>
 
 <div class="prof-layout">
@@ -95,21 +99,22 @@
 <!-- ── LEFT SIDEBAR ── -->
 <div class="prof-sidebar">
   <div class="card" style="text-align:center">
-    <div class="avatar-ring" id="avatarRing">
+    <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
       {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="Profile">
+        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
       {% else %}
-        {{ user.name[0]|upper }}
+        <span aria-hidden="true">{{ user.name[0]|upper }}</span>
+        <span class="visually-hidden">{{ user.name }}'s profile initial</span>
       {% endif %}
     </div>
     <div class="prof-name">{{ user.name }}</div>
     <div class="prof-handle">
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
-      <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem"></i>
+      <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn" onclick="showCodelioCard()">Get your Codolio Card</button>
-    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;">
-      <i class="bi bi-share-fill" style="margin-right:6px"></i> Share Progress (Image)
+    <button class="card-btn" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;" aria-label="Share progress image URL">
+      <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
     <script>
       function copyProgressCardUrl() {
@@ -121,27 +126,26 @@
         });
       }
     </script>
-    <a class="card-btn" href="{{ url_for('tracker.export_csv') }}" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary)">
-      <i class="bi bi-download" style="margin-right:6px"></i> Export Progress CSV
+    <a class="card-btn" href="{{ url_for('tracker.export_csv') }}" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary)" aria-label="Export progress as CSV file">
+      <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
     </a>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
-      {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email"><i class="bi bi-envelope"></i></a>{% endif %}
-      {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn"><i class="bi bi-linkedin"></i></a>{% endif %}
-      {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X"><i class="bi bi-twitter-x"></i></a>{% endif %}
-      {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website"><i class="bi bi-globe"></i></a>{% endif %}
-      {% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub"><i class="bi bi-github"></i></a>{% endif %}
-      {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume"><i class="bi bi-file-earmark-person"></i></a>{% endif %}
-    </div>
+      {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
+{% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
+{% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
+{% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe" aria-hidden="true"></i></a>{% endif %}
+{% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
+{% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}</div>
     {% if user.location or user.college %}
-    <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)"></i> {{ user.location }}{% endif %}</div>
-    <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)"></i> {{ user.college }}{% endif %}</div>
+    <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
+    <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> {{ user.college }}{% endif %}</div>
     {% else %}
-    <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)"></i> India</div>
-    <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)"></i> Computer Science</div>
+    <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
+    <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'"><i class="bi bi-pencil-square"></i> Edit Profile</button>
-    <button onclick="openDeleteModal()" style="width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'"><i class="bi bi-trash3"></i> Delete Account</button>
+    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button onclick="openDeleteModal()" style="width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -151,41 +155,41 @@
     </div>
     <div class="sec-title">Problem Solving Stats</div>
     <div class="platform-row">
-      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px"></i>LeetCode</span>
+      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px"></i>GeeksForGeeks</span>
+      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px"></i>Coding Ninjas</span>
+      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px"></i>HackerRank</span>
+      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px"></i>AtCoder</span>
+      <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
-    <button class="add-btn" onclick="openSyncModal()"><i class="bi bi-plus"></i> Add Platform</button>
+    <button class="add-btn" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
-      <span><i class="bi bi-github" style="margin-right:6px"></i>GitHub</span>
+      <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out"><i class="bi bi-box-arrow-up-right"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
   </div>
@@ -194,10 +198,10 @@
     <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Leaderboard</div>
     <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
     <div style="display:flex;align-items:center;gap:8px">
-      <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem"></i>
+      <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn">View Leaderboard</a>
+      <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
@@ -227,11 +231,11 @@
       <div class="hm-meta">
         <span>Submissions <strong>{{ global_total_solved }}</strong></span>
         <span>Active Days <strong>{{ total_active_days }}</strong></span>
-        <select style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit">
+        <select style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit" aria-label="Select time period">
           <option>Current</option>
         </select>
       </div>
-      <div class="heatmap-grid" id="heatmap"></div>
+      <div class="heatmap-grid" id="heatmap" aria-label="Activity heatmap showing submission history"></div>
     </div>
   </div>
 
@@ -241,7 +245,7 @@
       <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
       <div class="big-num" style="text-align:center">{{ lc_contests }}</div>
       <div style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
-        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode</span>
+        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px" aria-hidden="true"></i>LeetCode</span>
         <strong>{{ lc_contests }}</strong>
       </div>
     </div>
@@ -256,7 +260,7 @@
           <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%</div>
         </div>
       </div>
-      <div style="height:130px;margin-top:4px"><canvas id="progressChart"></canvas></div>
+      <div style="height:130px;margin-top:4px"><canvas id="progressChart" aria-label="Rating progress chart"></canvas></div>
     </div>
   </div>
 
@@ -266,12 +270,12 @@
       <span style="font-weight:700">Awards</span>
       <span style="font-size:.75rem;color:var(--text-muted)">from LeetCode &amp; HackerRank</span>
     </div>
-    <div class="awards-grid" id="awardsGrid">
+    <div class="awards-grid" id="awardsGrid" role="list" aria-label="Achievements and badges">
       {# Real LC badges #}
       {% for badge in lc_badges %}
-      <div class="award-badge" title="{{ badge.name }}">
+      <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }}">
+          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -279,8 +283,8 @@
       {# Real HR badges — only earned stars shown, no empty placeholders #}
       {% for badge in hr_badges %}
       {% set earned = badge.stars|int if badge.stars else 0 %}
-      <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}">
-        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c"></i>
+      <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}" role="listitem">
+        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c" aria-hidden="true"></i>
         <div class="hr-stars">
           {% for i in range(earned) %}
             <span class="s-on">★</span>
@@ -290,15 +294,15 @@
       </div>
       {% endfor %}
       {# DSA milestone badges (always shown) #}
-      {% if dsa_done >= 200 %}<div class="award-badge" title="200 DSA Solved">🔥<span class="a-lbl">200 Solved</span></div>
-      {% elif dsa_done >= 100 %}<div class="award-badge" title="100 DSA Solved">💯<span class="a-lbl">100 Solved</span></div>
-      {% elif dsa_done >= 50 %}<div class="award-badge" title="50 DSA Solved">🏆<span class="a-lbl">50 Solved</span></div>{% endif %}
-      {% if lc_contests > 0 %}<div class="award-badge" title="LeetCode Contestant">⚔️<span class="a-lbl">Contestant</span></div>{% endif %}
-      {% if lc_rating > 1400 %}<div class="award-badge" title="Rating 1400+">⭐<span class="a-lbl">1400+ Rating</span></div>{% endif %}
-      {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days">🗓️<span class="a-lbl">100 Days</span></div>
-      {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days">📅<span class="a-lbl">30 Days</span></div>{% endif %}
+      {% if dsa_done >= 200 %}<div class="award-badge" title="200 DSA Solved" role="listitem">🔥<span class="a-lbl">200 Solved</span></div>
+      {% elif dsa_done >= 100 %}<div class="award-badge" title="100 DSA Solved" role="listitem">💯<span class="a-lbl">100 Solved</span></div>
+      {% elif dsa_done >= 50 %}<div class="award-badge" title="50 DSA Solved" role="listitem">🏆<span class="a-lbl">50 Solved</span></div>{% endif %}
+      {% if lc_contests > 0 %}<div class="award-badge" title="LeetCode Contestant" role="listitem">⚔️<span class="a-lbl">Contestant</span></div>{% endif %}
+      {% if lc_rating > 1400 %}<div class="award-badge" title="Rating 1400+" role="listitem">⭐<span class="a-lbl">1400+ Rating</span></div>{% endif %}
+      {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days" role="listitem">🗓️<span class="a-lbl">100 Days</span></div>
+      {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days" role="listitem">📅<span class="a-lbl">30 Days</span></div>{% endif %}
       {% if lc_badges|length == 0 and hr_badges|length == 0 and dsa_done < 50 %}
-      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit">Connect Now</button></div>
+      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit" aria-label="Connect platforms to see awards">Connect Now</button></div>
       {% endif %}
     </div>
   </div>
@@ -307,7 +311,7 @@
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <span style="font-weight:700">DSA Topic Analysis</span>
-      <i class="bi bi-info-circle" style="color:var(--text-muted)"></i>
+      <i class="bi bi-info-circle" style="color:var(--text-muted)" aria-label="Information about topic analysis"></i>
     </div>
     {% if topic_progress and topic_progress[0].done > 0 %}
     <div style="overflow-y:auto;max-height:300px;padding-right:4px">
@@ -325,7 +329,7 @@
     </div>
     {% else %}
     <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:.85rem">
-      <i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px"></i>
+      <i class="bi bi-bar-chart" style="font-size:2rem;display:block;margin-bottom:8px" aria-hidden="true"></i>
       Start solving questions to see topic analysis
     </div>
     {% endif %}
@@ -337,14 +341,14 @@
   <div class="card">
     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Problems Solved</span>
-      <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">
-        <i class="bi bi-arrow-clockwise" id="quickSyncIcon"></i>
+      <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Sync connected platforms">
+        <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
       </button>
     </div>
 
     <!-- Fundamentals -->
     <div class="donut-wrap">
-      <canvas id="platformsChart"></canvas>
+      <canvas id="platformsChart" aria-label="Platforms solved distribution chart"></canvas>
       <div class="donut-inner">{{ global_total_solved }}</div>
     </div>
     <div>
@@ -379,7 +383,7 @@
     <!-- DSA difficulty -->
     <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
     <div class="donut-wrap">
-      <canvas id="difficultyChart"></canvas>
+      <canvas id="difficultyChart" aria-label="Difficulty distribution chart"></canvas>
       <div class="donut-inner">{{ lc_easy + lc_medium + lc_hard }}</div>
     </div>
     <div>
@@ -403,7 +407,7 @@
     <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:4px">Contest Rankings</div>
     <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">LEETCODE</div>
     <div class="rating-wrap">
-      <i class="bi bi-shield-shaded shield-icon"></i>
+      <i class="bi bi-shield-shaded shield-icon" aria-hidden="true"></i>
       <div>
         <div class="rating-num">{{ lc_rating }}</div>
         <div class="rating-sub">(max: {{ lc_rating }})</div>
@@ -415,39 +419,39 @@
 </div>
 
 <!-- Sync Modal -->
-<div class="modal-ov" id="syncModal">
+<div class="modal-ov" id="syncModal" role="dialog" aria-modal="true" aria-labelledby="syncModalTitle" tabindex="-1">
   <div class="modal-bx" style="max-width:480px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <h3 style="margin-bottom:0"><i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles</h3>
-      <button onclick="closeSyncModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <h3 id="syncModalTitle" style="margin-bottom:0"><i class="bi bi-link-45deg" style="color:var(--accent)" aria-hidden="true"></i> Connect Coding Profiles</h3>
+      <button onclick="closeSyncModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close modal">✕</button>
     </div>
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
-    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
-    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
-    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
-    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
-    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
-    <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Handle</label>
-    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
+    <label class="m-lbl" for="lc_username"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px" aria-hidden="true"></i>LeetCode Username</label>
+    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}" aria-label="LeetCode username">
+    <label class="m-lbl" for="gh_username"><i class="bi bi-github" style="margin-right:4px" aria-hidden="true"></i>GitHub Username</label>
+    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}" aria-label="GitHub username">
+    <label class="m-lbl" for="gfg_username"><i class="bi bi-braces" style="color:var(--success);margin-right:4px" aria-hidden="true"></i>GeeksForGeeks Username</label>
+    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}" aria-label="GeeksForGeeks username">
+    <label class="m-lbl" for="cn_username"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px" aria-hidden="true"></i>Coding Ninjas Username</label>
+    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}" aria-label="Coding Ninjas username">
+    <label class="m-lbl" for="hr_username"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px" aria-hidden="true"></i>HackerRank Username</label>
+    <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}" aria-label="HackerRank username">
+    <label class="m-lbl" for="ac_username"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px" aria-hidden="true"></i>AtCoder Handle</label>
+    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}" aria-label="AtCoder username">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
-      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
-      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
+      <button class="m-cancel" onclick="closeSyncModal()" aria-label="Cancel">Cancel</button>
+      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)" aria-label="Sync activity"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Sync Activity</span></button>
     </div>
   </div>
 </div>
 
 <!-- Codolio Card Modal -->
-<div class="modal-ov" id="cardModal">
+<div class="modal-ov" id="cardModal" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle" tabindex="-1">
   <div class="modal-bx" style="max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <span style="font-weight:700;font-size:1rem">Your Profile Card</span>
-      <button onclick="document.getElementById('cardModal').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <span id="cardModalTitle" style="font-weight:700;font-size:1rem">Your Profile Card</span>
+      <button onclick="document.getElementById('cardModal').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close modal">✕</button>
     </div>
     <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
       <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
@@ -460,67 +464,64 @@
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied!', 'success')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button onclick="showToast('Profile card copied!', 'success')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit" aria-label="Share profile card">Share Card</button>
   </div>
 </div>
 
 <!-- Edit Profile Modal -->
-<div class="modal-ov" id="editProfileModal">
+<div class="modal-ov" id="editProfileModal" role="dialog" aria-modal="true" aria-labelledby="editProfileModalTitle" tabindex="-1">
   <div class="modal-bx" style="max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
     <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color)">
-      <h3 style="margin:0"><i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile</h3>
-      <button onclick="closeEditProfile()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <h3 id="editProfileModalTitle" style="margin:0"><i class="bi bi-person-gear" style="color:var(--accent)" aria-hidden="true"></i> Edit Profile</h3>
+      <button onclick="closeEditProfile()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close modal">✕</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
     <!-- Photo Upload -->
     <div style="text-align:center;margin-bottom:20px">
       <div style="position:relative;display:inline-block">
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
-          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover">{% else %}{{ user.name[0]|upper }}{% endif %}
+          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover" alt="Profile preview">{% else %}<span aria-hidden="true">{{ user.name[0]|upper }}</span>{% endif %}
         </div>
         <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
-          <i class="bi bi-camera"></i> Upload Photo
+          <i class="bi bi-camera" aria-hidden="true"></i> Upload Photo
         </label>
-        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)" aria-label="Choose profile photo file">
       </div>
       <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
     </div>
     <!-- Basic Info -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}"></div>
-      <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}"></div>
+      <div><label class="m-lbl" for="ep_name">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}" aria-label="Full name"></div>
+      <div><label class="m-lbl" for="ep_headline">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}" aria-label="Headline"></div>
     </div>
-    <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself...">{{ user.bio or '' }}</textarea></div>
+    <div style="margin-bottom:12px"><label class="m-lbl" for="ep_bio">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself..." aria-label="Bio">{{ user.bio or '' }}</textarea></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value="{{ user.location or '' }}"></div>
+      <div><label class="m-lbl" for="ep_location"><i class="bi bi-geo-alt" aria-hidden="true"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value="{{ user.location or '' }}" aria-label="Location"></div>
       <div style="position:relative">
-        <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
-        <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off">
+        <label class="m-lbl" for="ep_college"><i class="bi bi-mortarboard" aria-hidden="true"></i> College / University</label>
+        <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off" aria-label="College or university">
         <div id="collegeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
       </div>
     </div>
     <!-- Social Links -->
     <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">Social Links</div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}"></div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
-    <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
+    <div style="margin-bottom:10px"><label class="m-lbl" for="ep_linkedin"><i class="bi bi-linkedin" style="color:#0a66c2" aria-hidden="true"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}" aria-label="LinkedIn URL"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl" for="ep_twitter"><i class="bi bi-twitter-x" aria-hidden="true"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}" aria-label="Twitter URL"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl" for="ep_website"><i class="bi bi-globe" style="color:var(--info)" aria-hidden="true"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}" aria-label="Website URL"></div>
+    <div style="margin-bottom:16px"><label class="m-lbl" for="ep_resume"><i class="bi bi-file-earmark-person" style="color:var(--accent)" aria-hidden="true"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}" aria-label="Resume URL"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
     </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
-      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
-      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
+      <button class="m-cancel" onclick="closeEditProfile()" aria-label="Cancel">Cancel</button>
+      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)" aria-label="Save profile changes"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle" aria-hidden="true"></i> Save Profile</span></button>
     </div>
   </div>
 </div>
 
-<!-- Toast notification -->
-<div class="toast" id="toast" style=""></div>
-
 <!-- Delete Account Modal -->
-<div class="modal-ov" id="deleteAccountModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+<div class="modal-ov" id="deleteAccountModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" tabindex="-1">
   <div class="modal-bx" style="max-width:420px;border-color:#ef4444">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <h3 id="deleteModalTitle" style="color:#ef4444;margin:0"><i class="bi bi-exclamation-triangle-fill"></i> Delete Account</h3>
+      <h3 id="deleteModalTitle" style="color:#ef4444;margin:0"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> Delete Account</h3>
       <button onclick="closeDeleteModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close">✕</button>
     </div>
     <p style="font-size:.83rem;color:var(--text-secondary);margin-bottom:16px">This action is <strong style="color:#ef4444">permanent and irreversible</strong>. All your progress, bookmarks, notes, and profile data will be deleted.</p>
@@ -528,18 +529,18 @@
       <input type="hidden" name="csrf_token" id="deleteCsrfToken">
       <div id="deletePasswordWrap">
         <label class="m-lbl" for="delete_password">Confirm your password to continue</label>
-        <input class="m-inp" type="password" id="delete_password" name="password" placeholder="Enter your password" autocomplete="current-password">
+        <input class="m-inp" type="password" id="delete_password" name="password" placeholder="Enter your password" autocomplete="current-password" aria-label="Password confirmation">
       </div>
       <div class="m-actions">
-        <button type="button" class="m-cancel" onclick="closeDeleteModal()">Cancel</button>
-        <button type="submit" id="deleteSubmitBtn" style="padding:8px 16px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit">Delete My Account</button>
+        <button type="button" class="m-cancel" onclick="closeDeleteModal()" aria-label="Cancel">Cancel</button>
+        <button type="submit" id="deleteSubmitBtn" style="padding:8px 16px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-size:.83rem;font-weight:700;cursor:pointer;font-family:inherit" aria-label="Confirm account deletion">Delete My Account</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- Sync Loading Overlay -->
-<div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+<div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px" role="status" aria-live="polite" aria-label="Syncing in progress">
   <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
   <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
   <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
@@ -778,11 +779,12 @@ try{new Chart(document.getElementById('difficultyChart'),{
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
 });}catch(e){console.warn('Difficulty chart error:',e);}
 
-function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
-function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
-function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
-function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
-function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
+function openSyncModal(){document.getElementById('syncModal').classList.add('open'); document.body.classList.add('modal-open');}
+function closeSyncModal(){document.getElementById('syncModal').classList.remove('open'); document.body.classList.remove('modal-open');}
+function showCodelioCard(){document.getElementById('cardModal').classList.add('open'); document.body.classList.add('modal-open');}
+function closeCardModal(){document.getElementById('cardModal').classList.remove('open'); document.body.classList.remove('modal-open');}
+function openEditProfile(){document.getElementById('editProfileModal').classList.add('open'); document.body.classList.add('modal-open');}
+function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open'); document.body.classList.remove('modal-open');}
 function openDeleteModal(){
   fetch('/delete_account/token')
     .then(r => r.json())
@@ -798,15 +800,23 @@ function openDeleteModal(){
         pwInput.setAttribute('required', '');
       }
       document.getElementById('deleteAccountModal').classList.add('open');
+      document.body.classList.add('modal-open');
       setTimeout(() => (data.is_oauth ? document.getElementById('deleteSubmitBtn') : pwInput).focus(), 100);
     })
     .catch(() => showToast('❌ Failed to open delete dialog. Try again.'));
 }
-function closeDeleteModal(){document.getElementById('deleteAccountModal').classList.remove('open');document.getElementById('delete_password').value='';}
+function closeDeleteModal(){document.getElementById('deleteAccountModal').classList.remove('open'); document.body.classList.remove('modal-open');document.getElementById('delete_password').value='';}
 
 ['syncModal','cardModal','editProfileModal','deleteAccountModal'].forEach(id=>{
   const el=document.getElementById(id);
-  if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
+  if(el){
+    el.addEventListener('click',e=>{
+      if(e.target===el){
+        el.classList.remove('open');
+        document.body.classList.remove('modal-open');
+      }
+    });
+  }
 });
 
 function handlePhotoUpload(e){

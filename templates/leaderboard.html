@@ -37,6 +37,11 @@
   color: #fff;
   box-shadow: 0 2px 8px rgba(255,107,0,0.3);
 }
+.lb-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 9px;
+}
 
 /* Pagination */
 .pagination {
@@ -67,6 +72,10 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.pagination-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .page-info {
   color: var(--text-secondary);
   font-size: 0.85rem;
@@ -89,9 +98,9 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
 }
-.lb-table { width: 100%; border-collapse: collapse; }
+.lb-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .lb-table thead th {
   background: var(--bg-secondary);
   color: var(--text-muted);
@@ -204,6 +213,7 @@
   border-radius: 20px;
   font-weight: 700;
   transition: all 0.2s;
+  text-decoration: none;
 }
 
 .current-user-pinned a:hover {
@@ -211,52 +221,56 @@
   color: white !important;
   text-decoration: none;
 }
+.current-user-pinned a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 </style>
 
 <div class="lb-header">
-  <h1><i class="bi bi-trophy-fill" style="color:var(--accent)"></i> Leaderboard</h1>
+  <h1><i class="bi bi-trophy-fill" style="color:var(--accent)" aria-hidden="true"></i> Leaderboard</h1>
   <p>Compete with fellow coders — ranked across LeetCode, GFG, Coding Ninjas, HackerRank, and DSA progress</p>
 </div>
 
 <!-- Tab Switcher -->
-<div class="lb-tabs" id="lbTabs">
-  <button class="lb-tab active" data-mode="cscore" id="tab-cscore">
-    <i class="bi bi-lightning-fill"></i> C-Score
+<div class="lb-tabs" id="lbTabs" role="tablist" aria-label="Leaderboard ranking modes">
+  <button class="lb-tab active" data-mode="cscore" id="tab-cscore" role="tab" aria-selected="true" aria-label="C-Score ranking">
+    <i class="bi bi-lightning-fill" aria-hidden="true"></i> C-Score
   </button>
-  <button class="lb-tab" data-mode="questions" id="tab-questions">
-    <i class="bi bi-code-slash"></i> Questions Solved
+  <button class="lb-tab" data-mode="questions" id="tab-questions" role="tab" aria-selected="false" aria-label="Questions Solved ranking">
+    <i class="bi bi-code-slash" aria-hidden="true"></i> Questions Solved
   </button>
-  <button class="lb-tab" data-mode="rating" id="tab-rating">
-    <i class="bi bi-star-fill"></i> LeetCode Rating
+  <button class="lb-tab" data-mode="rating" id="tab-rating" role="tab" aria-selected="false" aria-label="LeetCode Rating ranking">
+    <i class="bi bi-star-fill" aria-hidden="true"></i> LeetCode Rating
   </button>
-  <button class="lb-tab" data-mode="college" id="tab-college">
-    <i class="bi bi-mortarboard-fill"></i> College Ranking
+  <button class="lb-tab" data-mode="college" id="tab-college" role="tab" aria-selected="false" aria-label="College Ranking">
+    <i class="bi bi-mortarboard-fill" aria-hidden="true"></i> College Ranking
   </button>
 </div>
 
 <!-- Table -->
 <div class="lb-table-wrap">
-  <table class="lb-table">
+  <table class="lb-table" aria-label="Leaderboard rankings">
     <thead>
       <tr>
-        <th>Rank</th>
-        <th>User</th>
-        <th>Score</th>
-        <th>DSA Done</th>
-        <th>Platforms</th>
+        <th scope="col">Rank</th>
+        <th scope="col">User</th>
+        <th scope="col">Score</th>
+        <th scope="col">DSA Done</th>
+        <th scope="col">Platforms</th>
       </tr>
     </thead>
-    <tbody id="lbBody">
+    <tbody id="lbBody" aria-live="polite">
       <tr><td colspan="5" class="loading">Loading...</td></tr>
     </tbody>
   </table>
 </div>
 
 <!-- Pagination -->
-<div class="pagination" id="pagination">
-  <button class="pagination-btn" id="prevBtn" disabled>← Previous</button>
-  <span class="page-info" id="pageInfo">Page 1</span>
-  <button class="pagination-btn" id="nextBtn">Next →</button>
+<div class="pagination" id="pagination" aria-label="Leaderboard pagination">
+  <button class="pagination-btn" id="prevBtn" disabled aria-label="Previous page">← Previous</button>
+  <span class="page-info" id="pageInfo" aria-live="polite">Page 1</span>
+  <button class="pagination-btn" id="nextBtn" aria-label="Next page">Next →</button>
 </div>
 
 {% endblock %}
@@ -312,7 +326,7 @@ async function loadLeaderboard(page = 1) {
   if (isLoading) return;
   isLoading = true;
   
-  document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading">Loading...</td></tr>';
+  document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading" aria-label="Loading leaderboard data">Loading...</td><tr>';
   
   try {
     const url = `/api/leaderboard?mode=${activeMode}&page=${page}&per_page=20&current_user_id=${CURRENT_USER_ID || ''}`;
@@ -327,7 +341,7 @@ async function loadLeaderboard(page = 1) {
     renderPagination();
   } catch (error) {
     console.error('Error loading leaderboard:', error);
-    document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading">Error loading data</td></tr>';
+    document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading" aria-label="Error loading data">Error loading data</td></tr>';
   }
   
   isLoading = false;
@@ -358,7 +372,7 @@ function renderTable(entries, mode) {
     const profileURL = !isCollegeMode && e.user_id ? `/u/${encodeURIComponent(e.user_id)}` : '';
     const nameHTML = isCollegeMode
       ? `${escapeHTML(e.college)}`
-      : `<a href="${profileURL}">${escapeHTML(e.name)}</a>${isMe ? '<span class="me-tag">YOU</span>' : ''}`;
+      : `<a href="${profileURL}" aria-label="View profile of ${escapeHTML(e.name)}">${escapeHTML(e.name)}</a>${isMe ? '<span class="me-tag" aria-label="This is you">YOU</span>' : ''}`;
     
     const subtitleHTML = isCollegeMode
       ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} · Top: ${escapeHTML(e.top_user?.name || 'N/A')}`
@@ -368,24 +382,24 @@ function renderTable(entries, mode) {
     
     const platformHTML = isCollegeMode
       ? `<span class="stat-badge lc">Solved ${e.total_solved}</span>`
-      : `${e.lc_total ? `<span class="stat-badge lc">LC ${e.lc_total}</span> ` : ''}
-         ${e.gfg_total ? `<span class="stat-badge gfg">GFG ${e.gfg_total}</span> ` : ''}
-         ${e.cn_total ? `<span class="stat-badge cn">CN ${e.cn_total}</span> ` : ''}
-         ${e.hr_total ? `<span class="stat-badge hr">HR ${e.hr_total}</span>` : ''}`;
+      : `${e.lc_total ? `<span class="stat-badge lc" aria-label="LeetCode: ${e.lc_total} solved">LC ${e.lc_total}</span> ` : ''}
+         ${e.gfg_total ? `<span class="stat-badge gfg" aria-label="GFG: ${e.gfg_total} solved">GFG ${e.gfg_total}</span> ` : ''}
+         ${e.cn_total ? `<span class="stat-badge cn" aria-label="Coding Ninjas: ${e.cn_total} solved">CN ${e.cn_total}</span> ` : ''}
+         ${e.hr_total ? `<span class="stat-badge hr" aria-label="HackerRank: ${e.hr_total} solved">HR ${e.hr_total}</span>` : ''}`;
     
     html += `
       <tr class="${isMe ? 'me-row' : ''}">
-        <td class="rank-cell ${rankClass}">${rankIcon}</td>
+        <td class="rank-cell ${rankClass}" aria-label="Rank ${rank}">${rankIcon}</td>
         <td>
           <div class="user-cell">
-            <div class="user-cell-avatar">${avatarHTML(e)}</div>
+            <div class="user-cell-avatar" aria-label="Avatar for ${escapeHTML(e.name)}">${avatarHTML(e)}</div>
             <div class="user-cell-info">
               <div class="user-cell-name">${nameHTML}</div>
               <div class="user-cell-college">${subtitleHTML}</div>
             </div>
           </div>
         </td>
-        <td class="score-cell ${getScoreClass(mode)}">${score}</td>
+        <td class="score-cell ${getScoreClass(mode)}" aria-label="${getScoreLabel(mode)}: ${score}">${score}</td>
         <td>${dsaHTML}</td>
         <td>${platformHTML}</td>
       </tr>`;
@@ -393,11 +407,12 @@ function renderTable(entries, mode) {
   
   // Add pinned row for current user if not already visible
   if (CURRENT_USER_ID && currentUserRank && !entries.some(e => e.user_id === CURRENT_USER_ID)) {
+    const targetPage = Math.ceil(currentUserRank / 20);
     html += `<tr class="current-user-pinned me-row">
       <td colspan="5" style="text-align: center; padding: 12px;">
-        <i class="bi bi-pin-angle-fill" style="color: var(--accent);"></i> 
+        <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
         You are ranked #${escapeHTML(currentUserRank)} in this category. 
-        <a href="?page=${Math.ceil(currentUserRank / 20)}">Go to your rank →</a>
+        <a href="?page=${targetPage}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
       </td>
     </tr>`;
   }
@@ -413,14 +428,24 @@ function renderPagination() {
   prevBtn.disabled = currentPage <= 1;
   nextBtn.disabled = currentPage >= totalPages;
   pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+  
+  // Update ARIA labels for pagination buttons
+  prevBtn.setAttribute('aria-label', currentPage <= 1 ? 'Previous page (disabled)' : 'Go to previous page');
+  nextBtn.setAttribute('aria-label', currentPage >= totalPages ? 'Next page (disabled)' : 'Go to next page');
 }
 
 function switchTab(mode) {
   activeMode = mode;
   currentPage = 1;
   
-  document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
-  document.querySelector(`.lb-tab[data-mode="${mode}"]`).classList.add('active');
+  // Update tab ARIA states
+  document.querySelectorAll('.lb-tab').forEach(tab => {
+    tab.classList.remove('active');
+    tab.setAttribute('aria-selected', 'false');
+  });
+  const activeTab = document.querySelector(`.lb-tab[data-mode="${mode}"]`);
+  activeTab.classList.add('active');
+  activeTab.setAttribute('aria-selected', 'true');
   
   loadLeaderboard(1);
 }
@@ -437,6 +462,13 @@ document.getElementById('nextBtn').addEventListener('click', () => {
 document.querySelectorAll('.lb-tab').forEach(tab => {
   tab.addEventListener('click', function() {
     switchTab(this.dataset.mode);
+  });
+  // Allow keyboard Enter/Space to activate tab
+  tab.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      switchTab(this.dataset.mode);
+    }
   });
 });
 
