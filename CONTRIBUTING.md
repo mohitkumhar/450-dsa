@@ -58,9 +58,10 @@ source venv/bin/activate
 
 **2. Install dependencies**
 ```bash
+# Runtime-only install
 pip install -r requirements.txt
 
-# For running tests
+# Development, linting, and test install
 pip install -r requirements-dev.txt
 ```
 
