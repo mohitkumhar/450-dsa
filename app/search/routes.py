@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
 
 from app.extensions import limiter
-from app.utils import search_dsa_questions
+from app.search.service import search_dsa_questions
 
 
 search_bp = Blueprint("search", __name__)
