@@ -2,7 +2,10 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 
 from app.extensions import limiter, cache
-from app.utils import build_college_leaderboard_data, build_leaderboard_data
+from app.leaderboard.service import (
+    build_college_leaderboard_data,
+    build_leaderboard_data,
+)
 
 
 leaderboard_bp = Blueprint("leaderboard", __name__)
