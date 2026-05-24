@@ -224,6 +224,8 @@ Open a GitHub issue with:
 ```bash
 pip install -r requirements-dev.txt
 pytest
+ruff check path/to/touched_file.py
+black --check path/to/touched_file.py
 ```
 
 Tests live in the `tests/` folder and use `mongomock` so no real MongoDB connection is needed to run them.
