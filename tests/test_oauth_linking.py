@@ -109,7 +109,7 @@ def make_app(monkeypatch, db_override):
     monkeypatch.setattr(ext, "db", db_override)
     monkeypatch.setattr(ext.mongo, "db", db_override, raising=False)
 
-    monkeypatch.setattr(ext.mongo, "init_app", lambda a: None)
+    monkeypatch.setattr(ext.mongo, "init_app", lambda a, **kwargs: None)
     monkeypatch.setattr(ext.oauth, "init_app", lambda a: None)
     monkeypatch.setattr(ext.limiter, "init_app", lambda a: None)
     monkeypatch.setattr(ext.cache, "init_app", lambda a: None)

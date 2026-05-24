@@ -15,7 +15,7 @@ def create_test_app(monkeypatch):
     monkeypatch.setattr(admin_routes, "db", test_db)
     monkeypatch.setattr(auth_routes, "db", test_db)
 
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
 
     flask_app = app_module.create_app()

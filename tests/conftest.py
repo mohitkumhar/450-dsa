@@ -40,7 +40,7 @@ def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
         for client_name, client in oauth_clients.items():
             monkeypatch.setattr(auth_routes, client_name, client)
 
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
 
     flask_app = app_module.create_app()

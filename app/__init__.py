@@ -27,6 +27,15 @@ def _configure_rate_limit_storage(app, config_class):
         raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
 
 
+def _mongo_client_options(app):
+    return {
+        "serverSelectionTimeoutMS": app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"],
+        "connectTimeoutMS": app.config["MONGO_CONNECT_TIMEOUT_MS"],
+        "maxPoolSize": app.config["MONGO_MAX_POOL_SIZE"],
+        "minPoolSize": app.config["MONGO_MIN_POOL_SIZE"],
+    }
+
+
 def create_app(config_class=None):
     load_dotenv()
 
@@ -62,7 +71,7 @@ def create_app(config_class=None):
         },
     )
 
-    mongo.init_app(app)
+    mongo.init_app(app, **_mongo_client_options(app))
     bcrypt.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
