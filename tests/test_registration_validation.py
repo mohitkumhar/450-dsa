@@ -1,5 +1,5 @@
 import app.auth.routes as auth_routes
-from tests.test_tracker_routes import create_test_app
+from test_tracker_routes import create_test_app
 
 
 def test_register_rejects_blank_display_name(monkeypatch):
@@ -12,7 +12,8 @@ def test_register_rejects_blank_display_name(monkeypatch):
             data={
                 "name": "   ",
                 "email": "blank-name@example.com",
-                "password": "strong-password",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass1!",
             },
         )
 
