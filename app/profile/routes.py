@@ -1,5 +1,4 @@
 import json
-import os
 import time
 
 import requests
@@ -391,7 +390,6 @@ def public_card(user_id):
         solved_items = {qid: p for qid, p in progress_data.items() if p.get("done")}
         platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
 
-        from card_generator import generate_progress_card
         img_io = generate_progress_card(name, c_score, dsa_progress, current_streak, platforms)
         
         card_cache[user_id] = (current_time, img_io)
