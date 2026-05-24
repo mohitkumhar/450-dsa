@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 {% block head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
+<script>
+(function loadChartJs() {
+  const primarySrc = 'https://cdn.jsdelivr.net/npm/chart.js';
+  const fallbackSrc = 'https://unpkg.com/chart.js@4/dist/chart.umd.js';
+
+  function appendScript(src) {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = false;
+    return script;
+  }
+
+  const primary = appendScript(primarySrc);
+  primary.addEventListener('error', () => {
+    if (document.querySelector('script[data-chartjs-fallback="true"]')) {
+      return;
+    }
+    const fallback = appendScript(fallbackSrc);
+    fallback.dataset.chartjsFallback = 'true';
+    document.head.appendChild(fallback);
+  }, { once: true });
+
+  document.head.appendChild(primary);
+})();
+</script>
 {% endblock %}
 {% block content %}
 <style>
@@ -27,6 +51,17 @@
 .link-out:hover{color:var(--accent)}
 .add-btn{width:100%;padding:7px;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-top:4px}
 .add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.profile-secondary-btn{width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s}
+.profile-secondary-btn:hover{border-color:var(--accent);color:var(--accent)}
+.profile-danger-btn{width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s}
+.profile-danger-btn:hover{background:rgba(239,68,68,.1)}
+.profile-inline-link-btn{margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit}
+.profile-inline-link-btn:hover{background:rgba(255,107,0,.08)}
+.profile-icon-btn{background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer}
+.profile-quick-sync-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center}
+.profile-quick-sync-btn:hover{color:var(--accent)}
+.profile-upload-label{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s}
+.profile-upload-label:hover{border-color:var(--accent);color:var(--accent)}
 .rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
 .rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
 .rank-label{font-size:0.75rem;color:var(--text-secondary)}
@@ -103,7 +138,17 @@ body.modal-open {
 }
 </style>
 
-<div class="prof-layout">
+<div class="prof-layout" id="profilePageRoot"
+  data-delete-account-token-url="{{ url_for('auth.delete_account_token') }}"
+  data-edit-profile-url="{{ url_for('profile.edit_profile') }}"
+  data-progress-card-url="{{ url_for('profile.public_card', user_id=user.id) }}"
+  data-sync-platforms-url="{{ url_for('profile.sync_platforms') }}"
+  data-upload-photo-url="{{ url_for('profile.upload_photo') }}"
+  data-lc-username="{{ user.leetcode_username or '' }}"
+  data-gh-username="{{ user.github_username or '' }}"
+  data-gfg-username="{{ user.gfg_username or '' }}"
+  data-hr-username="{{ user.hackerrank_username or '' }}"
+  data-cn-username="{{ user.codingninjas_username or '' }}">
 
 <!-- ── LEFT SIDEBAR ── -->
 <div class="prof-sidebar">
@@ -121,8 +166,8 @@ body.modal-open {
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
       <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
-    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;" aria-label="Share progress image URL">
+    <button class="card-btn" type="button" data-action="show-card-modal" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn" type="button" data-action="copy-progress-card-url" style="background:#10b981;" aria-label="Share progress image URL">
       <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
     <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
@@ -146,7 +191,9 @@ body.modal-open {
       }
 
       function copyProgressCardUrl() {
-        const url = window.location.origin + '/u/{{ user.id }}/card.png';
+        const root = document.getElementById('profilePageRoot');
+        const progressCardPath = root?.dataset.progressCardUrl || '/u/{{ user.id }}/card.png';
+        const url = progressCardPath.startsWith('http') ? progressCardPath : window.location.origin + progressCardPath;
         if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
           showProgressCardUrlFallback(url);
           return;
@@ -180,8 +227,8 @@ body.modal-open {
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button onclick="openDeleteModal()" style="width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
+    <button class="profile-secondary-btn" type="button" data-action="open-edit-profile" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button class="profile-danger-btn" type="button" data-action="open-delete-account" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -193,39 +240,39 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#sync-platforms" class="link-out" data-action="open-sync-modal" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#sync-platforms" class="link-out" data-action="open-sync-modal" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#sync-platforms" class="link-out" data-action="open-sync-modal" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#sync-platforms" class="link-out" data-action="open-sync-modal" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#sync-platforms" class="link-out" data-action="open-sync-modal" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
-    <button class="add-btn" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+    <button class="add-btn" type="button" data-action="open-sync-modal" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#sync-platforms" class="link-out" data-action="open-sync-modal" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
   </div>
@@ -314,7 +361,7 @@ body.modal-open {
       {% for badge in lc_badges %}
       <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
+          <img src="{{ badge.icon }}" class="award-icon" data-fallback-text="🏅" style="width:36px;height:36px;object-fit:contain" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -341,7 +388,7 @@ body.modal-open {
       {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days" role="listitem">🗓️<span class="a-lbl">100 Days</span></div>
       {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days" role="listitem">📅<span class="a-lbl">30 Days</span></div>{% endif %}
       {% if lc_badges|length == 0 and hr_badges|length == 0 and dsa_done < 50 %}
-      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit" aria-label="Connect platforms to see awards">Connect Now</button></div>
+      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button type="button" data-action="open-sync-modal" class="profile-inline-link-btn" aria-label="Connect platforms to see awards">Connect Now</button></div>
       {% endif %}
     </div>
   </div>
@@ -380,7 +427,7 @@ body.modal-open {
   <div class="card">
     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Problems Solved</span>
-      <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Sync connected platforms">
+      <button type="button" data-action="quick-sync" class="profile-quick-sync-btn" title="Sync Connected Platforms" aria-label="Sync connected platforms">
         <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
       </button>
     </div>
@@ -464,7 +511,7 @@ body.modal-open {
   <div class="modal-bx" style="max-width:480px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <h3 style="margin-bottom:0"><i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles</h3>
-      <button onclick="closeSyncModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <button type="button" data-action="close-sync-modal" class="profile-icon-btn" aria-label="Close connect coding profiles dialog">✕</button>
     </div>
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
     <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
@@ -479,8 +526,8 @@ body.modal-open {
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
-      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
-      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
+      <button type="button" class="m-cancel" data-action="close-sync-modal">Cancel</button>
+      <button type="button" class="m-save" id="btnSync" data-action="submit-sync-profile"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
     </div>
   </div>
 </div>
@@ -490,7 +537,7 @@ body.modal-open {
   <div class="modal-bx" style="max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <span style="font-weight:700;font-size:1rem">Your Profile Card</span>
-      <button onclick="document.getElementById('cardModal').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <button type="button" data-action="close-card-modal" class="profile-icon-btn" aria-label="Close profile card dialog">✕</button>
     </div>
     <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
       <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
@@ -503,7 +550,7 @@ body.modal-open {
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button type="button" data-action="share-card" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
   </div>
 </div>
 
@@ -512,7 +559,7 @@ body.modal-open {
   <div class="modal-bx" style="max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
     <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color)">
       <h3 style="margin:0"><i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile</h3>
-      <button onclick="closeEditProfile()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      <button type="button" data-action="close-edit-profile" class="profile-icon-btn" aria-label="Close edit profile dialog">✕</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
     <!-- Photo Upload -->
@@ -521,10 +568,10 @@ body.modal-open {
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
           {% if user.profile_photo %}<img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
-        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+        <label for="photoInput" class="profile-upload-label">
           <i class="bi bi-camera"></i> Upload Photo
         </label>
-        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+        <input type="file" id="photoInput" accept="image/*" style="display:none">
       </div>
       <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
     </div>
@@ -550,9 +597,33 @@ body.modal-open {
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
     </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
-      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
-      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
+      <button type="button" class="m-cancel" data-action="close-edit-profile">Cancel</button>
+      <button type="button" class="m-save" id="btnSaveProfile" data-action="submit-save-profile"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
     </div>
+</div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal-ov" id="deleteAccountModal">
+  <div class="modal-bx" style="max-width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin-bottom:0"><i class="bi bi-trash3" style="color:#ef4444"></i> Delete Account</h3>
+      <button type="button" data-action="close-delete-account" class="profile-icon-btn" aria-label="Close delete account dialog">✕</button>
+    </div>
+    <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:16px">
+      This permanently removes your profile and progress. This action cannot be undone.
+    </p>
+    <form id="deleteAccountForm" method="post" action="{{ url_for('auth.delete_account') }}">
+      <input type="hidden" name="csrf_token" id="deleteAccountCsrfToken">
+      <div id="deletePasswordField" style="display:none">
+        <label class="m-lbl" for="deleteAccountPassword">Confirm Password</label>
+        <input class="m-inp" type="password" id="deleteAccountPassword" name="password" autocomplete="current-password">
+      </div>
+      <div class="m-actions">
+        <button type="button" class="m-cancel" data-action="close-delete-account">Cancel</button>
+        <button type="submit" class="m-save" style="background:#ef4444">Delete Account</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -579,9 +650,11 @@ body.modal-open {
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/profile_interactions.js') }}"></script>
 <script>
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
+  const root=document.getElementById('profilePageRoot');
   const contentEl=document.getElementById('saveProfileContent');
   const payload={
     name: document.getElementById('ep_name').value,
@@ -596,7 +669,7 @@ window.handleSaveProfile = function(btn){
   };
   btn.disabled=true;
   contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
-  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  fetch(root?.dataset.editProfileUrl || '/edit_profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -618,12 +691,12 @@ window.handleSaveProfile = function(btn){
 window.handleQuickSync = function(btn) {
   const icon = document.getElementById('quickSyncIcon');
   if (btn.disabled) return;
-  
-  const lc = '{{ user.leetcode_username or "" }}';
-  const gh = '{{ user.github_username or "" }}';
-  const gfg = '{{ user.gfg_username or "" }}';
-  const hr = '{{ user.hackerrank_username or "" }}';
-  const cn = '{{ user.codingninjas_username or "" }}';
+  const root = document.getElementById('profilePageRoot');
+  const lc = root?.dataset.lcUsername || '';
+  const gh = root?.dataset.ghUsername || '';
+  const gfg = root?.dataset.gfgUsername || '';
+  const hr = root?.dataset.hrUsername || '';
+  const cn = root?.dataset.cnUsername || '';
   
   if(!lc && !gh && !gfg && !hr && !cn){
     showToast('⚠️ No platforms connected to sync!');
@@ -635,7 +708,7 @@ window.handleQuickSync = function(btn) {
   icon.className = 'bi bi-arrow-clockwise btn-spinner';
   showToast('⏳ Syncing profiles...');
   
-  fetch('/sync_platforms', {
+  fetch(root?.dataset.syncPlatformsUrl || '/sync_platforms', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
@@ -659,6 +732,7 @@ window.handleQuickSync = function(btn) {
 };
 
 window.handleSyncProfile = function(btn){
+  const root = document.getElementById('profilePageRoot');
   const syncContent=document.getElementById('syncBtnContent');
   const lc=document.getElementById('lc_username').value.trim();
   const gh=document.getElementById('gh_username').value.trim();
@@ -693,7 +767,7 @@ window.handleSyncProfile = function(btn){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),90000);
 
-  fetch('/sync_platforms',{
+  fetch(root?.dataset.syncPlatformsUrl || '/sync_platforms',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
@@ -786,6 +860,7 @@ try{new Chart(document.getElementById('difficultyChart'),{
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
 function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
+function closeCardModal(){document.getElementById('cardModal').classList.remove('open')}
 function showToast(msg){
   const t=document.getElementById('toast');
   if(!t)return;
@@ -794,8 +869,10 @@ function showToast(msg){
 }
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
+function openDeleteModal(){document.getElementById('deleteAccountModal').classList.add('open')}
+function closeDeleteModal(){document.getElementById('deleteAccountModal').classList.remove('open')}
 
-['syncModal','cardModal','editProfileModal'].forEach(id=>{
+['syncModal','cardModal','editProfileModal','deleteAccountModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
 });
@@ -806,10 +883,11 @@ function handlePhotoUpload(e){
   if(file.size>2*1024*1024){showToast('❌ Image too large (max 2MB)');return;}
   const preview=document.getElementById('editAvatarPreview');
   const mainAvatar=document.getElementById('avatarRing');
+  const root = document.getElementById('profilePageRoot');
   const fd=new FormData();
   fd.append('photo',file);
   showToast('⏳ Uploading photo...');
-  fetch('/upload_photo',{method:'POST',body:fd})
+  fetch(root?.dataset.uploadPhotoUrl || '/upload_photo',{method:'POST',body:fd})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
