@@ -249,7 +249,6 @@ function updateQuestion(id, data, callback) {
     });
 }
 
-// Update the checkbox event listener in topic.html
 document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
         if (!isAuthenticated) { 
@@ -274,7 +273,6 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
     });
 });
 
-// Update bookmark button event listener
 document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         if (!isAuthenticated) { 

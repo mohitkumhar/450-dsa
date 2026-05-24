@@ -1,16 +1,10 @@
-import base64
 import json
 import os
 import time
 
-# Comment out cloudinary for now if not installed
-# import cloudinary
-# import cloudinary.uploader
-# import cloudinary.api
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
-import time
 from card_generator import generate_progress_card
 
 from app.extensions import db
@@ -29,7 +23,6 @@ from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, u
 from streaks import compute_streak
 from profile_validation import build_profile_updates
 
-# THIS LINE IS IMPORTANT - defines the blueprint
 profile_bp = Blueprint("profile", __name__)
 
 
@@ -384,7 +377,6 @@ def public_card(user_id):
     try:
         name = user.get("name", "Anonymous")
         
-        # Calculate real stats
         stats = compute_c_score(user)
         c_score = stats["c_score"]
         dsa_done = stats["dsa_done"]
@@ -519,7 +511,6 @@ def profile():
     all_questions = list(db.question.find())
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
 
-    # ===== Count difficulties from DSA questions =====
     difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
     
     dsa_easy = 0
@@ -534,8 +525,6 @@ def profile():
             dsa_medium += 1
         elif diff == "Hard":
             dsa_hard += 1
-    # ================================================
-
     platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "Other": 0}
     daily_counts = {}
 
@@ -569,7 +558,6 @@ def profile():
     ext_totals = user.external_totals or {}
     platforms = compute_user_platforms(solved_items, ext_totals, all_questions)
 
-    # Use DSA difficulties for the chart
     lc_easy = dsa_easy
     lc_medium = dsa_medium
     lc_hard = dsa_hard

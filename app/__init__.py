@@ -53,7 +53,6 @@ def create_app():
         },
     )
 
-    # Initialize extensions
     mongo.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
@@ -82,7 +81,6 @@ def create_app():
         client_kwargs={"scope": "openid email profile"},
     )
 
-    # Create indexes (skip if using mock)
     try:
         db.user.create_index("email", unique=True, sparse=True)
         db.user.create_index("github_id", unique=True, sparse=True)
@@ -91,7 +89,7 @@ def create_app():
         db.topic.create_index("name", unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
     except Exception:
-        pass  # Skip indexes if using mock DB
+        pass
 
     # Lightweight schema backfill for legacy user documents.
     db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
@@ -108,7 +106,6 @@ def create_app():
                 topic_id = result.inserted_id
                 questions = []
                 for question in topic["questions"]:
-                    # ADDED: difficulty field
                     difficulty = question.get("difficulty", "Medium")
                     questions.append(
                         {
@@ -116,7 +113,7 @@ def create_app():
                             "problem": question["Problem"],
                             "url": question["URL"],
                             "url2": question.get("URL2", ""),
-                            "difficulty": difficulty,  # <-- NEW FIELD
+                            "difficulty": difficulty,
                         }
                     )
                 if questions:
