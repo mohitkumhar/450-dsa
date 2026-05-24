@@ -79,6 +79,16 @@
     font-weight: 600;
 }
 .topic-status:empty { display: none; }
+.topic-skeleton-shell { grid-template-columns: 1fr; }
+.topic-skeleton-toolbar { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; }
+.topic-skeleton-card { min-height: 420px; }
+.btn-busy { pointer-events: none; opacity: 0.75; }
+.btn-busy::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; animation: topic-spin 0.7s linear infinite; }
+.row-updating { opacity: 0.55; }
+
+@keyframes topic-spin {
+    to { transform: rotate(360deg); }
+}
 
 @media (max-width: 640px) {
     .topic-header { flex-direction: column; align-items: stretch; }
@@ -89,6 +99,19 @@
 }
 </style>
 
+<div class="page-load-skeleton topic-skeleton-shell">
+    <div class="skeleton-line" style="width: 140px;"></div>
+    <div class="skeleton-line" style="width: 260px;"></div>
+    <div class="topic-skeleton-toolbar">
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+    </div>
+    <div class="skeleton-block topic-skeleton-card"></div>
+</div>
+
+<div class="page-load-target">
 <a href="{{ url_for('tracker.index') }}" class="back-btn" aria-label="Back to Topics">
     <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Topics
 </a>
@@ -222,6 +245,7 @@
         </tbody>
     </table>
 </div>
+</div>
 
 <!-- Notes Modal -->
 <div class="modal-overlay" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
@@ -285,6 +309,7 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
         const previousChecked = !this.checked;
         const nextChecked = this.checked;
         this.disabled = true;
+        row.classList.add('row-updating');
         
         // Update ARIA label
         const problemName = row.querySelector('.q-name')?.textContent || 'Question';
@@ -299,6 +324,7 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
             })
             .finally(() => {
                 this.disabled = false;
+                row.classList.remove('row-updating');
             });
     });
 });
@@ -312,6 +338,7 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
         const isBookmarked = this.dataset.bookmarked === 'true';
         const newStatus = !isBookmarked;
         this.disabled = true;
+        this.classList.add('row-updating');
         setBookmarkState(this, newStatus);
         updateQuestion(this.dataset.id, {bookmark: newStatus})
             .catch(() => {
@@ -320,6 +347,7 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
             })
             .finally(() => {
                 this.disabled = false;
+                this.classList.remove('row-updating');
             });
     });
 });
@@ -330,6 +358,8 @@ document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
         const difficulty = this.dataset.difficulty;
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('difficulty', difficulty);
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
         window.location.href = currentUrl.toString();
     });
 });
@@ -389,6 +419,9 @@ modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 document.getElementById('saveNotesBtn').addEventListener('click', function() {
     const qId = document.getElementById('currentQuestionId').value;
     const notes = document.getElementById('notesTextarea').value;
+    const previousContent = this.innerHTML;
+    this.disabled = true;
+    this.textContent = 'Saving...';
     updateQuestion(qId, {notes: notes}, () => {
         closeModal();
         const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
@@ -401,14 +434,21 @@ document.getElementById('saveNotesBtn').addEventListener('click', function() {
         }
     }).catch(() => {
         showUpdateError('Unable to save notes. Please try again.');
+    }).finally(() => {
+        this.disabled = false;
+        this.innerHTML = previousContent;
     });
 });
 //  Practice Random Button
 document.getElementById('practiceRandomBtn').addEventListener('click', function() {
+    this.classList.add('btn-busy');
+    this.setAttribute('aria-busy', 'true');
     const rows = Array.from(document.querySelectorAll('#questions-table tbody tr:not(#empty-state-row)'))
         .filter(row => row.style.display !== 'none');
     
     if (rows.length === 0) {
+        this.classList.remove('btn-busy');
+        this.removeAttribute('aria-busy');
         alert('No questions available!');
         return;
     }
@@ -416,7 +456,11 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
     const randomRow = rows[Math.floor(Math.random() * rows.length)];
     randomRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     randomRow.style.outline = '2px solid var(--accent)';
-    setTimeout(() => { randomRow.style.outline = ''; }, 2000);
+    setTimeout(() => {
+        randomRow.style.outline = '';
+        this.classList.remove('btn-busy');
+        this.removeAttribute('aria-busy');
+    }, 2000);
 });
 
 </script>
