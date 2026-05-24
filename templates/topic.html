@@ -89,7 +89,7 @@
 }
 </style>
 
-<a href="{{ url_for('tracker.index') }}" class="back-btn" aria-label="Back to Topics">
+<a href="{{ url_for('tracker.index') }}" class="back-btn ui-btn ui-btn--secondary" aria-label="Back to Topics">
     <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Topics
 </a>
 
@@ -105,7 +105,7 @@
         </div>
     </div>
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
+    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn ui-btn ui-btn--secondary" aria-label="Export notes for this topic">
         <i class="bi bi-download" aria-hidden="true"></i> Export Notes
     </a>
     {% endif %}
@@ -113,22 +113,22 @@
 
 <!-- Filter Buttons with ARIA labels -->
 <div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn--pill ui-btn--secondary {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
         📋 All ({{ total_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn--pill ui-btn--secondary {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
         🟢 Easy ({{ easy_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn--pill ui-btn--secondary {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
         🟡 Medium ({{ medium_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn--pill ui-btn--secondary {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
         🔴 Hard ({{ hard_count }})
     </button>
 </div>
 <!-- Practice Random Button -->
 <div style="margin-bottom: 16px;">
-    <button id="practiceRandomBtn" type="button" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+    <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn--pill ui-btn--primary">
         🎲 Practice Random
     </button>
 </div>
@@ -190,7 +190,7 @@
                     </span>
                 </td>
                 <td>
-                    <button class="action-icon bookmark-btn {% if p and p.bookmark %}bookmarked{% endif %}"
+                    <button class="action-icon ui-btn ui-btn--icon ui-btn--secondary bookmark-btn {% if p and p.bookmark %}bookmarked{% endif %}"
                         data-id="{{ q_id_str }}"
                         data-bookmarked="{{ 'true' if p and p.bookmark else 'false' }}"
                         aria-label="{% if p and p.bookmark %}Remove bookmark for '{{ q.problem }}'{% else %}Bookmark '{{ q.problem }}'{% endif %}"
@@ -199,7 +199,7 @@
                     </button>
                 </td>
                 <td>
-                    <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn"
+                    <button class="notes-btn-sm ui-btn ui-btn--secondary {% if p and p.notes %}has-notes{% endif %} notes-btn"
                         data-id="{{ q_id_str }}"
                         data-notes="{{ p.notes if p and p.notes else '' }}"
                         aria-label="{% if p and p.notes %}Edit notes for '{{ q.problem }}'{% else %}Add notes for '{{ q.problem }}'{% endif %}">
@@ -214,7 +214,7 @@
                     <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
                         No questions match the selected difficulty.
                     </p>
-                    <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()" aria-label="Clear filter and show all questions">
+                    <button class="filter-btn ui-btn ui-btn--pill ui-btn--secondary" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()" aria-label="Clear filter and show all questions">
                         Clear filter &amp; show all
                     </button>
                 </td>
@@ -230,8 +230,8 @@
         <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes for this question"></textarea>
         <input type="hidden" id="currentQuestionId">
         <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modalCancel" aria-label="Cancel editing notes">Cancel</button>
-            <button class="btn-modal-save" id="saveNotesBtn" aria-label="Save notes">Save Notes</button>
+            <button class="btn-modal-cancel ui-btn ui-btn--secondary" id="modalCancel" aria-label="Cancel editing notes">Cancel</button>
+            <button class="btn-modal-save ui-btn ui-btn--primary" id="saveNotesBtn" aria-label="Save notes">Save Notes</button>
         </div>
     </div>
 </div>

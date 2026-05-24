@@ -322,7 +322,7 @@
   }
 </style>
 
-<a href="{{ url_for('tracker.index') }}" class="back-btn"><i class="bi bi-arrow-left"></i> Back to Topics</a>
+<a href="{{ url_for('tracker.index') }}" class="back-btn ui-btn ui-btn--secondary"><i class="bi bi-arrow-left"></i> Back to Topics</a>
 <div class="page-title">Bookmarks</div>
 <div class="page-sub">Your saved questions for quick review</div>
 
@@ -362,13 +362,13 @@
           </div>
         </td>
         <td>
-          <button class="action-icon bookmark-btn" data-id="{{ q_id_str }}" data-bookmarked="true"
+          <button class="action-icon ui-btn ui-btn--icon ui-btn--secondary bookmark-btn" data-id="{{ q_id_str }}" data-bookmarked="true"
             aria-label="Remove bookmark for {{ q.problem }}" aria-pressed="true">
             <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
           </button>
         </td>
         <td>
-          <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn" data-id="{{ q_id_str }}"
+          <button class="notes-btn-sm ui-btn ui-btn--secondary {% if p and p.notes %}has-notes{% endif %} notes-btn" data-id="{{ q_id_str }}"
             data-notes="{{ p.notes if p and p.notes else '' }}"
             aria-label="{% if p and p.notes %}Edit notes for {{ q.problem }}{% else %}Add notes for {{ q.problem }}{% endif %}">
             <i class="bi bi-journal-text" aria-hidden="true"></i> {% if p and p.notes %}Edit{% else %}Add{% endif %}
@@ -393,8 +393,8 @@
     <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes"></textarea>
     <input type="hidden" id="currentQuestionId">
     <div class="modal-actions">
-      <button class="btn-cancel" id="modalCancel">Cancel</button>
-      <button class="btn-save" id="saveNotesBtn">Save Notes</button>
+      <button class="btn-cancel ui-btn ui-btn--secondary" id="modalCancel">Cancel</button>
+      <button class="btn-save ui-btn ui-btn--primary" id="saveNotesBtn">Save Notes</button>
     </div>
   </div>
 </div>

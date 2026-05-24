@@ -262,6 +262,74 @@
             gap: 10px;
         }
 
+        .ui-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 600;
+            line-height: 1.2;
+            text-decoration: none;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .ui-btn:hover {
+            text-decoration: none;
+        }
+
+        .ui-btn--primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .ui-btn--primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            color: white;
+        }
+
+        .ui-btn--secondary {
+            background: var(--bg-card);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .ui-btn--secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .ui-btn--danger {
+            background: none;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .ui-btn--danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+
+        .ui-btn--icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+        }
+
+        .ui-btn--pill {
+            padding: 6px 14px;
+            border-radius: 50px;
+        }
+
         .pill-btn {
             display: flex;
             align-items: center;
@@ -750,15 +818,15 @@
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="#" class="pill-btn" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+            <a href="#" class="pill-btn ui-btn ui-btn--pill ui-btn--secondary" id="monthly-rewind-btn" aria-label="Monthly Rewind">
                 <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn--pill ui-btn--primary" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark/light theme">
+            <button class="icon-btn ui-btn ui-btn--icon ui-btn--secondary" id="theme-toggle" aria-label="Toggle dark/light theme">
                 <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
             {% if current_user.is_authenticated %}
@@ -766,7 +834,7 @@
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn" aria-label="Login">
+            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn--pill ui-btn--secondary" aria-label="Login">
                 <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
