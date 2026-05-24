@@ -7,7 +7,9 @@
 .prof-layout{display:grid;grid-template-columns:240px 1fr 260px;gap:16px;align-items:start}
 .prof-sidebar,.prof-main,.prof-right{display:flex;flex-direction:column;gap:14px}
 .card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px;color:var(--text-primary)}
-.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color)}
+.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color);position:relative;overflow:hidden}
+.avatar-ring::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skeleton-shimmer 1.15s linear infinite}
+.avatar-ring img{position:relative;z-index:1}
 .prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
 .prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
 .card-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:12px}
@@ -45,6 +47,11 @@
 /* contest row */
 .contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
 .empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
+.chart-shell{position:relative;min-height:130px}
+.chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
+.chart-shell .chart-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:skeleton-shimmer 1.15s linear infinite}
+.chart-shell canvas{position:relative;z-index:1}
+.chart-shell.is-ready .chart-skeleton{display:none}
 .awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
 .award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
 .award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
@@ -289,7 +296,10 @@ body.modal-open {
           <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%</div>
         </div>
       </div>
-      <div style="height:130px;margin-top:4px"><canvas id="progressChart" aria-label="Rating progress chart"></canvas></div>
+      <div class="chart-shell" id="progressChartShell" style="height:130px;margin-top:4px">
+        <div class="chart-skeleton" aria-hidden="true"></div>
+        <canvas id="progressChart" aria-label="Rating progress chart"></canvas>
+      </div>
     </div>
   </div>
 
@@ -376,7 +386,8 @@ body.modal-open {
     </div>
 
     <!-- Fundamentals -->
-    <div class="donut-wrap">
+    <div class="donut-wrap chart-shell" id="platformsChartShell">
+      <div class="chart-skeleton" aria-hidden="true"></div>
       <canvas id="platformsChart" aria-label="Platforms solved distribution chart"></canvas>
       <div class="donut-inner">{{ global_total_solved }}</div>
     </div>
@@ -411,7 +422,8 @@ body.modal-open {
 
     <!-- DSA difficulty -->
     <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
-    <div class="donut-wrap">
+    <div class="donut-wrap chart-shell" id="difficultyChartShell">
+      <div class="chart-skeleton" aria-hidden="true"></div>
       <canvas id="difficultyChart" aria-label="Difficulty distribution chart"></canvas>
       <div class="donut-inner">{{ lc_easy + lc_medium + lc_hard }}</div>
     </div>
@@ -718,6 +730,10 @@ window.handleSyncProfile = function(btn){
 // ── Chart & Visualization Code ──
 const dailyCounts = {{ daily_counts | tojson }};
 const heatmap = document.getElementById('heatmap');
+function markChartReady(id){
+  const shell = document.getElementById(id);
+  if (shell) shell.classList.add('is-ready');
+}
 const today = new Date();
 const days = 168;
 let start = new Date(); start.setDate(today.getDate() - days + 1);
@@ -741,6 +757,7 @@ if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
     data:{labels:chartData.map(d=>d.x),datasets:[{data:chartData.map(d=>d.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length>0?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0].label,label:ctx=>ratingHistory.length>0?'Rating: '+ctx.raw:'Solved: '+ctx.raw}}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}
   });
+  markChartReady('progressChartShell');
 } else if(chartCanvas && typeof Chart !== 'undefined') {
   // Show empty state inside canvas area
   const ctx = chartCanvas.getContext('2d');
@@ -750,6 +767,7 @@ if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
   ctx.font = '13px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Sync LeetCode to see rating chart', chartCanvas.width/2, chartCanvas.height/2 - 8);
+  markChartReady('progressChartShell');
 }
 
 const pData = {{ platforms | tojson }};
@@ -757,13 +775,13 @@ try{new Chart(document.getElementById('platformsChart'),{
   type:'doughnut',
   data:{labels:['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['Coding Ninjas'],pData['HackerRank'],pData['Other']],backgroundColor:['#ffb800','#22c55e','#8b5cf6','#00bd6c','#6c757d'],borderWidth:0,cutout:'78%'}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-});}catch(e){console.warn('Chart.js load failed:',e);}
+}); markChartReady('platformsChartShell');}catch(e){console.warn('Chart.js load failed:',e); markChartReady('platformsChartShell');}
 
 try{new Chart(document.getElementById('difficultyChart'),{
   type:'doughnut',
   data:{labels:['Easy','Medium','Hard'],datasets:[{data:[{{lc_easy}},{{lc_medium}},{{lc_hard}}],backgroundColor:['#00b8a3','#ffc01e','#ff375f'],borderWidth:0,cutout:'78%'}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-});}catch(e){console.warn('Difficulty chart error:',e);}
+}); markChartReady('difficultyChartShell');}catch(e){console.warn('Difficulty chart error:',e); markChartReady('difficultyChartShell');}
 
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}

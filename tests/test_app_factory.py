@@ -83,6 +83,9 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/apispec_1.json" in routes
 
     question_indexes = app_module.db.question.indexes
+    topic_indexes = app_module.db.topic.indexes
+    assert (("position",), {}) in topic_indexes
+    assert (("topic",), {}) in question_indexes
     assert (([("problem", "text")],), {"name": "problem_text"}) in question_indexes
     assert "/admin" in routes
     assert "/admin/users/<user_id>/delete" in routes

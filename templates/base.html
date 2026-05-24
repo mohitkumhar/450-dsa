@@ -12,6 +12,9 @@
     <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}" sizes="192x192" type="image/svg+xml">
     <link rel="icon" href="{{ url_for('static', filename='icons/icon-512.svg') }}" sizes="512x512" type="image/svg+xml">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}">
+    <script>
+        document.documentElement.classList.add('page-loading');
+    </script>
    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     
@@ -66,6 +69,69 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        .page-load-target {
+            transition: opacity 0.18s ease;
+        }
+
+        .page-load-skeleton {
+            display: none;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .page-loading .page-load-target {
+            opacity: 0;
+        }
+
+        .page-loading .page-load-skeleton {
+            display: grid;
+        }
+
+        .skeleton-block,
+        .skeleton-line,
+        .skeleton-chip {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .skeleton-block::after,
+        .skeleton-line::after,
+        .skeleton-chip::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.12),
+                transparent
+            );
+            animation: skeleton-shimmer 1.15s linear infinite;
+        }
+
+        .skeleton-block {
+            border-radius: var(--radius-lg);
+            min-height: 120px;
+        }
+
+        .skeleton-line {
+            border-radius: 999px;
+            height: 12px;
+        }
+
+        .skeleton-chip {
+            border-radius: 8px;
+            height: 32px;
+        }
+
+        @keyframes skeleton-shimmer {
+            100% {
+                transform: translateX(100%);
+            }
         }
 
         /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
@@ -926,6 +992,10 @@
             const fc = document.getElementById('flash-container');
             if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
         }, 4000);
+
+        window.addEventListener('load', () => {
+            document.documentElement.classList.remove('page-loading');
+        });
     </script>
     {% block scripts %}{% endblock %}
 </body>
