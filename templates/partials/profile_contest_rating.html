@@ -1,0 +1,27 @@
+  <!-- Contests + Rating chart -->
+  <div class="contest-grid">
+    <div class="card">
+      <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
+      <div class="big-num" style="text-align:center">{{ lc_contests }}</div>
+      <div style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
+        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px" aria-hidden="true"></i>LeetCode</span>
+        <strong>{{ lc_contests }}</strong>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <div>
+          <div class="stat-lbl">Rating</div>
+          <div class="metric-value" style="font-size:1.6rem">{{ lc_rating }}</div>
+        </div>
+        <div style="text-align:right;font-size:.75rem;color:var(--text-secondary)">
+          <div>Rank: {{ lc_rank }}</div>
+          <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%</div>
+        </div>
+      </div>
+      <div class="chart-shell" id="progressChartShell" style="height:130px;margin-top:4px">
+        <div class="chart-skeleton" aria-hidden="true"></div>
+        <canvas id="progressChart" aria-label="Rating progress chart"></canvas>
+      </div>
+    </div>
+  </div>

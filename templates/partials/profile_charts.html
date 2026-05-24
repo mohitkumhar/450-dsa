@@ -1,0 +1,79 @@
+  <div class="card">
+    <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Problems Solved</span>
+      <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Sync connected platforms">
+        <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <!-- Fundamentals -->
+    <div class="donut-wrap chart-shell" id="platformsChartShell">
+      <div class="chart-skeleton" aria-hidden="true"></div>
+      <canvas id="platformsChart" aria-label="Platforms solved distribution chart"></canvas>
+      <div class="donut-inner">{{ global_total_solved }}</div>
+    </div>
+    <div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#ffb800"></span><span style="color:#ffb800;font-weight:700">LeetCode</span></span>
+        <strong>{{ platforms['LeetCode'] }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#22c55e"></span><span style="color:#22c55e;font-weight:700">GFG</span></span>
+        <strong>{{ platforms['GFG'] }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#8b5cf6"></span><span style="color:#8b5cf6;font-weight:700">Coding Ninjas</span></span>
+        <strong>{{ platforms['Coding Ninjas'] }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#00bd6c"></span><span style="color:#00bd6c;font-weight:700">HackerRank</span></span>
+        <strong>{{ platforms['HackerRank'] }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#f97316"></span><span style="color:#f97316;font-weight:700">AtCoder</span></span>
+        <strong>{{ platforms['AtCoder'] }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#6c757d"></span><span style="color:#6c757d;font-weight:700">Other</span></span>
+        <strong>{{ platforms['Other'] }}</strong>
+      </div>
+    </div>
+
+    <hr style="border-color:var(--border-color);margin:16px 0">
+
+    <!-- DSA difficulty -->
+    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
+    <div class="donut-wrap chart-shell" id="difficultyChartShell">
+      <div class="chart-skeleton" aria-hidden="true"></div>
+      <canvas id="difficultyChart" aria-label="Difficulty distribution chart"></canvas>
+      <div class="donut-inner">{{ lc_easy + lc_medium + lc_hard }}</div>
+    </div>
+    <div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#00b8a3"></span><span style="color:#00b8a3;font-weight:700">Easy</span></span>
+        <strong>{{ lc_easy }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#ffc01e"></span><span style="color:#ffc01e;font-weight:700">Medium</span></span>
+        <strong>{{ lc_medium }}</strong>
+      </div>
+      <div class="legend-item">
+        <span><span class="legend-dot" style="background:#ff375f"></span><span style="color:#ff375f;font-weight:700">Hard</span></span>
+        <strong>{{ lc_hard }}</strong>
+      </div>
+    </div>
+
+    <hr style="border-color:var(--border-color);margin:16px 0">
+
+    <!-- Contest Rankings -->
+    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:4px">Contest Rankings</div>
+    <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">LEETCODE</div>
+    <div class="rating-wrap">
+      <i class="bi bi-shield-shaded shield-icon" aria-hidden="true"></i>
+      <div>
+        <div class="rating-num">{{ lc_rating }}</div>
+        <div class="rating-sub">(max: {{ lc_rating }})</div>
+        <div class="rating-sub">Rank: {{ lc_rank }}</div>
+      </div>
+    </div>
+  </div>
