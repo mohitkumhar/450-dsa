@@ -96,6 +96,8 @@ def create_app(config_class=None):
         db.user.create_index("google_id", unique=True, sparse=True)
         db.user.create_index("is_admin")
         db.topic.create_index("name", unique=True)
+        db.topic.create_index("position")
+        db.question.create_index("topic")
         db.question.create_index([("problem", "text")], name="problem_text")
     except Exception:
         pass
