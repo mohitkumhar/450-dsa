@@ -1,0 +1,62 @@
+{% macro badge_class(platform_name) -%}
+  {%- set platform = (platform_name or '')|lower -%}
+  {%- if platform in ('lc', 'leetcode') or 'leetcode' in platform -%}badge-lc
+  {%- elif platform in ('gfg', 'geeksforgeeks') or 'geeksforgeeks' in platform -%}badge-gfg
+  {%- elif platform in ('hr', 'hackerrank') or 'hackerrank' in platform -%}badge-hr
+  {%- elif platform in ('cn', 'coding ninjas') or 'coding ninjas' in platform -%}badge-cn
+  {%- elif platform in ('yt', 'youtube') or 'youtube' in platform -%}badge-yt
+  {%- else -%}badge-link
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro profile_link_class(platform_name) -%}
+  {%- set platform = (platform_name or '')|lower -%}
+  {%- if platform in ('lc', 'leetcode') or 'leetcode' in platform -%}platform-link-lc
+  {%- elif platform in ('gfg', 'geeksforgeeks') or 'geeksforgeeks' in platform -%}platform-link-gfg
+  {%- elif platform in ('hr', 'hackerrank') or 'hackerrank' in platform -%}platform-link-hr
+  {%- elif platform in ('cn', 'coding ninjas') or 'coding ninjas' in platform -%}platform-link-cn
+  {%- elif platform in ('atcoder',) or 'atcoder' in platform -%}platform-link-atcoder
+  {%- elif platform in ('github',) or 'github' in platform -%}platform-link-github
+  {%- else -%}platform-link-default
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro badge_icon(kind='external') -%}
+  {{- 'bi-search' if kind == 'search' else 'bi-box-arrow-up-right' -}}
+{%- endmacro %}
+
+{% macro external_link_badge(url, platform_name, aria_label=None, kind='external', class_name='q-badge', label=None) -%}
+<a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+   class="{{ class_name }} {{ badge_class(platform_name) }}"
+   aria-label="{{ aria_label or (platform_name ~ ' link (opens in new tab)') }}">
+  <i class="bi {{ badge_icon(kind) }}" aria-hidden="true"></i>
+  <span class="badge-label">{{ label or platform_name }}</span>
+</a>
+{%- endmacro %}
+
+{% macro profile_platform_link(url=None, platform_name='', aria_label=None, connect_handler='openSyncModal();return false;') -%}
+  {%- set link_class = profile_link_class(platform_name) -%}
+  {%- if url -%}
+<a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+   class="link-out {{ link_class }}"
+   aria-label="{{ aria_label or (platform_name ~ ' profile (opens in new tab)') }}">
+  <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+</a>
+  {%- else -%}
+<a href="#" class="link-out {{ link_class }}" onclick="{{ connect_handler }}"
+   aria-label="{{ aria_label or ('Connect ' ~ platform_name ~ ' account') }}">
+  <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+</a>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro search_badge_template(template_id, color_key, kind='external') -%}
+<template id="{{ template_id }}">
+  <a href="#" target="_blank" rel="noopener noreferrer"
+     class="q-badge {{ badge_class(color_key) }}"
+     aria-label="Open external link (opens in new tab)">
+    <i class="bi {{ badge_icon(kind) }}" aria-hidden="true"></i>
+    <span class="badge-label"></span>
+  </a>
+</template>
+{%- endmacro %}

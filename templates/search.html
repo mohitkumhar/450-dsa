@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/external_link_badges.html" import search_badge_template %}
 {% block content %}
 <style>
 .search-shell { max-width: 980px; }
@@ -171,6 +172,19 @@
 }
 </style>
 
+<div hidden aria-hidden="true">
+  {{ search_badge_template("search-badge-template-lc-external", "lc") }}
+  {{ search_badge_template("search-badge-template-gfg-external", "gfg") }}
+  {{ search_badge_template("search-badge-template-cn-external", "cn") }}
+  {{ search_badge_template("search-badge-template-hr-external", "hr") }}
+  {{ search_badge_template("search-badge-template-link-external", "link") }}
+  {{ search_badge_template("search-badge-template-lc-search", "lc", kind="search") }}
+  {{ search_badge_template("search-badge-template-gfg-search", "gfg", kind="search") }}
+  {{ search_badge_template("search-badge-template-cn-search", "cn", kind="search") }}
+  {{ search_badge_template("search-badge-template-hr-search", "hr", kind="search") }}
+  {{ search_badge_template("search-badge-template-link-search", "link", kind="search") }}
+</div>
+
 <div class="search-shell">
   <div class="search-head">
     <div class="search-title"><i class="bi bi-search" style="color:var(--accent)" aria-hidden="true"></i> Search</div>
@@ -228,12 +242,19 @@ function escapeHtml(value) {
   }[ch]));
 }
 
-function badgeClass(color) {
-  if (color === 'lc') return 'badge-lc';
-  if (color === 'gfg') return 'badge-gfg';
-  if (color === 'cn') return 'badge-cn';
-  if (color === 'hr') return 'badge-hr';
-  return 'badge-link';
+function badgeColorKey(color) {
+  if (color === 'lc' || color === 'gfg' || color === 'cn' || color === 'hr') return color;
+  return 'link';
+}
+
+function renderBadge(link, kind, ariaLabel) {
+  const templateId = `search-badge-template-${badgeColorKey(link.color)}-${kind}`;
+  const template = document.getElementById(templateId) || document.getElementById(`search-badge-template-link-${kind}`);
+  const anchor = template.content.firstElementChild.cloneNode(true);
+  anchor.href = link.url;
+  anchor.setAttribute('aria-label', ariaLabel);
+  anchor.querySelector('.badge-label').textContent = link.platform;
+  return anchor.outerHTML;
 }
 
 function currentQuery() {
@@ -278,9 +299,7 @@ function renderResults(payload) {
 
   if (!count) {
     const external = (payload.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for your query (opens new tab)">
-        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderBadge(link, 'external', `Search ${link.platform} for your query (opens new tab)`)
     ).join('');
     results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart" aria-hidden="true"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
     return;
@@ -288,14 +307,10 @@ function renderResults(payload) {
 
   results.innerHTML = payload.results.map(item => {
     const directLinks = (item.links || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="View on ${escapeHtml(link.platform)} (opens new tab)">
-        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderBadge(link, 'external', `View on ${link.platform} (opens new tab)`)
     ).join('');
     const platformSearches = (item.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for this problem (opens new tab)">
-        <i class="bi bi-search" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderBadge(link, 'search', `Search ${link.platform} for this problem (opens new tab)`)
     ).join('');
     const topicUrl = `/topic/${encodeURIComponent(item.topic_id)}`;
 

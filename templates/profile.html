@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/external_link_badges.html" import profile_platform_link %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
 {% endblock %}
@@ -25,6 +26,13 @@
 .check-ok{color:var(--success);font-size:0.9rem}
 .link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
 .link-out:hover{color:var(--accent)}
+.platform-link-lc{color:#ffb800}
+.platform-link-gfg{color:var(--success)}
+.platform-link-cn{color:#8b5cf6}
+.platform-link-hr{color:#00bd6c}
+.platform-link-atcoder{color:#f97316}
+.platform-link-github{color:var(--text-primary)}
+.platform-link-default{color:var(--text-muted)}
 .add-btn{width:100%;padding:7px;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-top:4px}
 .add-btn:hover{border-color:var(--accent);color:var(--accent)}
 .rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
@@ -193,31 +201,31 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link("https://leetcode.com/" ~ user.leetcode_username, "LeetCode", aria_label="LeetCode profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="LeetCode", aria_label="Connect LeetCode account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link("https://www.geeksforgeeks.org/user/" ~ user.gfg_username, "GFG", aria_label="GFG profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="GFG", aria_label="Connect GFG account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link("https://www.naukri.com/code360/profile/" ~ user.codingninjas_username, "Coding Ninjas", aria_label="Coding Ninjas profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="Coding Ninjas", aria_label="Connect Coding Ninjas account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link("https://www.hackerrank.com/" ~ user.hackerrank_username, "HackerRank", aria_label="HackerRank profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="HackerRank", aria_label="Connect HackerRank account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link("https://atcoder.jp/users/" ~ user.atcoder_username, "AtCoder", aria_label="AtCoder profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="AtCoder", aria_label="Connect AtCoder account") }}{% endif %}
       </span>
     </div>
     <button class="add-btn" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
@@ -225,7 +233,7 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link("https://github.com/" ~ user.github_username, "GitHub", aria_label="GitHub profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="GitHub", aria_label="Connect GitHub account") }}{% endif %}
       </span>
     </div>
   </div>
