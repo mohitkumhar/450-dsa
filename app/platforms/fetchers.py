@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import datetime
 
@@ -25,6 +26,32 @@ query userProfile($username: String!) {
     rating
     globalRanking
     topPercentage
+  }
+}
+"""
+
+GITHUB_STATS_QUERY = """
+query githubStats($login: String!) {
+  user(login: $login) {
+    issues {
+      totalCount
+    }
+    pullRequests {
+      totalCount
+    }
+    mergedPullRequests: pullRequests(states: MERGED) {
+      totalCount
+    }
+    contributionsCollection {
+      contributionCalendar {
+        weeks {
+          contributionDays {
+            date
+            contributionCount
+          }
+        }
+      }
+    }
   }
 }
 """
@@ -159,40 +186,87 @@ def fetch_hr_badges(username):
         return [], 0
 
 
+def build_github_stats_payload(username):
+    return {
+        "query": GITHUB_STATS_QUERY,
+        "variables": {"login": username},
+    }
+
+
+def _fetch_github_graphql(username, token):
+    response = requests.post(
+        "https://api.github.com/graphql",
+        json=build_github_stats_payload(username),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+        },
+        timeout=5,
+    )
+    payload = response.json()
+    user = payload.get("data", {}).get("user")
+    if not user:
+        return {}
+
+    result_calendar = {}
+    weeks = user.get("contributionsCollection", {}).get("contributionCalendar", {}).get("weeks", [])
+    for week in weeks:
+        for day in week.get("contributionDays", []):
+            result_calendar[day.get("date")] = day.get("contributionCount", 0)
+
+    stats = {
+        "issues": user.get("issues", {}).get("totalCount", 0),
+        "prs": user.get("pullRequests", {}).get("totalCount", 0),
+        "merged_prs": user.get("mergedPullRequests", {}).get("totalCount", 0),
+    }
+    return {"calendar": result_calendar, "stats": stats}
+
+
 def fetch_github(username):
     try:
-        response = requests.get(f"https://github.com/users/{username}/contributions", timeout=5)
-        matches = re.findall(r"(\d+|No)\s+contributions?\s+on\s+(\d{4}-\d{2}-\d{2})", response.text)
-        result_calendar = {}
-        for count_str, date_str in matches:
-            count = 0 if count_str == "No" else int(count_str)
-            result_calendar[date_str] = count
+        token = os.environ.get("GITHUB_TOKEN", "").strip()
+        graphql_payload = _fetch_github_graphql(username, token) if token else {}
+        result_calendar = graphql_payload.get("calendar", {})
+        stats = dict(graphql_payload.get("stats", {}))
 
-        response_issues = requests.get(
-            f"https://api.github.com/search/issues?q=type:issue+author:{username}",
-            timeout=5,
-        ).json()
-        response_prs = requests.get(
-            f"https://api.github.com/search/issues?q=type:pr+author:{username}",
-            timeout=5,
-        ).json()
-        response_merged = requests.get(
-            f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
-            timeout=5,
-        ).json()
+        if not result_calendar:
+            response = requests.get(f"https://github.com/users/{username}/contributions", timeout=5)
+            matches = re.findall(r"(\d+|No)\s+contributions?\s+on\s+(\d{4}-\d{2}-\d{2})", response.text)
+            for count_str, date_str in matches:
+                count = 0 if count_str == "No" else int(count_str)
+                result_calendar[date_str] = count
+
+        if not stats:
+            response_issues = requests.get(
+                f"https://api.github.com/search/issues?q=type:issue+author:{username}",
+                timeout=5,
+            ).json()
+            response_prs = requests.get(
+                f"https://api.github.com/search/issues?q=type:pr+author:{username}",
+                timeout=5,
+            ).json()
+            response_merged = requests.get(
+                f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
+                timeout=5,
+            ).json()
+            stats.update(
+                {
+                    "issues": response_issues.get("total_count", 0),
+                    "prs": response_prs.get("total_count", 0),
+                    "merged_prs": response_merged.get("total_count", 0),
+                }
+            )
+
         headers = {"Accept": "application/vnd.github.cloak-preview+json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
         response_commits = requests.get(
             f"https://api.github.com/search/commits?q=author:{username}",
             headers=headers,
             timeout=5,
         ).json()
 
-        stats = {
-            "issues": response_issues.get("total_count", 0),
-            "prs": response_prs.get("total_count", 0),
-            "merged_prs": response_merged.get("total_count", 0),
-            "commits": response_commits.get("total_count", 0),
-        }
+        stats["commits"] = response_commits.get("total_count", 0)
 
         return {"calendar": result_calendar, "stats": stats}
     except Exception as exc:
