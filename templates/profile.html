@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import modal_shell %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
 {% endblock %}
@@ -107,7 +108,7 @@ body.modal-open {
   <div class="card" style="text-align:center">
     <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
       {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
+        <img src="{{ user.profile_photo }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
       {% else %}
         <span aria-hidden="true">{{ user.name[0]|upper }}</span>
         <span class="visually-hidden">{{ user.name }}'s profile initial</span>
@@ -167,7 +168,7 @@ body.modal-open {
       {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
       {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
       {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe" aria-hidden="true"></i></a>{% endif %}
-      {% if user.github_username %}<a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
+      {% if user.github_username %}<a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
       {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}
     </div>
     {% if user.location or user.college %}
@@ -190,31 +191,31 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://leetcode.com/{{ user.leetcode_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.geeksforgeeks.org/user/{{ user.gfg_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.naukri.com/code360/profile/{{ user.codingninjas_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://www.hackerrank.com/{{ user.hackerrank_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
@@ -222,7 +223,7 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://github.com/{{ user.github_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
   </div>
@@ -311,7 +312,7 @@ body.modal-open {
       {% for badge in lc_badges %}
       <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
+          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -371,16 +372,104 @@ body.modal-open {
     {% endif %}
   </div>
 
-  <!-- RIGHT COLUMN -->
-  <div class="prof-right">
-    <!-- Problem distribution, difficulty, rankings charts -->
-    {% include 'partials/profile_charts.html' %}
+<!-- Sync Modal -->
+{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
+    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
+    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
+    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
+    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
+    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
+    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
+    <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
+    <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
+    <div class="m-actions">
+      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
+      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
+    </div>
+{% endcall %}
+
+<!-- Codolio Card Modal -->
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
+    <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
+      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
+      <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
+      <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@{{ user.leetcode_username or user.name|lower|replace(' ','') }}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ global_total_solved }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Questions</div></div>
+        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ total_active_days }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div></div>
+        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ lc_rating or dsa_done }}</div><div style="font-size:.65rem;color:var(--text-secondary)">{{ 'LC Rating' if lc_rating else 'DSA Done' }}</div></div>
+      </div>
+      <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
+    </div>
+    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+{% endcall %}
+
+<!-- Edit Profile Modal -->
+{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
+    <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
+    <!-- Photo Upload -->
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="position:relative;display:inline-block">
+        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
+          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
+        </div>
+        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+          <i class="bi bi-camera"></i> Upload Photo
+        </label>
+        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+      </div>
+      <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
+    </div>
+    <!-- Basic Info -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}"></div>
+      <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}"></div>
+    </div>
+    <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself...">{{ user.bio or '' }}</textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value="{{ user.location or '' }}"></div>
+      <div style="position:relative">
+        <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
+        <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off">
+        <div id="collegeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+      </div>
+    </div>
+    <!-- Social Links -->
+    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">Social Links</div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
+    <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
+    </div><!-- end scrollable body -->
+    <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
+      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
+      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
+    </div>
+{% endcall %}
+
+<!-- Toast notification -->
+<div class="toast" id="toast" style=""></div>
+
+<!-- Sync Loading Overlay -->
+<div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+  <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
+  <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
+  <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
+  <div style="display:flex;gap:8px;margin-top:4px" id="syncSteps">
+    <span id="ss_lc" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; LeetCode</span>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <span id="ss_gh" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GitHub</span>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <span id="ss_gfg" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GFG</span>
+    <span style="color:rgba(255,255,255,.2)">·</span>
+    <span id="ss_cn" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; Coding Ninjas</span>
   </div>
-
 </div>
-
-<!-- Modals & Overlays -->
-{% include 'partials/profile_modals.html' %}
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 {% endblock %}
 
