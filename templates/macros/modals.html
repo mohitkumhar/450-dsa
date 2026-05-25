@@ -1,0 +1,16 @@
+{% macro notes_modal(modal_id='notesModal', title_id='notesModalTitle', textarea_id='notesTextarea', question_id_input='currentQuestionId', cancel_id='modalCancel', save_id='saveNotesBtn', textarea_label='Notes for this question', textarea_placeholder='Write your notes here...') -%}
+<div class="app-modal" id="{{ modal_id }}" role="dialog" aria-modal="true" aria-labelledby="{{ title_id }}">
+  <div class="app-modal__dialog">
+    <h3 class="app-modal__title" id="{{ title_id }}">
+      <i class="bi bi-journal-text" aria-hidden="true"></i>
+      <span>Notes</span>
+    </h3>
+    <textarea class="app-modal__textarea" id="{{ textarea_id }}" placeholder="{{ textarea_placeholder }}" aria-label="{{ textarea_label }}"></textarea>
+    <input type="hidden" id="{{ question_id_input }}">
+    <div class="app-modal__actions">
+      <button class="ui-btn ui-btn-secondary" id="{{ cancel_id }}" aria-label="Cancel editing notes">Cancel</button>
+      <button class="ui-btn ui-btn-primary" id="{{ save_id }}" aria-label="Save notes">Save Notes</button>
+    </div>
+  </div>
+</div>
+{%- endmacro %}
