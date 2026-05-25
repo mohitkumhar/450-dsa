@@ -159,6 +159,12 @@ def create_app(config_class=None):
 
         return {"csrf_token": csrf_token}
 
+    @app.route("/service-worker.js")
+    def service_worker():
+        response = app.send_static_file("js/service-worker.js")
+        response.mimetype = "application/javascript"
+        return response
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(faq_bp)  
     app.register_blueprint(tracker_bp)
