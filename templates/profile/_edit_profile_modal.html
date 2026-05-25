@@ -1,0 +1,39 @@
+{% from "_macros.html" import modal_shell %}
+{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
+    <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="position:relative;display:inline-block">
+        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
+          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
+        </div>
+        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+          <i class="bi bi-camera"></i> Upload Photo
+        </label>
+        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+      </div>
+      <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}"></div>
+      <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}"></div>
+    </div>
+    <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself...">{{ user.bio or '' }}</textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value="{{ user.location or '' }}"></div>
+      <div style="position:relative">
+        <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
+        <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off">
+        <div id="collegeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+      </div>
+    </div>
+    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">Social Links</div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
+    <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
+    </div>
+    <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
+      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
+      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
+    </div>
+{% endcall %}

@@ -11,6 +11,9 @@ def test_profile_template_uses_url_for_endpoint_config():
     assert '"syncPlatforms": url_for(\'profile.sync_platforms\')' in template
     assert '"searchUniversities": url_for(\'profile.search_universities\')' in template
     assert '"publicCardPath": url_for(\'profile.public_card\'' in template
+    assert '"profileModalSync": url_for(\'profile.sync_modal\')' in template
+    assert '"profileModalCard": url_for(\'profile.card_modal\')' in template
+    assert '"profileModalEdit": url_for(\'profile.edit_profile_modal\')' in template
     assert "fetch('/edit_profile'" not in template
     assert "fetch('/sync_platforms'" not in template
     assert "fetch('/search_universities?q='" not in template

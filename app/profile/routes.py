@@ -25,6 +25,13 @@ profile_bp = Blueprint("profile", __name__)
 __all__ = ["CACHE_TTL", "get_public_card_image"]
 
 
+def invalidate_public_card_cache(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except KeyError:
+        pass
+
+
 def build_sync_platforms_response(platform_status: dict):
     attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
     synced = sum(1 for value in platform_status.values() if value.get("status") == "synced")
@@ -82,6 +89,35 @@ def build_platform_sync_jobs(
         jobs["atcoder"] = lambda: fetch_atcoder(atcoder_username)
 
     return jobs
+
+
+def build_profile_card_modal_context(user):
+    solved_items = {
+        question_id: progress
+        for question_id, progress in user.progress.items()
+        if progress.get("done")
+    }
+    all_questions = list(db.question.find())
+    ext_platform_totals = user.external_totals or {}
+    platforms = compute_user_platforms(solved_items, ext_platform_totals, all_questions)
+
+    daily_counts = {}
+    for progress in solved_items.values():
+        solved_at = progress.get("timestamp") or utc_now()
+        day = solved_at.strftime("%Y-%m-%d")
+        daily_counts[day] = daily_counts.get(day, 0) + 1
+
+    ext_daily = user.external_daily_counts or {}
+    for day, count in ext_daily.items():
+        daily_counts[day] = daily_counts.get(day, 0) + count
+
+    return {
+        "user": user,
+        "dsa_done": len(solved_items),
+        "global_total_solved": sum(platforms.values()),
+        "total_active_days": len(daily_counts),
+        "lc_rating": ext_platform_totals.get("LeetCode_Rating", 0),
+    }
 
 
 @profile_bp.route("/sync_platforms", methods=["POST"])
@@ -318,7 +354,7 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
-    cache.delete(f"card_{str(current_user.id)}")
+    invalidate_public_card_cache(current_user.id)
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -396,7 +432,7 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
-        cache.delete(f"card_{str(current_user.id)}")
+        invalidate_public_card_cache(current_user.id)
     return json_success()
 
 
@@ -482,6 +518,27 @@ def search_universities():
         return jsonify([])
     except Exception:
         return jsonify([])
+
+
+@profile_bp.route("/profile/modals/sync")
+@login_required
+def sync_modal():
+    return render_template("profile/_sync_modal.html", user=current_user)
+
+
+@profile_bp.route("/profile/modals/card")
+@login_required
+def card_modal():
+    return render_template(
+        "profile/_card_modal.html",
+        **build_profile_card_modal_context(current_user),
+    )
+
+
+@profile_bp.route("/profile/modals/edit")
+@login_required
+def edit_profile_modal():
+    return render_template("profile/_edit_profile_modal.html", user=current_user)
 
 
 @profile_bp.route("/upload_photo", methods=["POST"])

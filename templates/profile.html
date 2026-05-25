@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "_macros.html" import modal_shell %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
 {% endblock %}
@@ -457,84 +456,7 @@ body.modal-open {
 </div>
 </div>
 
-<!-- Sync Modal -->
-{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
-    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
-    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
-    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
-    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
-    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
-    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
-    <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
-    <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
-    <div class="m-actions">
-      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
-      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
-    </div>
-{% endcall %}
-
-<!-- Codolio Card Modal -->
-{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
-    <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
-      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
-      <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
-      <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@{{ user.leetcode_username or user.name|lower|replace(' ','') }}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ global_total_solved }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Questions</div></div>
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ total_active_days }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div></div>
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ lc_rating or dsa_done }}</div><div style="font-size:.65rem;color:var(--text-secondary)">{{ 'LC Rating' if lc_rating else 'DSA Done' }}</div></div>
-      </div>
-      <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
-    </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
-{% endcall %}
-
-<!-- Edit Profile Modal -->
-{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
-    <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
-    <!-- Photo Upload -->
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="position:relative;display:inline-block">
-        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
-          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
-        </div>
-        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
-          <i class="bi bi-camera"></i> Upload Photo
-        </label>
-        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
-      </div>
-      <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
-    </div>
-    <!-- Basic Info -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}"></div>
-      <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}"></div>
-    </div>
-    <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself...">{{ user.bio or '' }}</textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value="{{ user.location or '' }}"></div>
-      <div style="position:relative">
-        <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
-        <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off">
-        <div id="collegeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
-      </div>
-    </div>
-    <!-- Social Links -->
-    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">Social Links</div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}"></div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
-    <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
-    </div><!-- end scrollable body -->
-    <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
-      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
-      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
-    </div>
-{% endcall %}
+<div id="profileModalMount"></div>
 
 <!-- Toast notification -->
 <div class="toast" id="toast" style=""></div>
@@ -565,7 +487,16 @@ const endpointConfig = {{ {
   "syncPlatforms": url_for('profile.sync_platforms'),
   "searchUniversities": url_for('profile.search_universities'),
   "publicCardPath": url_for('profile.public_card', user_id=user.id),
+  "profileModalSync": url_for('profile.sync_modal'),
+  "profileModalCard": url_for('profile.card_modal'),
+  "profileModalEdit": url_for('profile.edit_profile_modal'),
 }|tojson }};
+
+const profileModalConfig = {
+  sync: { id: 'syncModal', url: endpointConfig.profileModalSync },
+  card: { id: 'cardModal', url: endpointConfig.profileModalCard },
+  edit: { id: 'editProfileModal', url: endpointConfig.profileModalEdit, onLoad: initCollegeAutocomplete },
+};
 
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
@@ -721,6 +652,67 @@ function markChartReady(id){
   const shell = document.getElementById(id);
   if (shell) shell.classList.add('is-ready');
 }
+
+async function ensureProfileModal(modalKey){
+  const config = profileModalConfig[modalKey];
+  if (!config) {
+    throw new Error('Unknown modal key: ' + modalKey);
+  }
+
+  let modal = document.getElementById(config.id);
+  if (modal) {
+    return modal;
+  }
+
+  const response = await fetch(config.url, {
+    headers: {'X-Requested-With': 'XMLHttpRequest'}
+  });
+  if (!response.ok) {
+    throw new Error('Failed to load modal');
+  }
+
+  const mount = document.getElementById('profileModalMount');
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = (await response.text()).trim();
+  modal = wrapper.firstElementChild;
+  if (!modal || modal.id !== config.id) {
+    throw new Error('Malformed modal response');
+  }
+
+  modal.addEventListener('click', (event) => {
+    if (event.target.id === config.id) {
+      closeProfileModal(config.id);
+    }
+  });
+  mount.appendChild(modal);
+
+  if (typeof config.onLoad === 'function') {
+    config.onLoad();
+  }
+
+  return modal;
+}
+
+function closeProfileModal(modalId){
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('open');
+  }
+  if (!document.querySelector('.modal-ov.open')) {
+    document.body.classList.remove('modal-open');
+  }
+}
+
+async function openProfileModal(modalKey){
+  try {
+    const modal = await ensureProfileModal(modalKey);
+    modal.classList.add('open');
+    document.body.classList.add('modal-open');
+  } catch (error) {
+    console.error('Modal load error:', error);
+    showToast('❌ Unable to load dialog right now.');
+  }
+}
 const today = new Date();
 const days = 168;
 let start = new Date(); start.setDate(today.getDate() - days + 1);
@@ -770,22 +762,17 @@ try{new Chart(document.getElementById('difficultyChart'),{
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
 }); markChartReady('difficultyChartShell');}catch(e){console.warn('Difficulty chart error:',e); markChartReady('difficultyChartShell');}
 
-function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
-function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
-function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
+function openSyncModal(){openProfileModal('sync')}
+function closeSyncModal(){closeProfileModal('syncModal')}
+function showCodelioCard(){openProfileModal('card')}
 function showToast(msg){
   const t=document.getElementById('toast');
   if(!t)return;
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2800);
 }
-function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
-function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
-
-['syncModal','cardModal','editProfileModal'].forEach(id=>{
-  const el=document.getElementById(id);
-  if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
-});
+function openEditProfile(){openProfileModal('edit')}
+function closeEditProfile(){closeProfileModal('editProfileModal')}
 
 function handlePhotoUpload(e){
   const file=e.target.files[0];
@@ -811,10 +798,11 @@ function handlePhotoUpload(e){
 }
 
 // ── College/University Autocomplete ──
-(function(){
+function initCollegeAutocomplete(){
   const inp = document.getElementById('ep_college');
   const dd = document.getElementById('collegeDropdown');
-  if(!inp || !dd) return;
+  if(!inp || !dd || inp.dataset.autocompleteBound === 'true') return;
+  inp.dataset.autocompleteBound = 'true';
   let timer = null, activeIdx = -1;
 
   function renderItems(items){
@@ -877,6 +865,6 @@ function handlePhotoUpload(e){
   document.addEventListener('click', function(e){
     if(!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display='none';
   });
-})();
+}
 </script>
 {% endblock %}

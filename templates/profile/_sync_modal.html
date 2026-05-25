@@ -1,0 +1,19 @@
+{% from "_macros.html" import modal_shell %}
+{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
+    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
+    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
+    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
+    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
+    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
+    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
+    <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
+    <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
+    <div class="m-actions">
+      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
+      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
+    </div>
+{% endcall %}
