@@ -162,6 +162,9 @@ def test_admin_can_delete_other_user(monkeypatch):
     assert response.status_code == 200
     assert test_db.user.find_one({"_id": victim_id}) is None
     assert "Deleted account for Spam Bot." in response.data.decode("utf-8")
+    audit_entry = test_db.admin_audit_log.find_one({"action": "delete_user"})
+    assert audit_entry is not None
+    assert audit_entry["target_user_id"] == victim_id
 
 
 def test_admin_delete_rejects_missing_csrf(monkeypatch):
@@ -217,3 +220,166 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
+
+
+def test_admin_can_promote_other_user(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Lead Admin",
+            "email": "lead@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    member_id = test_db.user.insert_one(
+        {
+            "name": "Member",
+            "email": "member@example.com",
+            "is_admin": False,
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{member_id}/role",
+            data={"q": "", "page": 1, "csrf_token": csrf_token, "make_admin": "1"},
+            follow_redirects=True,
+        )
+
+    promoted_user = test_db.user.find_one({"_id": member_id})
+    assert response.status_code == 200
+    assert promoted_user["is_admin"] is True
+    assert "Promoted Member to admin." in response.data.decode("utf-8")
+    audit_entry = test_db.admin_audit_log.find_one({"action": "promote_admin"})
+    assert audit_entry is not None
+    assert audit_entry["target_user_id"] == member_id
+
+
+def test_admin_can_demote_other_admin(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Lead Admin",
+            "email": "lead@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    target_admin_id = test_db.user.insert_one(
+        {
+            "name": "Second Admin",
+            "email": "second@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{target_admin_id}/role",
+            data={"q": "", "page": 1, "csrf_token": csrf_token, "make_admin": "0"},
+            follow_redirects=True,
+        )
+
+    demoted_user = test_db.user.find_one({"_id": target_admin_id})
+    assert response.status_code == 200
+    assert demoted_user["is_admin"] is False
+    assert "Demoted Second Admin to user." in response.data.decode("utf-8")
+    audit_entry = test_db.admin_audit_log.find_one({"action": "demote_admin"})
+    assert audit_entry is not None
+    assert audit_entry["target_user_id"] == target_admin_id
+
+
+def test_admin_cannot_demote_self(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Solo Admin",
+            "email": "solo@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{admin_id}/role",
+            data={"q": "", "page": 1, "csrf_token": csrf_token, "make_admin": "0"},
+            follow_redirects=True,
+        )
+
+    user_doc = test_db.user.find_one({"_id": admin_id})
+    assert response.status_code == 200
+    assert user_doc["is_admin"] is True
+    assert "You cannot remove your own admin access." in response.data.decode("utf-8")
+
+
+def test_admin_role_change_rejects_missing_csrf(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Lead Admin",
+            "email": "lead@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    member_id = test_db.user.insert_one(
+        {
+            "name": "Member",
+            "email": "member@example.com",
+            "is_admin": False,
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{member_id}/role",
+            data={"q": "", "page": 1, "make_admin": "1"},
+        )
+
+    member = test_db.user.find_one({"_id": member_id})
+    assert response.status_code == 400
+    assert member["is_admin"] is False
+
+
+def test_non_admin_cannot_change_roles(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Basic",
+            "email": "basic@example.com",
+            "is_admin": False,
+            "progress": {},
+        }
+    ).inserted_id
+    target_id = test_db.user.insert_one(
+        {
+            "name": "Target",
+            "email": "target@example.com",
+            "is_admin": False,
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, user_id)
+        response = client.post(
+            f"/admin/users/{target_id}/role",
+            data={"q": "", "page": 1, "make_admin": "1"},
+        )
+
+    target_user = test_db.user.find_one({"_id": target_id})
+    assert response.status_code == 403
+    assert target_user["is_admin"] is False

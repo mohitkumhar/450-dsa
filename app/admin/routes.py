@@ -106,6 +106,20 @@ def _build_user_query(search_term):
     return {"$or": [{"name": pattern}, {"email": pattern}]}
 
 
+def _audit_admin_action(action, actor_id, target_user, metadata=None):
+    db.admin_audit_log.insert_one(
+        {
+            "action": action,
+            "actor_id": actor_id,
+            "target_user_id": target_user.get("_id"),
+            "target_email": target_user.get("email"),
+            "target_name": target_user.get("name"),
+            "metadata": metadata or {},
+            "created_at": datetime.now(timezone.utc),
+        }
+    )
+
+
 @admin_bp.route("", methods=["GET"])
 @login_required
 @admin_required
@@ -176,5 +190,53 @@ def delete_user(user_id):
         abort(500)
 
     display_name = target_user.get("name") or target_user.get("email") or "user"
+    _audit_admin_action("delete_user", current_user.id, target_user)
     flash(f"Deleted account for {display_name}.", "success")
+    return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+
+@admin_bp.route("/users/<user_id>/role", methods=["POST"])
+@login_required
+@admin_required
+def update_user_role(user_id):
+    search_term = (request.form.get("q") or request.args.get("q") or "").strip()
+    page = max(_safe_int(request.form.get("page") or request.args.get("page"), 1), 1)
+
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+
+    if not ObjectId.is_valid(user_id):
+        flash("Invalid user id.", "danger")
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+    target_id = ObjectId(user_id)
+    make_admin = request.form.get("make_admin") == "1"
+
+    if str(current_user.id) == str(target_id) and not make_admin:
+        flash("You cannot remove your own admin access.", "warning")
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+    target_user = db.user.find_one({"_id": target_id}, {"name": 1, "email": 1, "is_admin": 1})
+    if not target_user:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+    if bool(target_user.get("is_admin")) == make_admin:
+        role_label = "admin" if make_admin else "user"
+        flash(f"User is already marked as {role_label}.", "info")
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+    result = db.user.update_one({"_id": target_id}, {"$set": {"is_admin": make_admin}})
+    if result.matched_count != 1:
+        abort(500)
+
+    display_name = target_user.get("name") or target_user.get("email") or "user"
+    action = "promote_admin" if make_admin else "demote_admin"
+    _audit_admin_action(action, current_user.id, target_user, {"new_is_admin": make_admin})
+    flash(
+        f"{'Promoted' if make_admin else 'Demoted'} {display_name} {'to admin' if make_admin else 'to user'}.",
+        "success",
+    )
     return redirect(url_for("admin.dashboard", q=search_term, page=page))

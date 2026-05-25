@@ -381,6 +381,22 @@
                                 {% else %}
                                 <button
                                     type="button"
+                                    class="action-btn js-role-change"
+                                    data-user-id="{{ user._id }}"
+                                    data-user-name="{{ user.name or user.email or 'this user' }}"
+                                    data-q="{{ search_term }}"
+                                    data-page="{{ page }}"
+                                    data-make-admin="{{ 0 if user.is_admin else 1 }}"
+                                    data-action-label="{{ 'Demote to User' if user.is_admin else 'Promote to Admin' }}"
+                                >
+                                    {% if user.is_admin %}
+                                    <i class="bi bi-person-dash-fill"></i> Demote
+                                    {% else %}
+                                    <i class="bi bi-shield-lock-fill"></i> Promote
+                                    {% endif %}
+                                </button>
+                                <button
+                                    type="button"
                                     class="action-btn danger js-delete-user"
                                     data-user-id="{{ user._id }}"
                                     data-user-name="{{ user.name or user.email or 'this user' }}"
@@ -447,6 +463,23 @@
             <div class="modal-actions">
                 <button type="button" class="action-btn" id="cancel-delete-btn">Cancel</button>
                 <button type="submit" class="action-btn danger"><i class="bi bi-trash3-fill"></i> Confirm Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="role-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="role-modal-title">
+    <div class="modal-card">
+        <h3 class="modal-title" id="role-modal-title">Update Admin Role</h3>
+        <p class="modal-copy" id="role-modal-copy">Confirm this role change.</p>
+        <form id="role-user-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" id="role-q" name="q" value="">
+            <input type="hidden" id="role-page" name="page" value="1">
+            <input type="hidden" id="role-make-admin" name="make_admin" value="0">
+            <div class="modal-actions">
+                <button type="button" class="action-btn" id="cancel-role-btn">Cancel</button>
+                <button type="submit" class="action-btn" id="confirm-role-btn"><i class="bi bi-shield-lock-fill"></i> Confirm</button>
             </div>
         </form>
     </div>
