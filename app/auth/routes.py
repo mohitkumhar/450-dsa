@@ -4,6 +4,7 @@ import secrets
 from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
+import pyotp
 
 from app.extensions import bcrypt, db, github, google, login_manager
 from app.utils import utc_now
@@ -11,6 +12,9 @@ from app.utils import utc_now
 
 auth_bp = Blueprint("auth", __name__)
 GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
+TWO_FACTOR_PENDING_USER_SESSION_KEY = "two_factor_pending_user_id"
+TWO_FACTOR_PENDING_SECRET_SESSION_KEY = "two_factor_pending_secret"
+TWO_FACTOR_PENDING_BACKUP_CODES_SESSION_KEY = "two_factor_pending_backup_codes"
 COMMON_WEAK_PASSWORDS = {
     "12345678",
     "123456789",
@@ -21,6 +25,72 @@ COMMON_WEAK_PASSWORDS = {
     "letmein",
     "welcome1",
 }
+
+
+def normalize_two_factor_code(code):
+    return re.sub(r"[\s-]+", "", (code or "")).upper()
+
+
+def generate_backup_codes(count=8):
+    return [f"{secrets.token_hex(2).upper()}-{secrets.token_hex(2).upper()}" for _ in range(count)]
+
+
+def hash_backup_codes(codes):
+    return [
+        bcrypt.generate_password_hash(normalize_two_factor_code(code)).decode("utf-8")
+        for code in codes
+    ]
+
+
+def verify_totp_code(secret, code):
+    normalized = normalize_two_factor_code(code)
+    if not normalized or not secret:
+        return False
+    return bool(pyotp.TOTP(secret).verify(normalized, valid_window=1))
+
+
+def consume_backup_code(user_doc, code):
+    normalized = normalize_two_factor_code(code)
+    if not normalized:
+        return False
+
+    hashed_codes = list(user_doc.get("two_factor_backup_codes") or [])
+    remaining_codes = []
+    matched = False
+
+    for hashed in hashed_codes:
+        if not matched and bcrypt.check_password_hash(hashed, normalized):
+            matched = True
+            continue
+        remaining_codes.append(hashed)
+
+    if matched:
+        db.user.update_one(
+            {"_id": user_doc["_id"]},
+            {"$set": {"two_factor_backup_codes": remaining_codes}},
+        )
+        user_doc["two_factor_backup_codes"] = remaining_codes
+        return True
+
+    return False
+
+
+def verify_two_factor_challenge(user_doc, code):
+    secret = user_doc.get("two_factor_secret")
+    if verify_totp_code(secret, code):
+        return True, False
+    if consume_backup_code(user_doc, code):
+        return True, True
+    return False, False
+
+
+def clear_pending_two_factor_setup():
+    session.pop(TWO_FACTOR_PENDING_SECRET_SESSION_KEY, None)
+    session.pop(TWO_FACTOR_PENDING_BACKUP_CODES_SESSION_KEY, None)
+
+
+def clear_pending_login_verification():
+    session.pop(TWO_FACTOR_PENDING_USER_SESSION_KEY, None)
 
 
 def resolve_oauth_user(provider_field, provider_id, name, email=None):
@@ -128,6 +198,10 @@ def login():
         password = request.form.get("password")
         user_doc = db.user.find_one({"email": email})
         if user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
+            if user_doc.get("two_factor_enabled") and user_doc.get("two_factor_secret"):
+                session[TWO_FACTOR_PENDING_USER_SESSION_KEY] = str(user_doc["_id"])
+                flash("Enter your authenticator code to finish signing in.", "info")
+                return redirect(url_for("auth.verify_two_factor_login"))
             login_user(UserWrapper(user_doc))
             flash(f"Welcome back, {user_doc.get('name', 'User')}! 👋", "success")
             return redirect(url_for("tracker.index"))
@@ -180,8 +254,45 @@ def register():
 
 @auth_bp.route("/logout")
 def logout():
+    clear_pending_login_verification()
     logout_user()
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/login/verify-2fa", methods=["GET", "POST"])
+def verify_two_factor_login():
+    if current_user.is_authenticated:
+        return redirect(url_for("tracker.index"))
+
+    pending_user_id = session.get(TWO_FACTOR_PENDING_USER_SESSION_KEY)
+    if not pending_user_id:
+        return redirect(url_for("auth.login"))
+
+    try:
+        user_doc = db.user.find_one({"_id": ObjectId(pending_user_id)})
+    except Exception:
+        user_doc = None
+
+    if not user_doc or not user_doc.get("two_factor_enabled"):
+        clear_pending_login_verification()
+        flash("Two-factor session expired. Please sign in again.", "warning")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        code = request.form.get("code", "")
+        is_valid, used_backup_code = verify_two_factor_challenge(user_doc, code)
+        if is_valid:
+            clear_pending_login_verification()
+            login_user(UserWrapper(user_doc))
+            if used_backup_code:
+                flash("Signed in with a backup code. That code cannot be used again.", "warning")
+            else:
+                flash(f"Welcome back, {user_doc.get('name', 'User')}! 👋", "success")
+            return redirect(url_for("tracker.index"))
+
+        flash("Invalid verification code.", "danger")
+
+    return render_template("two_factor_verify.html", user_email=user_doc.get("email"))
 
 
 @auth_bp.route("/delete_account", methods=["POST"])
@@ -221,6 +332,137 @@ def delete_account_token():
     from flask import jsonify
     user_doc = db.user.find_one({"_id": current_user.id}, {"password": 1}) or {}
     return jsonify({"csrf_token": token, "is_oauth": not bool(user_doc.get("password"))})
+
+
+@auth_bp.route("/settings/two-factor", methods=["GET"])
+@login_required
+def two_factor_settings():
+    user_doc = db.user.find_one({"_id": current_user.id}) or {}
+    if not user_doc.get("password"):
+        return render_template(
+            "two_factor.html",
+            password_account=False,
+            two_factor_enabled=False,
+            setup_secret=None,
+            otpauth_uri=None,
+            backup_codes=None,
+        )
+
+    setup_secret = session.get(TWO_FACTOR_PENDING_SECRET_SESSION_KEY)
+    backup_codes = session.get(TWO_FACTOR_PENDING_BACKUP_CODES_SESSION_KEY)
+    otpauth_uri = None
+    if setup_secret:
+        otpauth_uri = pyotp.TOTP(setup_secret).provisioning_uri(
+            name=user_doc.get("email") or str(user_doc["_id"]),
+            issuer_name="450 DSA Tracker",
+        )
+
+    return render_template(
+        "two_factor.html",
+        password_account=True,
+        two_factor_enabled=bool(user_doc.get("two_factor_enabled")),
+        setup_secret=setup_secret,
+        otpauth_uri=otpauth_uri,
+        backup_codes=backup_codes,
+    )
+
+
+@auth_bp.route("/settings/two-factor/setup", methods=["POST"])
+@login_required
+def setup_two_factor():
+    user_doc = db.user.find_one({"_id": current_user.id}) or {}
+    if not user_doc.get("password"):
+        flash("Two-factor authentication is only available for password accounts.", "danger")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    if user_doc.get("two_factor_enabled"):
+        flash("Two-factor authentication is already enabled.", "info")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    session[TWO_FACTOR_PENDING_SECRET_SESSION_KEY] = pyotp.random_base32()
+    session[TWO_FACTOR_PENDING_BACKUP_CODES_SESSION_KEY] = generate_backup_codes()
+    flash("Scan the secret in your authenticator app, then confirm with a code.", "info")
+    return redirect(url_for("auth.two_factor_settings"))
+
+
+@auth_bp.route("/settings/two-factor/confirm", methods=["POST"])
+@login_required
+def confirm_two_factor():
+    user_doc = db.user.find_one({"_id": current_user.id}) or {}
+    secret = session.get(TWO_FACTOR_PENDING_SECRET_SESSION_KEY)
+    backup_codes = session.get(TWO_FACTOR_PENDING_BACKUP_CODES_SESSION_KEY) or []
+    password = request.form.get("password", "")
+    code = request.form.get("code", "")
+
+    if not user_doc.get("password"):
+        flash("Two-factor authentication is only available for password accounts.", "danger")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    if not secret or not backup_codes:
+        flash("Start setup before confirming two-factor authentication.", "warning")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    if not bcrypt.check_password_hash(user_doc["password"], password):
+        flash("Incorrect password.", "danger")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    if not verify_totp_code(secret, code):
+        flash("Invalid authenticator code.", "danger")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    db.user.update_one(
+        {"_id": current_user.id},
+        {
+            "$set": {
+                "two_factor_enabled": True,
+                "two_factor_secret": secret,
+                "two_factor_backup_codes": hash_backup_codes(backup_codes),
+            }
+        },
+    )
+    clear_pending_two_factor_setup()
+    current_user.reload()
+    flash("Two-factor authentication is now enabled. Save your backup codes somewhere safe.", "success")
+    return redirect(url_for("auth.two_factor_settings"))
+
+
+@auth_bp.route("/settings/two-factor/disable", methods=["POST"])
+@login_required
+def disable_two_factor():
+    user_doc = db.user.find_one({"_id": current_user.id}) or {}
+    password = request.form.get("password", "")
+    code = request.form.get("code", "")
+
+    if not user_doc.get("two_factor_enabled"):
+        flash("Two-factor authentication is not enabled.", "info")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    if not bcrypt.check_password_hash(user_doc["password"], password):
+        flash("Incorrect password.", "danger")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    is_valid, used_backup_code = verify_two_factor_challenge(user_doc, code)
+    if not is_valid:
+        flash("Invalid verification code.", "danger")
+        return redirect(url_for("auth.two_factor_settings"))
+
+    db.user.update_one(
+        {"_id": current_user.id},
+        {
+            "$set": {
+                "two_factor_enabled": False,
+                "two_factor_secret": None,
+                "two_factor_backup_codes": [],
+            }
+        },
+    )
+    clear_pending_two_factor_setup()
+    current_user.reload()
+    if used_backup_code:
+        flash("Two-factor authentication disabled. One backup code was consumed.", "warning")
+    else:
+        flash("Two-factor authentication disabled.", "success")
+    return redirect(url_for("auth.two_factor_settings"))
 
 
 @auth_bp.route("/login/github")

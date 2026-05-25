@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card" style="max-width:620px">
+        <div class="auth-logo"><i class="bi bi-shield-lock"></i></div>
+        <h2>Two-Factor Authentication</h2>
+        <p class="subtitle">Add an authenticator app step and keep backup codes for recovery.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-inline {{ category }}">
+                <i class="bi bi-{% if category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}check-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% if not password_account %}
+        <div class="flash-inline warning">
+            <i class="bi bi-info-circle"></i>
+            Two-factor authentication is currently available only for accounts that sign in with a password.
+        </div>
+        <div class="auth-footer">
+            <a href="{{ url_for('profile.profile') }}">Back to profile</a>
+        </div>
+        {% elif two_factor_enabled %}
+        <div class="flash-inline success">
+            <i class="bi bi-shield-check"></i>
+            Two-factor authentication is enabled for your account.
+        </div>
+        <form method="POST" action="{{ url_for('auth.disable_two_factor') }}" id="disableTwoFactorForm" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="disable_password">Current Password</label>
+                <input type="password" class="form-control" id="disable_password" name="password" placeholder="••••••••" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="disable_code">Authenticator or Backup Code</label>
+                <input type="text" class="form-control" id="disable_code" name="code" placeholder="123456 or ABCD-EFGH" required>
+            </div>
+            <button type="submit" class="btn-primary-full">
+                <i class="bi bi-shield-x"></i> Disable 2FA
+            </button>
+        </form>
+        {% else %}
+            {% if not setup_secret %}
+            <form method="POST" action="{{ url_for('auth.setup_two_factor') }}">
+                <button type="submit" class="btn-primary-full">
+                    <i class="bi bi-shield-plus"></i> Start 2FA Setup
+                </button>
+            </form>
+            {% else %}
+            <div class="flash-inline info">
+                <i class="bi bi-phone"></i>
+                Enter this secret in your authenticator app, then confirm with a current code.
+            </div>
+            <div class="form-group">
+                <label class="form-label">Authenticator Secret</label>
+                <input type="text" class="form-control" value="{{ setup_secret }}" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">otpauth URI</label>
+                <textarea class="form-control" rows="3" readonly>{{ otpauth_uri }}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Backup Codes</label>
+                <div class="strength-rules" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    {% for code in backup_codes %}
+                    <div class="rule met"><i class="bi bi-key-fill"></i> {{ code }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('auth.confirm_two_factor') }}" id="confirmTwoFactorForm" novalidate>
+                <div class="form-group">
+                    <label class="form-label" for="confirm_password">Current Password</label>
+                    <input type="password" class="form-control" id="confirm_password" name="password" placeholder="••••••••" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="confirm_code">Authenticator Code</label>
+                    <input type="text" class="form-control" id="confirm_code" name="code" placeholder="123456" required>
+                </div>
+                <button type="submit" class="btn-primary-full">
+                    <i class="bi bi-shield-check"></i> Enable 2FA
+                </button>
+            </form>
+            {% endif %}
+        {% endif %}
+
+        <div class="auth-footer">
+            <a href="{{ url_for('profile.profile') }}">Back to profile</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

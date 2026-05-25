@@ -179,6 +179,11 @@ body.modal-open {
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
     <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    {% if user.password %}
+    <a class="ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('auth.two_factor_settings') }}" style="margin-top:8px" aria-label="Manage two-factor authentication">
+      <i class="bi bi-shield-lock" aria-hidden="true"></i> Two-Factor Auth
+    </a>
+    {% endif %}
     <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 

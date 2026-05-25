@@ -78,8 +78,13 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     routes = {rule.rule for rule in flask_app.url_map.iter_rules()}
     assert "/" in routes
     assert "/login" in routes
+    assert "/login/verify-2fa" in routes
     assert "/register" in routes
     assert "/logout" in routes
+    assert "/settings/two-factor" in routes
+    assert "/settings/two-factor/setup" in routes
+    assert "/settings/two-factor/confirm" in routes
+    assert "/settings/two-factor/disable" in routes
     assert "/login/github" in routes
     assert "/login/github/authorize" in routes
     assert "/login/google" in routes

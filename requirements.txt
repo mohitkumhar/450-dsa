@@ -16,3 +16,4 @@ redis==5.0.4
 # pyjson5==1.6.2
 Flask-Caching==2.0.2
 flasgger==0.9.7.1
+pyotp==2.9.0

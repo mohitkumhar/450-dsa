@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <div class="auth-logo"><i class="bi bi-shield-lock"></i></div>
+        <h2>Verify Sign In</h2>
+        <p class="subtitle">Enter a 6-digit authenticator code or one of your backup codes for {{ user_email }}.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-inline {{ category }}">
+                <i class="bi bi-{% if category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}check-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.verify_two_factor_login') }}" id="verifyTwoFactorForm" novalidate>
+            <div class="form-group">
+                <label class="form-label" for="code">Authenticator or Backup Code</label>
+                <input type="text" class="form-control" id="code" name="code" placeholder="123456 or ABCD-EFGH" required autofocus>
+            </div>
+            <button type="submit" class="btn-primary-full">
+                <i class="bi bi-shield-check"></i> Verify and Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <a href="{{ url_for('auth.login') }}">Back to login</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
