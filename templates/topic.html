@@ -128,9 +128,14 @@
         </div>
     </div>
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
-        <i class="bi bi-download" aria-hidden="true"></i> Export Notes
-    </a>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+        <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
+            <i class="bi bi-download" aria-hidden="true"></i> Export Notes
+        </a>
+        <button type="button" class="export-notes-btn" id="resetTopicBtn" {% if topic_tracked_count == 0 %}disabled{% endif %} aria-label="Reset saved progress for this topic">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset Topic
+        </button>
+    </div>
     {% endif %}
 </div>
 
@@ -259,12 +264,27 @@
         </div>
     </div>
 </div>
+
+<div class="modal-overlay" id="resetTopicModal" role="dialog" aria-modal="true" aria-labelledby="resetTopicModalTitle">
+    <div class="modal-box">
+        <h3 id="resetTopicModalTitle"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset Topic Progress</h3>
+        <p class="modal-copy">This will clear saved progress for {{ topic_tracked_count }} tracked question(s) in {{ topic.name }}.</p>
+        <form id="resetTopicForm">
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" type="button" id="resetTopicCancel" aria-label="Cancel topic reset">Cancel</button>
+                <button class="btn-modal-save" type="submit" id="resetTopicConfirm" aria-label="Confirm topic reset">Reset Topic</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
+const resetTopicUrl = "{{ url_for('tracker.reset_topic_progress', topic_id=topic._id|string) }}";
+const csrfToken = "{{ csrf_token() if current_user.is_authenticated else '' }}";
 
 function showUpdateError(message = 'Unable to save your change. Please try again.') {
     topicStatus.textContent = message;
@@ -373,6 +393,10 @@ document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
 
 // Notes Modal with focus trap
 const modal = document.getElementById('notesModal');
+const resetTopicModal = document.getElementById('resetTopicModal');
+const resetTopicBtn = document.getElementById('resetTopicBtn');
+const resetTopicCancel = document.getElementById('resetTopicCancel');
+const resetTopicForm = document.getElementById('resetTopicForm');
 const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 
 function openModal(triggerEl) {
@@ -392,6 +416,18 @@ function closeModal() {
     modal.classList.remove('open');
     modal.removeEventListener('keydown', trapFocus);
     if (modal._trigger) modal._trigger.focus();
+}
+
+function openResetTopicModal(triggerEl) {
+    if (!resetTopicModal) return;
+    resetTopicModal.classList.add('open');
+    resetTopicModal._trigger = triggerEl;
+}
+
+function closeResetTopicModal() {
+    if (!resetTopicModal) return;
+    resetTopicModal.classList.remove('open');
+    if (resetTopicModal._trigger) resetTopicModal._trigger.focus();
 }
 
 function trapFocus(e) {
@@ -415,6 +451,42 @@ document.querySelectorAll('.notes-btn').forEach(btn => {
 
 document.getElementById('modalCancel').addEventListener('click', closeModal);
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+if (resetTopicBtn) {
+    resetTopicBtn.addEventListener('click', function() {
+        openResetTopicModal(this);
+    });
+}
+
+if (resetTopicCancel) {
+    resetTopicCancel.addEventListener('click', closeResetTopicModal);
+}
+
+if (resetTopicModal) {
+    resetTopicModal.addEventListener('click', e => { if (e.target === resetTopicModal) closeResetTopicModal(); });
+}
+
+if (resetTopicForm) {
+    resetTopicForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        resetTopicBtn.disabled = true;
+        fetch(resetTopicUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+            body: new URLSearchParams({csrf_token: csrfToken}).toString()
+        }).then(r => {
+            if (!r.ok) throw new Error('Request failed');
+            return r.json();
+        }).then(res => {
+            if (!res.success) throw new Error(res.error || 'Reset failed');
+            window.location.reload();
+        }).catch(() => {
+            resetTopicBtn.disabled = false;
+            closeResetTopicModal();
+            showUpdateError('Unable to reset topic progress. Please try again.');
+        });
+    });
+}
 
 document.getElementById('saveNotesBtn').addEventListener('click', function() {
     const qId = document.getElementById('currentQuestionId').value;

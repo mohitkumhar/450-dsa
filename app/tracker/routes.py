@@ -1,5 +1,5 @@
 from bson import ObjectId
-from flask import Blueprint, Response, jsonify, render_template, request
+from flask import Blueprint, Response, abort, jsonify, render_template, request, session
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -73,6 +73,8 @@ def topic(topic_id):
         questions = [q for q in questions if q.get('difficulty', 'Medium') == difficulty_filter]
     
     progress_dict = current_user.progress if current_user.is_authenticated else {}
+    topic_question_ids = {str(question["_id"]) for question in questions}
+    topic_tracked_count = sum(1 for question_id in topic_question_ids if progress_dict.get(question_id))
     
     return render_template(
         "topic.html", 
@@ -83,7 +85,8 @@ def topic(topic_id):
         total_count=total_count,
         easy_count=easy_count,
         medium_count=medium_count,
-        hard_count=hard_count
+        hard_count=hard_count,
+        topic_tracked_count=topic_tracked_count,
     )
 
 
@@ -102,6 +105,35 @@ def export_topic_notes(topic_id):
     response = Response(markdown, mimetype="text/markdown")
     response.headers["Content-Disposition"] = f'attachment; filename={topic_notes_filename(topic_doc["name"])}'
     return response
+
+
+@tracker_bp.route("/topic/<topic_id>/reset-progress", methods=["POST"])
+@login_required
+def reset_topic_progress(topic_id):
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+
+    try:
+        topic_doc = db.topic.find_one({"_id": ObjectId(topic_id)})
+    except Exception:
+        return "Topic not found", 404
+    if not topic_doc:
+        return "Topic not found", 404
+
+    question_ids = [str(question["_id"]) for question in db.question.find({"topic": topic_doc["_id"]}, {"_id": 1})]
+    progress = current_user.progress or {}
+    tracked_question_ids = [question_id for question_id in question_ids if progress.get(question_id)]
+
+    if not tracked_question_ids:
+        return json_success(message=f"No saved progress found for {topic_doc['name']}.")
+
+    unset_fields = {f"progress.{question_id}": "" for question_id in tracked_question_ids}
+    db.user.update_one({"_id": current_user.id}, {"$unset": unset_fields})
+    current_user.reload()
+    clear_leaderboard_snapshots()
+    return json_success(message=f"Reset progress for {len(tracked_question_ids)} tracked question(s) in {topic_doc['name']}.")
 
 
 @tracker_bp.route("/update_question/<question_id>", methods=["POST"])

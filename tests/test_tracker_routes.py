@@ -4,6 +4,12 @@ import app.tracker.routes as tracker_routes
 from conftest import build_test_app, login_test_user
 
 
+def set_csrf_token(client, token="test-csrf-token"):
+    with client.session_transaction() as session:
+        session["csrf_token"] = token
+    return token
+
+
 def test_topic_not_found_invalid_id(monkeypatch):
     flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
 
@@ -183,3 +189,100 @@ def test_update_question_accepts_valid_boolean_update(monkeypatch):
     progress = user["progress"][str(question_id)]
     assert progress["done"] is True
     assert "timestamp" in progress
+
+
+def test_topic_page_shows_reset_summary_for_authenticated_user(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    question_ids = test_db.question.insert_many(
+        [
+            {"topic": topic_id, "problem": "Two Sum"},
+            {"topic": topic_id, "problem": "Three Sum"},
+        ]
+    ).inserted_ids
+
+    with flask_app.test_client() as client:
+        user_id = login_test_user(client, test_db)
+        test_db.user.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    f"progress.{question_ids[0]}.done": True,
+                    f"progress.{question_ids[1]}.bookmark": True,
+                }
+            },
+        )
+        response = client.get(f"/topic/{topic_id}")
+
+    html = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert "Reset Topic" in html
+    assert "This will clear saved progress for 2 tracked question(s) in Arrays." in html
+
+
+def test_reset_topic_progress_clears_only_topic_entries(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    other_topic_id = test_db.topic.insert_one({"name": "Graphs", "position": 2}).inserted_id
+    topic_question_ids = test_db.question.insert_many(
+        [
+            {"topic": topic_id, "problem": "Two Sum"},
+            {"topic": topic_id, "problem": "Three Sum"},
+        ]
+    ).inserted_ids
+    other_question_id = test_db.question.insert_one({"topic": other_topic_id, "problem": "DFS"}).inserted_id
+
+    with flask_app.test_client() as client:
+        user_id = login_test_user(client, test_db)
+        set_csrf_token(client)
+        test_db.user.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
+                    f"progress.{topic_question_ids[0]}.done": True,
+                    f"progress.{topic_question_ids[1]}.bookmark": True,
+                    f"progress.{other_question_id}.done": True,
+                }
+            },
+        )
+        response = client.post(
+            f"/topic/{topic_id}/reset-progress",
+            data={"csrf_token": "test-csrf-token"},
+        )
+
+    user = test_db.user.find_one({"_id": user_id})
+    progress = user["progress"]
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True
+    assert str(topic_question_ids[0]) not in progress
+    assert str(topic_question_ids[1]) not in progress
+    assert progress[str(other_question_id)]["done"] is True
+
+
+def test_reset_topic_progress_rejects_missing_csrf(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        set_csrf_token(client)
+        response = client.post(f"/topic/{topic_id}/reset-progress", data={})
+
+    assert response.status_code == 400
+
+
+def test_reset_topic_progress_returns_success_when_nothing_to_clear(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    test_db.question.insert_one({"topic": topic_id, "problem": "Two Sum"})
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        set_csrf_token(client)
+        response = client.post(
+            f"/topic/{topic_id}/reset-progress",
+            data={"csrf_token": "test-csrf-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "No saved progress found for Arrays."
