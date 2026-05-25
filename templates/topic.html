@@ -251,7 +251,7 @@
                     <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
                         No questions match the selected difficulty.
                     </p>
-                    <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()" aria-label="Clear filter and show all questions">
+                    <button class="filter-btn" type="button" data-action="clear-difficulty-filter" aria-label="Clear filter and show all questions">
                         Clear filter &amp; show all
                     </button>
                 </td>
@@ -266,6 +266,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/topic_interactions.js') }}"></script>
 <script>
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
