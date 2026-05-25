@@ -60,13 +60,17 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert flask_app.config["MONGO_URI"] == "mongodb://localhost:27017/450_dsa"
     assert flask_app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] == 5000
     assert flask_app.config["MONGO_CONNECT_TIMEOUT_MS"] == 5000
+    assert flask_app.config["MONGO_SOCKET_TIMEOUT_MS"] == 10000
     assert flask_app.config["MONGO_MAX_POOL_SIZE"] == 20
     assert flask_app.config["MONGO_MIN_POOL_SIZE"] == 0
+    assert flask_app.config["MONGO_WAIT_QUEUE_TIMEOUT_MS"] == 5000
     assert flask_app.config["RATELIMIT_STORAGE_URI"] == "memory://"
     assert mongo_init_calls == [
         {
             "serverSelectionTimeoutMS": 5000,
             "connectTimeoutMS": 5000,
+            "socketTimeoutMS": 10000,
+            "waitQueueTimeoutMS": 5000,
             "maxPoolSize": 20,
             "minPoolSize": 0,
         }
@@ -211,6 +215,72 @@ def test_create_app_uses_configured_rate_limit_storage(monkeypatch):
     assert flask_app.config["RATELIMIT_STORAGE_URI"] == "redis://localhost:6379/0"
 
 
+def test_create_app_uses_configured_mongo_timeouts_and_pool_settings(monkeypatch):
+    mongo_init_calls = []
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "2500")
+    monkeypatch.setenv("MONGO_CONNECT_TIMEOUT_MS", "1800")
+    monkeypatch.setenv("MONGO_SOCKET_TIMEOUT_MS", "9000")
+    monkeypatch.setenv("MONGO_MAX_POOL_SIZE", "40")
+    monkeypatch.setenv("MONGO_MIN_POOL_SIZE", "6")
+    monkeypatch.setenv("MONGO_WAIT_QUEUE_TIMEOUT_MS", "3200")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(
+        app_module.mongo,
+        "init_app",
+        lambda flask_app, **kwargs: mongo_init_calls.append(kwargs),
+    )
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app()
+
+    assert flask_app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] == 2500
+    assert flask_app.config["MONGO_CONNECT_TIMEOUT_MS"] == 1800
+    assert flask_app.config["MONGO_SOCKET_TIMEOUT_MS"] == 9000
+    assert flask_app.config["MONGO_MAX_POOL_SIZE"] == 40
+    assert flask_app.config["MONGO_MIN_POOL_SIZE"] == 6
+    assert flask_app.config["MONGO_WAIT_QUEUE_TIMEOUT_MS"] == 3200
+    assert mongo_init_calls == [
+        {
+            "serverSelectionTimeoutMS": 2500,
+            "connectTimeoutMS": 1800,
+            "socketTimeoutMS": 9000,
+            "waitQueueTimeoutMS": 3200,
+            "maxPoolSize": 40,
+            "minPoolSize": 6,
+        }
+    ]
+
+
+def test_create_app_clamps_min_pool_size_to_max_pool_size(monkeypatch):
+    mongo_init_calls = []
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("MONGO_MAX_POOL_SIZE", "5")
+    monkeypatch.setenv("MONGO_MIN_POOL_SIZE", "9")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(
+        app_module.mongo,
+        "init_app",
+        lambda flask_app, **kwargs: mongo_init_calls.append(kwargs),
+    )
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    app_module.create_app()
+
+    assert mongo_init_calls[0]["maxPoolSize"] == 5
+    assert mongo_init_calls[0]["minPoolSize"] == 5
+
+
 def test_create_app_requires_persistent_rate_limit_storage_in_production(monkeypatch):
     monkeypatch.delenv("RATELIMIT_STORAGE_URI", raising=False)
     monkeypatch.setenv("FLASK_ENV", "production")
@@ -248,6 +318,8 @@ def test_create_app_uses_testing_config_class(monkeypatch):
         {
             "serverSelectionTimeoutMS": 5000,
             "connectTimeoutMS": 5000,
+            "socketTimeoutMS": 10000,
+            "waitQueueTimeoutMS": 5000,
             "maxPoolSize": 20,
             "minPoolSize": 0,
         }
@@ -292,8 +364,10 @@ def test_create_app_allows_mongo_timeout_and_pool_overrides(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "1200")
     monkeypatch.setenv("MONGO_CONNECT_TIMEOUT_MS", "2300")
+    monkeypatch.setenv("MONGO_SOCKET_TIMEOUT_MS", "6400")
     monkeypatch.setenv("MONGO_MAX_POOL_SIZE", "17")
     monkeypatch.setenv("MONGO_MIN_POOL_SIZE", "3")
+    monkeypatch.setenv("MONGO_WAIT_QUEUE_TIMEOUT_MS", "2800")
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(
         app_module.mongo,
@@ -310,12 +384,16 @@ def test_create_app_allows_mongo_timeout_and_pool_overrides(monkeypatch):
 
     assert flask_app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] == 1200
     assert flask_app.config["MONGO_CONNECT_TIMEOUT_MS"] == 2300
+    assert flask_app.config["MONGO_SOCKET_TIMEOUT_MS"] == 6400
     assert flask_app.config["MONGO_MAX_POOL_SIZE"] == 17
     assert flask_app.config["MONGO_MIN_POOL_SIZE"] == 3
+    assert flask_app.config["MONGO_WAIT_QUEUE_TIMEOUT_MS"] == 2800
     assert mongo_init_calls == [
         {
             "serverSelectionTimeoutMS": 1200,
             "connectTimeoutMS": 2300,
+            "socketTimeoutMS": 6400,
+            "waitQueueTimeoutMS": 2800,
             "maxPoolSize": 17,
             "minPoolSize": 3,
         }
