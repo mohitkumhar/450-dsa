@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
 .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
@@ -57,17 +58,6 @@
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
-/* Modal focus management */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-.modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
-.modal-textarea { width: 100%; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-family: inherit; resize: vertical; min-height: 120px; outline: none; }
-.modal-textarea:focus { border-color: var(--accent); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-.btn-modal-cancel { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-color); background: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-.btn-modal-save { padding: 9px 18px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit; }
-.btn-modal-save:hover { background: var(--accent-hover); }
 .topic-status {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -136,22 +126,22 @@
 
 <!-- Filter Buttons with ARIA labels -->
 <div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
         📋 All ({{ total_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
         🟢 Easy ({{ easy_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
         🟡 Medium ({{ medium_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
         🔴 Hard ({{ hard_count }})
     </button>
 </div>
 <!-- Practice Random Button -->
 <div style="margin-bottom: 16px;">
-    <button id="practiceRandomBtn" type="button" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+    <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn-primary ui-btn-pill">
         🎲 Practice Random
     </button>
 </div>
@@ -248,21 +238,14 @@
 </div>
 
 <!-- Notes Modal -->
-<div class="modal-overlay" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
-    <div class="modal-box">
-        <h3 id="notesModalTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes</h3>
-        <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes for this question"></textarea>
-        <input type="hidden" id="currentQuestionId">
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modalCancel" aria-label="Cancel editing notes">Cancel</button>
-            <button class="btn-modal-save" id="saveNotesBtn" aria-label="Save notes">Save Notes</button>
-        </div>
-    </div>
-</div>
+{{ notes_modal(textarea_label='Notes for this question') }}
 {% endblock %}
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+}|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -283,7 +266,7 @@ function setBookmarkState(btn, isBookmarked) {
 }
 
 function updateQuestion(id, data, callback) {
-    return fetch('/update_question/' + id, {
+    return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)

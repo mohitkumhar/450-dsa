@@ -207,6 +207,9 @@
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "searchQuestions": url_for('search.api_search_questions'),
+}|tojson }};
 const input = document.getElementById('searchInput');
 const results = document.getElementById('results');
 const meta = document.getElementById('searchMeta');
@@ -335,7 +338,7 @@ async function runSearch() {
   meta.setAttribute('aria-busy', 'true');
 
   try {
-    const res = await fetch(`/api/search_questions?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+    const res = await fetch(`${endpointConfig.searchQuestions}?q=${encodeURIComponent(query)}`, { signal: controller.signal });
     renderResults(await res.json());
     meta.setAttribute('aria-busy', 'false');
   } catch (err) {
