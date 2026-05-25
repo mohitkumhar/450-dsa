@@ -15,14 +15,14 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
-from app.profile.card_service import CACHE_TTL, card_cache, get_public_card_image
+from app.profile.card_service import CACHE_TTL, get_public_card_image
 from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
 from platform_fetcher import run_fetch_jobs
 from profile_validation import build_profile_updates
 
 profile_bp = Blueprint("profile", __name__)
 
-__all__ = ["CACHE_TTL", "card_cache", "get_public_card_image"]
+__all__ = ["CACHE_TTL", "get_public_card_image"]
 
 
 def build_sync_platforms_response(platform_status: dict):
@@ -40,9 +40,8 @@ def build_sync_platforms_response(platform_status: dict):
 
 
 def clear_profile_caches(user_id):
-    card_cache.pop(str(user_id), None)
     try:
-        cache.clear()
+        cache.delete(f"card_{str(user_id)}")
     except KeyError:
         pass
 
@@ -404,6 +403,7 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
+        clear_profile_caches(current_user.id)
     return json_success()
 
 

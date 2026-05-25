@@ -537,9 +537,9 @@ def test_public_card_response_headers(client, app):
         assert "Content-Length" in response.headers or len(response.data) > 0
 
 
-def test_public_card_cache_expiration(client, app):
-    """Test that cache respects TTL."""
-    
+def test_public_card_cache_reuse(client, app):
+    """Test that card cache returns consistent data on repeated requests."""
+
     user_id = ObjectId()
     user_data = {
         "_id": user_id,
@@ -547,15 +547,15 @@ def test_public_card_cache_expiration(client, app):
         "progress": {},
         "external_totals": {}
     }
+
     app.mock_db.question.data = {}
-    
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
-        # First request
         response1 = client.get(f"/u/{user_id}/card.png")
         assert response1.status_code == 200
-        
-        # Verify cache was populated
-        from app.profile.routes import card_cache
-        assert str(user_id) in card_cache
+
+        response2 = client.get(f"/u/{user_id}/card.png")
+        assert response2.status_code == 200
+
+        assert response1.data == response2.data

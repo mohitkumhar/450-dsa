@@ -77,7 +77,7 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
         "db",
         SimpleNamespace(user=SimpleNamespace(update_one=lambda query, update: captured.setdefault("db_update", (query, update)))),
     )
-    monkeypatch.setattr(profile_routes.cache, "clear", lambda: captured.setdefault("cleared_cache", True))
+    monkeypatch.setattr(profile_routes.cache, "delete", lambda key: captured.setdefault("cleared_cache_key", key))
 
     def fake_run_fetch_jobs(fetch_jobs, max_workers=5):
         captured["job_names"] = sorted(fetch_jobs.keys())
@@ -166,8 +166,6 @@ def test_sync_platforms_tolerates_missing_cache_extension(monkeypatch):
         SimpleNamespace(user=SimpleNamespace(update_one=lambda query, update: captured.setdefault("db_update", (query, update)))),
     )
 
-    profile_routes.card_cache["user-1"] = ("cached", "etag", object())
-
     monkeypatch.setattr(
         profile_routes,
         "run_fetch_jobs",
@@ -190,4 +188,3 @@ def test_sync_platforms_tolerates_missing_cache_extension(monkeypatch):
 
     assert response.status_code == 200
     assert response.get_json()["success"] is True
-    assert "user-1" not in profile_routes.card_cache
