@@ -363,7 +363,7 @@ def public_card(user_id):
         return "Invalid User ID", 400
 
     try:
-        img_io = get_public_card_image(user_id, object_id, db_handle=db)
+        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
     except LookupError:
         return "User not found", 404
     except Exception:
@@ -372,7 +372,13 @@ def public_card(user_id):
 
     try:
         img_io.seek(0)
-        return send_file(img_io, mimetype="image/png")
+        response = send_file(img_io, mimetype="image/png")
+        response.headers["Cache-Control"] = f"public, max-age={CACHE_TTL}"
+        response.set_etag(etag)
+        if last_modified is not None:
+            response.last_modified = last_modified
+        response.make_conditional(request)
+        return response
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
