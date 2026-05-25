@@ -11,10 +11,9 @@ from app.leaderboard.service import (
 leaderboard_bp = Blueprint("leaderboard", __name__)
 
 
-@leaderboard_bp.route("/leaderboard")
-@limiter.limit("20 per minute")
-@cache.cached(timeout=300)
-def leaderboard():
+# Added data-level caching to avoid context-leak in HTML
+@cache.memoize(timeout=300)
+def get_cached_leaderboard_data():
     entries = build_leaderboard_data()
 
     by_cscore = sorted(entries, key=lambda item: item["c_score"], reverse=True)
@@ -31,10 +30,21 @@ def leaderboard():
     assign_ranks(by_questions, "questions")
     assign_ranks(by_rating, "rating")
     assign_ranks(by_college, "college")
+    
+    return by_cscore, by_questions, by_rating, by_college
 
+
+@leaderboard_bp.route("/leaderboard")
+@limiter.limit("20 per minute")
+# ❌ Removed @cache.cached(timeout=300) to prevent cross-session context leak
+def leaderboard():
+    # Fetching data securely from memoized function
+    by_cscore, by_questions, by_rating, by_college = get_cached_leaderboard_data()
+
+    # Dynamic session data context (never cached)
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
     
-    # Find current user's rank in each category
+    # Find current user's rank in each category dynamically
     current_user_rank = None
     if current_user_id:
         for i, entry in enumerate(by_cscore):
@@ -56,84 +66,7 @@ def leaderboard():
 @leaderboard_bp.route("/api/leaderboard")
 @cache.cached(timeout=300, query_string=True)
 def api_leaderboard():
-    """Return paginated leaderboard rankings for the selected mode.
-    ---
-    tags:
-      - Leaderboard
-    parameters:
-      - name: mode
-        in: query
-        type: string
-        required: false
-        default: cscore
-        enum:
-          - cscore
-          - questions
-          - rating
-          - college
-        description: Ranking mode used to sort leaderboard entries.
-      - name: page
-        in: query
-        type: integer
-        required: false
-        default: 1
-        minimum: 1
-        description: Page number for paginated results.
-      - name: per_page
-        in: query
-        type: integer
-        required: false
-        default: 20
-        maximum: 100
-        description: Number of entries per page.
-      - name: current_user_id
-        in: query
-        type: string
-        required: false
-        description: Optional user id used to return that user's current rank.
-    responses:
-      200:
-        description: Paginated leaderboard response.
-        schema:
-          type: object
-          properties:
-            entries:
-              type: array
-              items:
-                type: object
-                properties:
-                  rank:
-                    type: integer
-                  user_id:
-                    type: string
-                  name:
-                    type: string
-                  profile_photo:
-                    type: string
-                  college:
-                    type: string
-                  c_score:
-                    type: integer
-                  total_solved:
-                    type: integer
-                  dsa_done:
-                    type: integer
-                  lc_total:
-                    type: integer
-                  lc_rating:
-                    type: integer
-            total:
-              type: integer
-            page:
-              type: integer
-            per_page:
-              type: integer
-            total_pages:
-              type: integer
-            current_user_rank:
-              type: integer
-              x-nullable: true
-    """
+    """Return paginated leaderboard rankings for the selected mode."""
     mode = request.args.get("mode", "cscore")
     page = int(request.args.get("page", 1))
     per_page = min(int(request.args.get("per_page", 20)), 100)
