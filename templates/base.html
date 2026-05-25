@@ -1023,7 +1023,7 @@
     {% if messages %}
     <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
         {% for category, message in messages %}
-        <div class="flash-alert {{ category }}" onclick="this.remove()" role="alert">
+        <div class="flash-alert {{ category }}" data-dismiss-flash tabindex="0" role="alert">
             <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
             {{ message }}
         </div>
@@ -1154,6 +1154,17 @@
             localStorage.setItem('theme', next);
             applyTheme(next);
             showToast(`Switched to ${next} mode`, 'info');
+        });
+
+        document.querySelectorAll('[data-dismiss-flash]').forEach((flashAlert) => {
+            const dismissFlash = () => flashAlert.remove();
+            flashAlert.addEventListener('click', dismissFlash);
+            flashAlert.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    dismissFlash();
+                }
+            });
         });
 
         // Auto-dismiss flash messages
