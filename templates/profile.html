@@ -470,6 +470,8 @@ body.modal-open {
     <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
     <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
+    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
@@ -544,15 +546,7 @@ body.modal-open {
   <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
   <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
   <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
-  <div style="display:flex;gap:8px;margin-top:4px" id="syncSteps">
-    <span id="ss_lc" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; LeetCode</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_gh" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GitHub</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_gfg" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GFG</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_cn" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; Coding Ninjas</span>
-  </div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px" id="syncSteps"></div>
 </div>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
@@ -611,8 +605,9 @@ window.handleQuickSync = function(btn) {
   const gfg = '{{ user.gfg_username or "" }}';
   const hr = '{{ user.hackerrank_username or "" }}';
   const cn = '{{ user.codingninjas_username or "" }}';
+  const ac = '{{ user.atcoder_username or "" }}';
   
-  if(!lc && !gh && !gfg && !hr && !cn){
+  if(!lc && !gh && !gfg && !hr && !cn && !ac){
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
@@ -625,7 +620,7 @@ window.handleQuickSync = function(btn) {
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac})
   })
   .then(r => r.json())
   .then(res => {
@@ -652,7 +647,8 @@ window.handleSyncProfile = function(btn){
   const gfg=document.getElementById('gfg_username').value.trim();
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
-  if(!lc && !gh && !gfg && !hr && !cn){showToast('\u26a0\ufe0f Enter at least one username');return;}
+  const ac=document.getElementById('ac_username').value.trim();
+  if(!lc && !gh && !gfg && !hr && !cn && !ac){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
   btn.disabled=true;
@@ -664,8 +660,23 @@ window.handleSyncProfile = function(btn){
   document.getElementById('syncOverlayMsg').textContent='Syncing your profiles...';
 
   // Animate step indicators
-  const steps=['ss_lc','ss_gh','ss_gfg','ss_cn'];
-  const labels=['LeetCode','GitHub','GFG','Coding Ninjas'];
+  const syncPlatforms=[
+    {id:'ss_lc', label:'LeetCode', value:lc},
+    {id:'ss_gh', label:'GitHub', value:gh},
+    {id:'ss_gfg', label:'GFG', value:gfg},
+    {id:'ss_hr', label:'HackerRank', value:hr},
+    {id:'ss_cn', label:'Coding Ninjas', value:cn},
+    {id:'ss_ac', label:'AtCoder', value:ac}
+  ];
+  const activeSyncPlatforms=syncPlatforms.filter(platform=>platform.value);
+  const stepsContainer=document.getElementById('syncSteps');
+  stepsContainer.innerHTML=activeSyncPlatforms.map((platform,index)=>`
+    ${index?'<span style="color:rgba(255,255,255,.2)">·</span>':''}
+    <span id="${platform.id}" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; ${platform.label}</span>
+  `).join('');
+
+  const steps=activeSyncPlatforms.map(platform=>platform.id);
+  const labels=activeSyncPlatforms.map(platform=>platform.label);
   let si=0;
   const stepTimer=setInterval(()=>{
     if(si>0) document.getElementById(steps[si-1]).style.color='rgba(0,200,100,.8)';
@@ -683,7 +694,7 @@ window.handleSyncProfile = function(btn){
   fetch(endpointConfig.syncPlatforms,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac}),
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
