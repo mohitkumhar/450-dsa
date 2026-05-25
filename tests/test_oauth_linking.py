@@ -316,4 +316,33 @@ def test_resolve_oauth_user_creates_new_user_without_email(monkeypatch):
 
     assert action == "created"
     assert user_doc["github_id"] == str(GITHUB_USER_INFO["id"])
-    assert user_doc["email"] is None
+    assert "email" not in user_doc
+
+
+def test_resolve_oauth_user_allows_multiple_users_without_email(monkeypatch):
+    import app.auth.routes as auth_routes
+
+    from tests.conftest import build_test_app
+
+    flask_app, test_db = build_test_app(monkeypatch)
+
+    with flask_app.app_context():
+        first_user, first_action = auth_routes.resolve_oauth_user(
+            "github_id",
+            "github-null-email",
+            "GitHub No Email",
+            email=None,
+        )
+        second_user, second_action = auth_routes.resolve_oauth_user(
+            "google_id",
+            "google-null-email",
+            "Google No Email",
+            email=None,
+        )
+
+    assert first_action == "created"
+    assert second_action == "created"
+    assert first_user["_id"] != second_user["_id"]
+    assert "email" not in first_user
+    assert "email" not in second_user
+    assert test_db.user.count_documents({}) == 2

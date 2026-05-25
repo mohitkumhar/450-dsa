@@ -29,6 +29,7 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
     Returns a tuple of `(user_doc, action)` where action is one of
     `existing`, `linked`, or `created`.
     """
+    email = (email or "").strip() or None
     user_doc = db.user.find_one({provider_field: provider_id})
     if user_doc:
         return user_doc, "existing"
@@ -41,16 +42,17 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
         user_doc[provider_field] = provider_id
         return user_doc, "linked"
 
-    result = db.user.insert_one(
-        {
-            "name": name,
-            "email": email,
-            provider_field: provider_id,
-            "progress": {},
-            "is_admin": False,
-            "created_at": utc_now(),
-        }
-    )
+    new_user = {
+        "name": name,
+        provider_field: provider_id,
+        "progress": {},
+        "is_admin": False,
+        "created_at": utc_now(),
+    }
+    if email:
+        new_user["email"] = email
+
+    result = db.user.insert_one(new_user)
     user_doc = db.user.find_one({"_id": result.inserted_id})
     return user_doc, "created"
 

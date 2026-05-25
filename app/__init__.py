@@ -91,7 +91,11 @@ def create_app(config_class=None):
     )
 
     try:
-        db.user.create_index("email", unique=True, sparse=True)
+        db.user.create_index(
+            "email",
+            unique=True,
+            partialFilterExpression={"email": {"$type": "string"}},
+        )
         db.user.create_index("github_id", unique=True, sparse=True)
         db.user.create_index("google_id", unique=True, sparse=True)
         db.user.create_index("is_admin")

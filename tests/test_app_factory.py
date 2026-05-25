@@ -84,9 +84,14 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
 
     question_indexes = app_module.db.question.indexes
     topic_indexes = app_module.db.topic.indexes
+    user_indexes = app_module.db.user.indexes
     assert (("position",), {}) in topic_indexes
     assert (("topic",), {}) in question_indexes
     assert (([("problem", "text")],), {"name": "problem_text"}) in question_indexes
+    assert (
+        ("email",),
+        {"unique": True, "partialFilterExpression": {"email": {"$type": "string"}}},
+    ) in user_indexes
     assert "/admin" in routes
     assert "/admin/users/<user_id>/delete" in routes
 
