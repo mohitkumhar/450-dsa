@@ -7,6 +7,34 @@
     <title>450 DSA Tracker</title>
     <meta name="description"
         content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
+    <meta name="theme-color" content="#111111">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}" sizes="192x192" type="image/svg+xml">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon-512.svg') }}" sizes="512x512" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}">
+    <script>
+        document.documentElement.classList.add('page-loading');
+
+        (function registerPageLoadingRelease() {
+            let pageLoadingReleased = false;
+            const releasePageLoading = () => {
+                if (pageLoadingReleased) {
+                    return;
+                }
+                pageLoadingReleased = true;
+                document.documentElement.classList.remove('page-loading');
+            };
+
+            window.releasePageLoading = releasePageLoading;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                window.requestAnimationFrame(releasePageLoading);
+            }, { once: true });
+
+            window.addEventListener('load', releasePageLoading, { once: true });
+            window.setTimeout(releasePageLoading, 2500);
+        })();
+    </script>
    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     
@@ -19,6 +47,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
     <style>
         :root {
             --bg-primary: #111111;
@@ -60,6 +89,69 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        .page-load-target {
+            transition: opacity 0.18s ease;
+        }
+
+        .page-load-skeleton {
+            display: none;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .page-loading .page-load-target {
+            opacity: 0;
+        }
+
+        .page-loading .page-load-skeleton {
+            display: grid;
+        }
+
+        .skeleton-block,
+        .skeleton-line,
+        .skeleton-chip {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .skeleton-block::after,
+        .skeleton-line::after,
+        .skeleton-chip::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.12),
+                transparent
+            );
+            animation: skeleton-shimmer 1.15s linear infinite;
+        }
+
+        .skeleton-block {
+            border-radius: var(--radius-lg);
+            min-height: 120px;
+        }
+
+        .skeleton-line {
+            border-radius: 999px;
+            height: 12px;
+        }
+
+        .skeleton-chip {
+            border-radius: 8px;
+            height: 32px;
+        }
+
+        @keyframes skeleton-shimmer {
+            100% {
+                transform: translateX(100%);
+            }
         }
 
         /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
@@ -260,6 +352,155 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+        .app-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-modal.open {
+            display: flex;
+        }
+
+        .app-modal__dialog {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .app-modal__title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-modal__textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            outline: none;
+        }
+
+        .app-modal__textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .app-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .ui-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 9px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .ui-btn:hover {
+            text-decoration: none;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .ui-btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .ui-btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            color: white;
+        }
+
+        .ui-btn-secondary {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .ui-btn-secondary:hover {
+            color: var(--accent);
+        }
+
+        .ui-btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .ui-btn-success:hover {
+            background: #2dd46a;
+            border-color: #2dd46a;
+            color: white;
+        }
+
+        .ui-btn-danger {
+            background: transparent;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .ui-btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .ui-btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ui-btn-pill {
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .ui-btn-block {
+            display: flex;
+            width: 100%;
         }
 
         .pill-btn {
@@ -750,15 +991,15 @@
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="#" class="pill-btn" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+            <a href="#" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
                 <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark/light theme">
+            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle" aria-label="Toggle dark/light theme">
                 <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
             {% if current_user.is_authenticated %}
@@ -766,7 +1007,7 @@
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn" aria-label="Login">
+            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" aria-label="Login">
                 <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
@@ -920,6 +1161,7 @@
             const fc = document.getElementById('flash-container');
             if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
         }, 4000);
+
     </script>
     {% block scripts %}{% endblock %}
 </body>

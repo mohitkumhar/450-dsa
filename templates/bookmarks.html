@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
   .back-btn {
@@ -226,88 +227,6 @@
     color: var(--info)
   }
 
-  .modal-ov {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, .7);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center
-  }
-
-  .modal-ov.open {
-    display: flex
-  }
-
-  .modal-bx {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 28px;
-    width: 90%;
-    max-width: 480px
-  }
-
-  .modal-bx h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 16px
-  }
-
-  .modal-textarea {
-    width: 100%;
-    padding: 12px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    color: var(--text-primary);
-    font-size: .88rem;
-    font-family: inherit;
-    resize: vertical;
-    min-height: 120px;
-    outline: none
-  }
-
-  .modal-textarea:focus {
-    border-color: var(--accent)
-  }
-
-  .modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 16px
-  }
-
-  .btn-cancel {
-    padding: 9px 18px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    background: none;
-    color: var(--text-secondary);
-    font-size: .85rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit
-  }
-
-  .btn-save {
-    padding: 9px 18px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: #fff;
-    font-size: .85rem;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit
-  }
-
-  .btn-save:hover {
-    background: var(--accent-hover)
-  }
-
   @media(max-width:640px) {
 
     .q-table thead th:nth-child(1),
@@ -387,21 +306,14 @@
 </div>
 {% endif %}
 
-<div class="modal-ov" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
-  <div class="modal-bx">
-    <h3 id="notesModalTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes</h3>
-    <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes"></textarea>
-    <input type="hidden" id="currentQuestionId">
-    <div class="modal-actions">
-      <button class="btn-cancel" id="modalCancel">Cancel</button>
-      <button class="btn-save" id="saveNotesBtn">Save Notes</button>
-    </div>
-  </div>
-</div>
+{{ notes_modal(textarea_label='Notes') }}
 {% endblock %}
 
 {% block scripts %}
 <script>
+  const endpointConfig = {{ {
+    "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+  }|tojson }};
   const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
   const modal = document.getElementById('notesModal');
 
@@ -430,7 +342,7 @@
   }
 
   function updateQuestion(id, data, callback) {
-    fetch('/update_question/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
       .then(r => r.json()).then(res => { if (res.success) callback(); })
       .catch(() => alert('Error updating.'));
   }

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import modal_shell %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
 {% endblock %}
@@ -7,11 +8,12 @@
 .prof-layout{display:grid;grid-template-columns:240px 1fr 260px;gap:16px;align-items:start}
 .prof-sidebar,.prof-main,.prof-right{display:flex;flex-direction:column;gap:14px}
 .card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px;color:var(--text-primary)}
-.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color)}
+.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color);position:relative;overflow:hidden}
+.avatar-ring::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skeleton-shimmer 1.15s linear infinite}
+.avatar-ring img{position:relative;z-index:1}
 .prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
 .prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
-.card-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;margin-bottom:12px}
-.card-btn:hover{background:var(--accent-hover);color:#fff;text-decoration:none}
+.card-btn{margin-bottom:12px}
 .prof-bio{text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px}
 .social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;padding:10px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
 .social-icon{color:var(--text-muted);font-size:1.1rem;text-decoration:none;transition:color 0.2s}
@@ -23,13 +25,11 @@
 .check-ok{color:var(--success);font-size:0.9rem}
 .link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
 .link-out:hover{color:var(--accent)}
-.add-btn{width:100%;padding:7px;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;font-family:inherit;transition:all 0.2s;margin-top:4px}
-.add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.add-btn{margin-top:4px}
 .rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
 .rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
 .rank-label{font-size:0.75rem;color:var(--text-secondary)}
-.view-lb-btn{display:block;width:100%;padding:9px;background:var(--accent);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;font-family:inherit;cursor:pointer;text-align:center;margin-top:10px;text-decoration:none}
-.view-lb-btn:hover{background:var(--accent-hover);color:#fff;text-decoration:none}
+.view-lb-btn{margin-top:10px}
 .meta-footer{font-size:0.72rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-top:8px}
 .meta-footer span{display:flex;justify-content:space-between}
 /* stat cards */
@@ -45,6 +45,11 @@
 /* contest row */
 .contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
 .empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
+.chart-shell{position:relative;min-height:130px}
+.chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
+.chart-shell .chart-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:skeleton-shimmer 1.15s linear infinite}
+.chart-shell canvas{position:relative;z-index:1}
+.chart-shell.is-ready .chart-skeleton{display:none}
 .awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
 .award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
 .award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
@@ -103,7 +108,7 @@ body.modal-open {
   <div class="card" style="text-align:center">
     <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
       {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
+        <img src="{{ user.profile_photo }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
       {% else %}
         <span aria-hidden="true">{{ user.name[0]|upper }}</span>
         <span class="visually-hidden">{{ user.name }}'s profile initial</span>
@@ -114,8 +119,8 @@ body.modal-open {
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
       <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
-    <button class="card-btn" onclick="copyProgressCardUrl()" style="background:#10b981;" aria-label="Share progress image URL">
+    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn ui-btn ui-btn-success ui-btn-block" onclick="copyProgressCardUrl()" aria-label="Share progress image URL">
       <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
     <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
@@ -139,7 +144,7 @@ body.modal-open {
       }
 
       function copyProgressCardUrl() {
-        const url = window.location.origin + '/u/{{ user.id }}/card.png';
+        const url = window.location.origin + endpointConfig.publicCardPath;
         if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
           showProgressCardUrlFallback(url);
           return;
@@ -154,7 +159,7 @@ body.modal-open {
         });
       }
     </script>
-    <a class="card-btn" href="{{ url_for('tracker.export_csv') }}" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary)" aria-label="Export progress as CSV file">
+    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_csv') }}" aria-label="Export progress as CSV file">
       <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
     </a>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
@@ -173,8 +178,8 @@ body.modal-open {
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button onclick="openEditProfile()" style="width:100%;margin-top:12px;padding:8px;border:1px solid var(--border-color);border-radius:9px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button onclick="openDeleteModal()" style="width:100%;margin-top:8px;padding:8px;border:1px solid #ef4444;border-radius:9px;background:none;color:#ef4444;font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
+    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -213,7 +218,7 @@ body.modal-open {
         {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="https://atcoder.jp/users/{{ user.atcoder_username }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
-    <button class="add-btn" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+    <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
@@ -230,7 +235,7 @@ body.modal-open {
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
+    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
@@ -289,7 +294,10 @@ body.modal-open {
           <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%</div>
         </div>
       </div>
-      <div style="height:130px;margin-top:4px"><canvas id="progressChart" aria-label="Rating progress chart"></canvas></div>
+      <div class="chart-shell" id="progressChartShell" style="height:130px;margin-top:4px">
+        <div class="chart-skeleton" aria-hidden="true"></div>
+        <canvas id="progressChart" aria-label="Rating progress chart"></canvas>
+      </div>
     </div>
   </div>
 
@@ -304,7 +312,7 @@ body.modal-open {
       {% for badge in lc_badges %}
       <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
+          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -376,7 +384,8 @@ body.modal-open {
     </div>
 
     <!-- Fundamentals -->
-    <div class="donut-wrap">
+    <div class="donut-wrap chart-shell" id="platformsChartShell">
+      <div class="chart-skeleton" aria-hidden="true"></div>
       <canvas id="platformsChart" aria-label="Platforms solved distribution chart"></canvas>
       <div class="donut-inner">{{ global_total_solved }}</div>
     </div>
@@ -411,7 +420,8 @@ body.modal-open {
 
     <!-- DSA difficulty -->
     <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
-    <div class="donut-wrap">
+    <div class="donut-wrap chart-shell" id="difficultyChartShell">
+      <div class="chart-skeleton" aria-hidden="true"></div>
       <canvas id="difficultyChart" aria-label="Difficulty distribution chart"></canvas>
       <div class="donut-inner">{{ lc_easy + lc_medium + lc_hard }}</div>
     </div>
@@ -448,12 +458,7 @@ body.modal-open {
 </div>
 
 <!-- Sync Modal -->
-<div class="modal-ov" id="syncModal">
-  <div class="modal-bx" style="max-width:480px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <h3 style="margin-bottom:0"><i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles</h3>
-      <button onclick="closeSyncModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
+{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
     <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
     <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
@@ -470,16 +475,10 @@ body.modal-open {
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
       <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
     </div>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Codolio Card Modal -->
-<div class="modal-ov" id="cardModal">
-  <div class="modal-bx" style="max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <span style="font-weight:700;font-size:1rem">Your Profile Card</span>
-      <button onclick="document.getElementById('cardModal').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
     <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
       <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
       <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
@@ -492,22 +491,16 @@ body.modal-open {
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
     <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Edit Profile Modal -->
-<div class="modal-ov" id="editProfileModal">
-  <div class="modal-bx" style="max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
-    <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color)">
-      <h3 style="margin:0"><i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile</h3>
-      <button onclick="closeEditProfile()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
+{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
     <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
     <!-- Photo Upload -->
     <div style="text-align:center;margin-bottom:20px">
       <div style="position:relative;display:inline-block">
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
-          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover">{% else %}{{ user.name[0]|upper }}{% endif %}
+          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
         <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
           <i class="bi bi-camera"></i> Upload Photo
@@ -541,8 +534,7 @@ body.modal-open {
       <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
       <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
     </div>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Toast notification -->
 <div class="toast" id="toast" style=""></div>
@@ -568,6 +560,13 @@ body.modal-open {
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "editProfile": url_for('profile.edit_profile'),
+  "syncPlatforms": url_for('profile.sync_platforms'),
+  "searchUniversities": url_for('profile.search_universities'),
+  "publicCardPath": url_for('profile.public_card', user_id=user.id),
+}|tojson }};
+
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');
@@ -584,7 +583,7 @@ window.handleSaveProfile = function(btn){
   };
   btn.disabled=true;
   contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
-  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -623,7 +622,7 @@ window.handleQuickSync = function(btn) {
   icon.className = 'bi bi-arrow-clockwise btn-spinner';
   showToast('⏳ Syncing profiles...');
   
-  fetch('/sync_platforms', {
+  fetch(endpointConfig.syncPlatforms, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
@@ -681,7 +680,7 @@ window.handleSyncProfile = function(btn){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),90000);
 
-  fetch('/sync_platforms',{
+  fetch(endpointConfig.syncPlatforms,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
@@ -718,6 +717,10 @@ window.handleSyncProfile = function(btn){
 // ── Chart & Visualization Code ──
 const dailyCounts = {{ daily_counts | tojson }};
 const heatmap = document.getElementById('heatmap');
+function markChartReady(id){
+  const shell = document.getElementById(id);
+  if (shell) shell.classList.add('is-ready');
+}
 const today = new Date();
 const days = 168;
 let start = new Date(); start.setDate(today.getDate() - days + 1);
@@ -741,6 +744,7 @@ if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
     data:{labels:chartData.map(d=>d.x),datasets:[{data:chartData.map(d=>d.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length>0?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0].label,label:ctx=>ratingHistory.length>0?'Rating: '+ctx.raw:'Solved: '+ctx.raw}}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}
   });
+  markChartReady('progressChartShell');
 } else if(chartCanvas && typeof Chart !== 'undefined') {
   // Show empty state inside canvas area
   const ctx = chartCanvas.getContext('2d');
@@ -750,6 +754,7 @@ if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
   ctx.font = '13px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Sync LeetCode to see rating chart', chartCanvas.width/2, chartCanvas.height/2 - 8);
+  markChartReady('progressChartShell');
 }
 
 const pData = {{ platforms | tojson }};
@@ -757,13 +762,13 @@ try{new Chart(document.getElementById('platformsChart'),{
   type:'doughnut',
   data:{labels:['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['Coding Ninjas'],pData['HackerRank'],pData['Other']],backgroundColor:['#ffb800','#22c55e','#8b5cf6','#00bd6c','#6c757d'],borderWidth:0,cutout:'78%'}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-});}catch(e){console.warn('Chart.js load failed:',e);}
+}); markChartReady('platformsChartShell');}catch(e){console.warn('Chart.js load failed:',e); markChartReady('platformsChartShell');}
 
 try{new Chart(document.getElementById('difficultyChart'),{
   type:'doughnut',
   data:{labels:['Easy','Medium','Hard'],datasets:[{data:[{{lc_easy}},{{lc_medium}},{{lc_hard}}],backgroundColor:['#00b8a3','#ffc01e','#ff375f'],borderWidth:0,cutout:'78%'}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-});}catch(e){console.warn('Difficulty chart error:',e);}
+}); markChartReady('difficultyChartShell');}catch(e){console.warn('Difficulty chart error:',e); markChartReady('difficultyChartShell');}
 
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
@@ -850,7 +855,7 @@ function handlePhotoUpload(e){
     const q = this.value.trim();
     if(q.length < 2){ dd.style.display='none'; return; }
     timer = setTimeout(() => {
-      fetch('/search_universities?q=' + encodeURIComponent(q))
+      fetch(endpointConfig.searchUniversities + '?q=' + encodeURIComponent(q))
         .then(r => r.json())
         .then(data => renderItems(data))
         .catch(() => { dd.style.display='none'; });

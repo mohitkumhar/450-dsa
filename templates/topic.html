@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
 .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
@@ -57,17 +58,6 @@
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
-/* Modal focus management */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-.modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
-.modal-textarea { width: 100%; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-family: inherit; resize: vertical; min-height: 120px; outline: none; }
-.modal-textarea:focus { border-color: var(--accent); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-.btn-modal-cancel { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-color); background: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-.btn-modal-save { padding: 9px 18px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit; }
-.btn-modal-save:hover { background: var(--accent-hover); }
 .topic-status {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -79,6 +69,16 @@
     font-weight: 600;
 }
 .topic-status:empty { display: none; }
+.topic-skeleton-shell { grid-template-columns: 1fr; }
+.topic-skeleton-toolbar { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; }
+.topic-skeleton-card { min-height: 420px; }
+.btn-busy { pointer-events: none; opacity: 0.75; }
+.btn-busy::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; animation: topic-spin 0.7s linear infinite; }
+.row-updating { opacity: 0.55; }
+
+@keyframes topic-spin {
+    to { transform: rotate(360deg); }
+}
 
 @media (max-width: 640px) {
     .topic-header { flex-direction: column; align-items: stretch; }
@@ -89,6 +89,19 @@
 }
 </style>
 
+<div class="page-load-skeleton topic-skeleton-shell">
+    <div class="skeleton-line" style="width: 140px;"></div>
+    <div class="skeleton-line" style="width: 260px;"></div>
+    <div class="topic-skeleton-toolbar">
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+    </div>
+    <div class="skeleton-block topic-skeleton-card"></div>
+</div>
+
+<div class="page-load-target">
 <a href="{{ url_for('tracker.index') }}" class="back-btn" aria-label="Back to Topics">
     <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Topics
 </a>
@@ -113,22 +126,22 @@
 
 <!-- Filter Buttons with ARIA labels -->
 <div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
         📋 All ({{ total_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
         🟢 Easy ({{ easy_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
         🟡 Medium ({{ medium_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
         🔴 Hard ({{ hard_count }})
     </button>
 </div>
 <!-- Practice Random Button -->
 <div style="margin-bottom: 16px;">
-    <button id="practiceRandomBtn" type="button" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+    <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn-primary ui-btn-pill">
         🎲 Practice Random
     </button>
 </div>
@@ -222,23 +235,17 @@
         </tbody>
     </table>
 </div>
+</div>
 
 <!-- Notes Modal -->
-<div class="modal-overlay" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
-    <div class="modal-box">
-        <h3 id="notesModalTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes</h3>
-        <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes for this question"></textarea>
-        <input type="hidden" id="currentQuestionId">
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modalCancel" aria-label="Cancel editing notes">Cancel</button>
-            <button class="btn-modal-save" id="saveNotesBtn" aria-label="Save notes">Save Notes</button>
-        </div>
-    </div>
-</div>
+{{ notes_modal(textarea_label='Notes for this question') }}
 {% endblock %}
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+}|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -259,7 +266,7 @@ function setBookmarkState(btn, isBookmarked) {
 }
 
 function updateQuestion(id, data, callback) {
-    return fetch('/update_question/' + id, {
+    return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -285,6 +292,7 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
         const previousChecked = !this.checked;
         const nextChecked = this.checked;
         this.disabled = true;
+        row.classList.add('row-updating');
         
         // Update ARIA label
         const problemName = row.querySelector('.q-name')?.textContent || 'Question';
@@ -299,6 +307,7 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
             })
             .finally(() => {
                 this.disabled = false;
+                row.classList.remove('row-updating');
             });
     });
 });
@@ -312,6 +321,7 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
         const isBookmarked = this.dataset.bookmarked === 'true';
         const newStatus = !isBookmarked;
         this.disabled = true;
+        this.classList.add('row-updating');
         setBookmarkState(this, newStatus);
         updateQuestion(this.dataset.id, {bookmark: newStatus})
             .catch(() => {
@@ -320,6 +330,7 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
             })
             .finally(() => {
                 this.disabled = false;
+                this.classList.remove('row-updating');
             });
     });
 });
@@ -330,6 +341,8 @@ document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
         const difficulty = this.dataset.difficulty;
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('difficulty', difficulty);
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
         window.location.href = currentUrl.toString();
     });
 });
@@ -389,6 +402,9 @@ modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 document.getElementById('saveNotesBtn').addEventListener('click', function() {
     const qId = document.getElementById('currentQuestionId').value;
     const notes = document.getElementById('notesTextarea').value;
+    const previousContent = this.innerHTML;
+    this.disabled = true;
+    this.textContent = 'Saving...';
     updateQuestion(qId, {notes: notes}, () => {
         closeModal();
         const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
@@ -401,14 +417,21 @@ document.getElementById('saveNotesBtn').addEventListener('click', function() {
         }
     }).catch(() => {
         showUpdateError('Unable to save notes. Please try again.');
+    }).finally(() => {
+        this.disabled = false;
+        this.innerHTML = previousContent;
     });
 });
 //  Practice Random Button
 document.getElementById('practiceRandomBtn').addEventListener('click', function() {
+    this.classList.add('btn-busy');
+    this.setAttribute('aria-busy', 'true');
     const rows = Array.from(document.querySelectorAll('#questions-table tbody tr:not(#empty-state-row)'))
         .filter(row => row.style.display !== 'none');
     
     if (rows.length === 0) {
+        this.classList.remove('btn-busy');
+        this.removeAttribute('aria-busy');
         alert('No questions available!');
         return;
     }
@@ -416,7 +439,11 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
     const randomRow = rows[Math.floor(Math.random() * rows.length)];
     randomRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     randomRow.style.outline = '2px solid var(--accent)';
-    setTimeout(() => { randomRow.style.outline = ''; }, 2000);
+    setTimeout(() => {
+        randomRow.style.outline = '';
+        this.classList.remove('btn-busy');
+        this.removeAttribute('aria-busy');
+    }, 2000);
 });
 
 </script>
