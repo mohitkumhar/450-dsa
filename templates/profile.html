@@ -217,6 +217,34 @@ body.modal-open {
       </span>
     </div>
     <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+
+        <div class="sec-title" style="margin-top:14px">Email Preferences</div>
+    <div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px">
+      Choose which emails you want to receive:
+    </div>
+    
+    <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:8px;transition:all .2s" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="email_product_updates" style="cursor:pointer;width:16px;height:16px">
+      <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text-primary)">Product Updates</span>
+    </label>
+    
+    <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:8px;transition:all .2s" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="email_study_reminders" style="cursor:pointer;width:16px;height:16px">
+      <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text-primary)">Study Reminders</span>
+    </label>
+    
+    <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:8px;transition:all .2s" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="email_sync_failures" style="cursor:pointer;width:16px;height:16px">
+      <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text-primary)">Sync Failures</span>
+    </label>
+    
+    <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:8px;transition:all .2s" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="email_achievement_emails" style="cursor:pointer;width:16px;height:16px">
+      <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text-primary)">Achievement Emails</span>
+    </label>
+    
+    <button onclick="saveEmailPreferences()" style="width:100%;padding:8px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit;margin-top:8px">Save Preferences</button>
+
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
@@ -860,5 +888,58 @@ function handlePhotoUpload(e){
     if(!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display='none';
   });
 })();
+
+
+window.saveEmailPreferences = async function(){
+  const prefs = {
+    product_updates: document.getElementById('email_product_updates').checked,
+    study_reminders: document.getElementById('email_study_reminders').checked,
+    sync_failures: document.getElementById('email_sync_failures').checked,
+    achievement_emails: document.getElementById('email_achievement_emails').checked,
+  };
+
+  try {
+    for (const [type, enabled] of Object.entries(prefs)) {
+      const response = await fetch(`/notifications/email-preferences/${type}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ enabled })
+      });
+      
+      if (!response.ok) throw new Error('Failed to save preference');
+    }
+    
+    if (typeof showToast === 'function') {
+      showToast('✅ Email preferences saved!');
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') {
+      showToast('❌ Error saving preferences');
+    }
+    console.error('Error:', e);
+  }
+};
+
+// Load preferences on page load
+window.addEventListener('DOMContentLoaded', async function() {
+  try {
+    const response = await fetch('/notifications/email-preferences', {
+      headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+    });
+    
+    if (response.ok) {
+      const prefs = await response.json();
+      document.getElementById('email_product_updates').checked = prefs.product_updates || false;
+      document.getElementById('email_study_reminders').checked = prefs.study_reminders || false;
+      document.getElementById('email_sync_failures').checked = prefs.sync_failures || false;
+      document.getElementById('email_achievement_emails').checked = prefs.achievement_emails || false;
+    }
+  } catch (e) {
+    console.error('Error loading preferences:', e);
+  }
+});
 </script>
 {% endblock %}

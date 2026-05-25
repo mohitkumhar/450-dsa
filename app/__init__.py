@@ -122,6 +122,7 @@ def create_app(config_class=None):
         db.topic.create_index("position")
         db.question.create_index("topic")
         db.question.create_index([("problem", "text")], name="problem_text")
+        db.email_preferences.create_index("user_id", unique=True)
     except Exception:
         pass
 
