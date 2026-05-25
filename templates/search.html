@@ -20,6 +20,7 @@
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 0 12px;
+  transition: all 0.2s;
 }
 .search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,107,0,0.12); }
 .search-box i { color: var(--text-muted); font-size: 1rem; }
@@ -33,6 +34,9 @@
   font: inherit;
   font-size: 0.95rem;
 }
+.search-input:focus-visible {
+  outline: none;
+}
 .clear-btn {
   width: 34px;
   height: 34px;
@@ -44,8 +48,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s;
 }
 .clear-btn:hover { color: var(--accent); background: rgba(255,107,0,0.08); }
+.clear-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .platform-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .platform-chip {
   border: 1px solid var(--border-color);
@@ -57,9 +66,82 @@
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
+  transition: all 0.2s;
 }
 .platform-chip:hover,
 .platform-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(255,107,0,0.08); }
+.platform-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.recent-searches {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+.recent-searches[hidden] {
+  display: none;
+}
+.recent-searches-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.recent-searches-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.recent-searches-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.recent-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.recent-search-chip:hover,
+.recent-search-chip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.recent-search-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-search-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+.recent-search-clear:hover,
+.recent-search-clear:focus-visible {
+  color: var(--accent);
+}
 .search-meta {
   color: var(--text-secondary);
   font-size: 0.82rem;
@@ -75,8 +157,13 @@
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
+  transition: border-color 0.2s;
 }
 .result-card:hover { border-color: var(--accent); }
+.result-card:focus-within {
+  border-color: var(--accent);
+  outline: none;
+}
 .result-topic {
   display: inline-flex;
   align-items: center;
@@ -90,6 +177,13 @@
   font-size: 0.72rem;
   font-weight: 700;
   text-decoration: none;
+  transition: all 0.2s;
+}
+.result-topic:hover,
+.result-topic:focus-visible {
+  background: rgba(99,102,241,0.2);
+  color: #a5b4fc;
+  text-decoration: none;
 }
 .result-name { color: var(--text-primary); font-size: 0.95rem; font-weight: 750; margin-bottom: 8px; }
 .link-row { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -102,8 +196,13 @@
   font-size: 0.73rem;
   font-weight: 700;
   text-decoration: none;
+  transition: opacity 0.2s;
 }
 .q-badge:hover { opacity: 0.86; text-decoration: none; }
+.q-badge:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .badge-lc { background: rgba(255,184,0,0.15); color: #ffb800; border: 1px solid rgba(255,184,0,0.25); }
 .badge-gfg { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
 .badge-cn { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
@@ -121,8 +220,10 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
+  transition: all 0.2s;
 }
-.topic-open:hover { color: var(--accent); border-color: var(--accent); text-decoration: none; }
+.topic-open:hover,
+.topic-open:focus-visible { color: var(--accent); border-color: var(--accent); text-decoration: none; }
 .empty-search {
   background: var(--bg-card);
   border: 1px dashed var(--border-color);
@@ -140,44 +241,71 @@
 
 <div class="search-shell">
   <div class="search-head">
-    <div class="search-title"><i class="bi bi-search" style="color:var(--accent)"></i> Search</div>
+    <div class="search-title"><i class="bi bi-search" style="color:var(--accent)" aria-hidden="true"></i> Search</div>
     <div class="search-sub">Find 450 DSA questions and jump to matching platform searches.</div>
   </div>
 
   <div class="search-panel">
     <div class="search-box" role="search">
       <i class="bi bi-search" aria-hidden="true"></i>
+      <label for="searchInput" class="visually-hidden">Search questions</label>
       <input id="searchInput" class="search-input" value="{{ initial_query }}" autocomplete="off" autofocus
         placeholder="Search arrays, kadane, lc two sum, gfg graph, cn dp..."
-        aria-label="Search DSA questions" aria-controls="results" aria-autocomplete="list">
-      <button id="clearSearch" class="clear-btn" type="button" aria-label="Clear search">
+        aria-label="Search DSA questions by problem name, topic, or platform" 
+        aria-controls="results" 
+        aria-describedby="searchMeta"
+        aria-autocomplete="list">
+      <button id="clearSearch" class="clear-btn" type="button" aria-label="Clear search input">
         <i class="bi bi-x-lg" aria-hidden="true"></i>
       </button>
     </div>
-    <div class="platform-row" role="group" aria-label="Filter by platform">
-      <button class="platform-chip" type="button" data-token="">All</button>
-      <button class="platform-chip" type="button" data-token="leetcode">LeetCode</button>
-      <button class="platform-chip" type="button" data-token="gfg">GFG</button>
-      <button class="platform-chip" type="button" data-token="cn">Coding Ninjas</button>
-      <button class="platform-chip" type="button" data-token="hackerrank">HackerRank</button>
+    <div class="platform-row" role="group" aria-label="Filter search results by coding platform">
+      <button class="platform-chip" type="button" data-token="" aria-label="Show all platforms">All</button>
+      <button class="platform-chip" type="button" data-token="leetcode" aria-label="Filter to LeetCode only">LeetCode</button>
+      <button class="platform-chip" type="button" data-token="gfg" aria-label="Filter to GeeksForGeeks only">GFG</button>
+      <button class="platform-chip" type="button" data-token="cn" aria-label="Filter to Coding Ninjas only">Coding Ninjas</button>
+      <button class="platform-chip" type="button" data-token="hackerrank" aria-label="Filter to HackerRank only">HackerRank</button>
+    </div>
+    <div id="recentSearches" class="recent-searches" hidden>
+      <div class="recent-searches-head">
+        <div class="recent-searches-title">Recent searches</div>
+        <button id="clearRecentSearches" class="recent-search-clear" type="button" aria-label="Clear recent searches">
+          Clear
+        </button>
+      </div>
+      <div id="recentSearchesList" class="recent-searches-list" role="list" aria-label="Recent searches"></div>
     </div>
   </div>
 
-  <div id="searchMeta" class="search-meta" aria-live="polite" aria-atomic="true"></div>
-  <div id="results" class="result-list" aria-live="polite" aria-atomic="true"></div>
+  <div id="searchMeta" class="search-meta" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="results" class="result-list" role="list" aria-label="Search results"></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "searchQuestions": url_for('search.api_search_questions'),
+}|tojson }};
 const input = document.getElementById('searchInput');
 const results = document.getElementById('results');
 const meta = document.getElementById('searchMeta');
 const clearBtn = document.getElementById('clearSearch');
+const recentSearchesPanel = document.getElementById('recentSearches');
+const recentSearchesList = document.getElementById('recentSearchesList');
+const clearRecentSearchesBtn = document.getElementById('clearRecentSearches');
 const chips = document.querySelectorAll('.platform-chip');
 let activeToken = '';
 let debounceTimer = null;
 let controller = null;
+const RECENT_SEARCHES_KEY = 'dsa_recent_searches_v1';
+const MAX_RECENT_SEARCHES = 5;
+const platformLabels = {
+  leetcode: 'LeetCode',
+  gfg: 'GFG',
+  cn: 'Coding Ninjas',
+  hackerrank: 'HackerRank'
+};
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, ch => ({
@@ -198,13 +326,92 @@ function currentQuery() {
   return [activeToken, text].filter(Boolean).join(' ');
 }
 
+function normalizeRecentSearchText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function loadRecentSearches() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object') : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveRecentSearches(entries) {
+  try {
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(entries));
+  } catch (err) {
+    // Ignore storage quota/privacy mode failures and keep the search UI usable.
+  }
+}
+
+function renderRecentSearches() {
+  const recentSearches = loadRecentSearches();
+  recentSearchesPanel.hidden = recentSearches.length === 0;
+  clearRecentSearchesBtn.hidden = recentSearches.length === 0;
+
+  if (!recentSearches.length) {
+    recentSearchesList.innerHTML = '';
+    return;
+  }
+
+  recentSearchesList.innerHTML = recentSearches.map((entry, index) => {
+    const tokenLabel = platformLabels[entry.token] || '';
+    const label = tokenLabel && entry.text ? `${tokenLabel}: ${entry.text}` : (entry.text || tokenLabel);
+    return `
+      <button class="recent-search-chip" type="button" data-index="${index}" role="listitem" aria-label="Repeat recent search ${escapeHtml(label)}">
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span class="recent-search-chip-text">${escapeHtml(label)}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function rememberRecentSearch(text, token) {
+  const normalizedText = normalizeRecentSearchText(text);
+  if (!normalizedText) return;
+
+  const recentSearches = loadRecentSearches();
+  const nextEntry = { text: normalizedText, token: token || '' };
+  const filtered = recentSearches.filter(entry =>
+    !(entry && entry.text && entry.token === nextEntry.token && entry.text.toLowerCase() === normalizedText.toLowerCase())
+  );
+
+  filtered.unshift(nextEntry);
+  saveRecentSearches(filtered.slice(0, MAX_RECENT_SEARCHES));
+  renderRecentSearches();
+}
+
+function applyRecentSearch(index) {
+  const recentSearches = loadRecentSearches();
+  const entry = recentSearches[index];
+  if (!entry) return;
+
+  input.value = entry.text || '';
+  setActiveChip(entry.token || '');
+  input.focus();
+  runSearch();
+}
+
 function setActiveChip(token) {
   activeToken = token;
-  chips.forEach(chip => chip.classList.toggle('active', chip.dataset.token === token));
+  chips.forEach(chip => {
+    const isActive = chip.dataset.token === token;
+    chip.classList.toggle('active', isActive);
+    chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
 }
 
 function renderEmpty(icon, text) {
-  results.innerHTML = `<div class="empty-search"><i class="bi ${icon}"></i><p>${escapeHtml(text)}</p></div>`;
+  results.innerHTML = `<div class="empty-search" role="status"><i class="bi ${icon}" aria-hidden="true"></i><p>${escapeHtml(text)}</p></div>`;
+}
+
+function renderPlatformPrompt() {
+  const platform = platformLabels[activeToken] || 'selected platform';
+  meta.textContent = `${platform} filter selected`;
+  renderEmpty('bi-search-heart', `Type a search term to find ${platform} practice links.`);
 }
 
 function renderResults(payload) {
@@ -213,6 +420,11 @@ function renderResults(payload) {
   meta.textContent = count ? `${count} result${count === 1 ? '' : 's'}${platforms.length ? ' with ' + platforms.join(', ') : ''}` : '';
 
   if (!input.value.trim()) {
+    if (activeToken) {
+      renderPlatformPrompt();
+      return;
+    }
+
     meta.textContent = '';
     renderEmpty('bi-search', 'Start typing to search the DSA sheet.');
     return;
@@ -220,36 +432,38 @@ function renderResults(payload) {
 
   if (!count) {
     const external = (payload.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
-        <i class="bi bi-box-arrow-up-right"></i>${escapeHtml(link.platform)}
+      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for your query (opens new tab)">
+        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
       </a>`
     ).join('');
-    results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
+    results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart" aria-hidden="true"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
     return;
   }
 
   results.innerHTML = payload.results.map(item => {
     const directLinks = (item.links || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
-        <i class="bi bi-box-arrow-up-right"></i>${escapeHtml(link.platform)}
+      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="View on ${escapeHtml(link.platform)} (opens new tab)">
+        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
       </a>`
     ).join('');
     const platformSearches = (item.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
-        <i class="bi bi-search"></i>${escapeHtml(link.platform)}
+      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for this problem (opens new tab)">
+        <i class="bi bi-search" aria-hidden="true"></i>${escapeHtml(link.platform)}
       </a>`
     ).join('');
     const topicUrl = `/topic/${encodeURIComponent(item.topic_id)}`;
 
     return `
-      <article class="result-card">
+      <article class="result-card" role="listitem">
         <div>
-          <a href="${topicUrl}" class="result-topic">${escapeHtml(item.topic)}</a>
+          <a href="${topicUrl}" class="result-topic" aria-label="Go to ${escapeHtml(item.topic)} topic page">${escapeHtml(item.topic)}</a>
           <div class="result-name">${escapeHtml(item.problem)}</div>
           <div class="link-row">${directLinks}${platformSearches}</div>
         </div>
         <div class="result-actions">
-          <a class="topic-open" href="${topicUrl}" title="Open topic"><i class="bi bi-arrow-right"></i></a>
+          <a class="topic-open" href="${topicUrl}" title="Open topic" aria-label="Go to ${escapeHtml(item.topic)} topic">
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </a>
         </div>
       </article>`;
   }).join('');
@@ -259,7 +473,12 @@ async function runSearch() {
   const query = currentQuery();
   if (controller) controller.abort();
 
-  if (!input.value.trim() && !activeToken) {
+  if (!input.value.trim()) {
+    if (activeToken) {
+      renderPlatformPrompt();
+      return;
+    }
+
     meta.textContent = '';
     renderEmpty('bi-search', 'Start typing to search the DSA sheet.');
     return;
@@ -267,13 +486,17 @@ async function runSearch() {
 
   controller = new AbortController();
   meta.textContent = 'Searching...';
+  meta.setAttribute('aria-busy', 'true');
 
   try {
-    const res = await fetch(`/api/search_questions?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+    const res = await fetch(`${endpointConfig.searchQuestions}?q=${encodeURIComponent(query)}`, { signal: controller.signal });
     renderResults(await res.json());
+    rememberRecentSearch(input.value, activeToken);
+    meta.setAttribute('aria-busy', 'false');
   } catch (err) {
     if (err.name !== 'AbortError') {
       meta.textContent = '';
+      meta.setAttribute('aria-busy', 'false');
       renderEmpty('bi-wifi-off', 'Search failed. Please try again.');
     }
   }
@@ -290,14 +513,34 @@ clearBtn.addEventListener('click', () => {
   input.focus();
   scheduleSearch();
 });
+recentSearchesList.addEventListener('click', (event) => {
+  const chip = event.target.closest('.recent-search-chip');
+  if (!chip) return;
+  applyRecentSearch(Number(chip.dataset.index));
+});
+clearRecentSearchesBtn.addEventListener('click', () => {
+  saveRecentSearches([]);
+  renderRecentSearches();
+});
 chips.forEach(chip => {
   chip.addEventListener('click', () => {
     setActiveChip(chip.dataset.token);
     runSearch();
   });
+  // Allow keyboard Enter/Space to activate chip
+  chip.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setActiveChip(chip.dataset.token);
+      runSearch();
+    }
+  });
+  chip.setAttribute('role', 'button');
+  chip.setAttribute('aria-pressed', 'false');
 });
 
 setActiveChip('');
+renderRecentSearches();
 runSearch();
 </script>
 {% endblock %}

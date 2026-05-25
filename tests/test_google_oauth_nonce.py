@@ -1,7 +1,5 @@
-import mongomock
-
-import app as app_module
 import app.auth.routes as auth_routes
+from conftest import build_test_app
 
 
 class FakeGoogleClient:
@@ -32,27 +30,9 @@ class FakeGoogleClient:
         self.userinfo_called = True
         return self.parsed_user
 
-
-def create_test_app(monkeypatch, google_client):
-    test_db = mongomock.MongoClient().db
-
-    monkeypatch.setattr(app_module, "db", test_db)
-    monkeypatch.setattr(auth_routes, "db", test_db)
-    monkeypatch.setattr(auth_routes, "google", google_client)
-
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
-    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
-
-    flask_app = app_module.create_app()
-    flask_app.config.update(TESTING=True)
-    flask_app._db_initialized = True
-
-    return flask_app, test_db
-
-
 def test_google_login_generates_and_sends_nonce(monkeypatch):
     google_client = FakeGoogleClient()
-    flask_app, _ = create_test_app(monkeypatch, google_client)
+    flask_app, _ = build_test_app(monkeypatch, oauth_clients={"google": google_client})
 
     with flask_app.test_client() as client:
         response = client.get("/login/google")
@@ -69,7 +49,7 @@ def test_google_login_generates_and_sends_nonce(monkeypatch):
 
 def test_google_authorize_uses_and_consumes_nonce(monkeypatch):
     google_client = FakeGoogleClient()
-    flask_app, test_db = create_test_app(monkeypatch, google_client)
+    flask_app, test_db = build_test_app(monkeypatch, oauth_clients={"google": google_client})
 
     with flask_app.test_client() as client:
         with client.session_transaction() as session:
@@ -90,7 +70,7 @@ def test_google_authorize_uses_and_consumes_nonce(monkeypatch):
 
 def test_google_authorize_rejects_missing_nonce(monkeypatch):
     google_client = FakeGoogleClient()
-    flask_app, _ = create_test_app(monkeypatch, google_client)
+    flask_app, _ = build_test_app(monkeypatch, oauth_clients={"google": google_client})
 
     with flask_app.test_client() as client:
         response = client.get("/login/google/authorize")

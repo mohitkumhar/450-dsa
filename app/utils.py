@@ -1,36 +1,29 @@
 import re
 from datetime import datetime, timezone
-from urllib.parse import quote_plus
+
+from flask import jsonify
 
 from app.extensions import db
-
-
-PLATFORM_SEARCHES = {
-    "LeetCode": {
-        "aliases": ("lc", "leetcode", "leet code"),
-        "color": "lc",
-        "url": "https://duckduckgo.com/?q=site%3Aleetcode.com%2Fproblems+{query}",
-    },
-    "GFG": {
-        "aliases": ("gfg", "geeksforgeeks", "geeks for geeks"),
-        "color": "gfg",
-        "url": "https://duckduckgo.com/?q=site%3Ageeksforgeeks.org%2Fproblems+{query}",
-    },
-    "Coding Ninjas": {
-        "aliases": ("cn", "coding ninjas", "codingninjas", "code360", "naukri code360"),
-        "color": "cn",
-        "url": "https://duckduckgo.com/?q=%28site%3Anaukri.com%2Fcode360%2Fproblems+OR+site%3Acodingninjas.com%2Fcodestudio%2Fproblems%29+{query}",
-    },
-    "HackerRank": {
-        "aliases": ("hr", "hackerrank", "hacker rank"),
-        "color": "hr",
-        "url": "https://duckduckgo.com/?q=site%3Ahackerrank.com%2Fchallenges+{query}",
-    },
-}
+from app.search import service as search_service
 
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+def json_response(payload=None, status_code=200, **fields):
+    body = dict(payload or {})
+    body.update(fields)
+    response = jsonify(body)
+    return response if status_code == 200 else (response, status_code)
+
+
+def json_success(status_code=200, **fields):
+    return json_response({"success": True}, status_code=status_code, **fields)
+
+
+def json_error(error, status_code=400, **fields):
+    return json_response({"success": False, "error": error}, status_code=status_code, **fields)
 
 
 def ensure_utc_datetime(value):
@@ -82,138 +75,61 @@ def platform_color_filter(name):
     return colors.get(name, "primary")
 
 
+def platform_profile_url(username, platform):
+    if not username:
+        return "#"
+    platform = platform.lower()
+    if platform == "leetcode":
+        return f"https://leetcode.com/{username}"
+    if platform == "gfg":
+        return f"https://www.geeksforgeeks.org/user/{username}"
+    if platform == "codingninjas" or platform == "coding ninjas":
+        return f"https://www.naukri.com/code360/profile/{username}"
+    if platform == "hackerrank":
+        return f"https://www.hackerrank.com/{username}"
+    if platform == "github":
+        return f"https://github.com/{username}"
+    if platform == "atcoder":
+        return f"https://atcoder.jp/users/{username}"
+    return "#"
+
+
 def parse_search_query(raw_query):
-    """Return cleaned query text and platform names mentioned by the user."""
-    query = (raw_query or "").strip()
-    query_l = query.lower()
-    requested_platforms = []
-
-    for platform, meta in PLATFORM_SEARCHES.items():
-        platform_requested = False
-        for alias in meta["aliases"]:
-            pattern = r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])"
-            if re.search(pattern, query_l):
-                platform_requested = True
-                query = re.sub(pattern, " ", query, flags=re.IGNORECASE)
-                query_l = query.lower()
-        if platform_requested:
-            requested_platforms.append(platform)
-
-    cleaned = re.sub(r"\s+", " ", query).strip()
-    return cleaned, requested_platforms
+    return search_service.parse_search_query(raw_query)
 
 
 def tokenize_search_text(value):
-    return [token for token in re.split(r"[^a-z0-9]+", (value or "").lower()) if token]
+    return search_service.tokenize_search_text(value)
 
 
 def build_external_searches(query, requested_platforms=None):
-    platforms = requested_platforms or list(PLATFORM_SEARCHES.keys())
-    encoded = quote_plus(query)
-    return [
-        {
-            "platform": platform,
-            "url": PLATFORM_SEARCHES[platform]["url"].format(query=encoded),
-            "color": PLATFORM_SEARCHES[platform]["color"],
-        }
-        for platform in platforms
-        if platform in PLATFORM_SEARCHES and query
-    ]
+    return search_service.build_external_searches(query, requested_platforms)
 
 
 def question_links(question):
-    links = []
-    for field in ("url", "url2"):
-        url = question.get(field)
-        if not url:
-            continue
-        platform = platform_name_filter(url)
-        links.append(
-            {
-                "platform": platform,
-                "url": url,
-                "color": PLATFORM_SEARCHES.get(platform, {}).get("color", "link"),
-            }
-        )
-    return links
+    return search_service.question_links(question)
 
 
 def search_dsa_questions(raw_query, limit=40):
-    query, requested_platforms = parse_search_query(raw_query)
-    query_tokens = tokenize_search_text(query)
-    if not query_tokens:
-        return {
-            "query": query,
-            "requested_platforms": requested_platforms,
-            "results": [],
-            "external_searches": [],
-        }
-
-    cursor = (
-        db.question.find(
-            {"$text": {"$search": query}},
-            {
-                "problem": 1,
-                "topic": 1,
-                "url": 1,
-                "url2": 1,
-                "score": {"$meta": "textScore"},
-            },
-        )
-        .sort([("score", {"$meta": "textScore"})])
-        .limit(limit)
-    )
-    questions = list(cursor)
-    topic_ids = list(
-        {question.get("topic") for question in questions if question.get("topic")}
-    )
-    topics = (
-        {
-            topic["_id"]: topic
-            for topic in db.topic.find(
-                {"_id": {"$in": topic_ids}}, {"name": 1, "position": 1}
-            )
-        }
-        if topic_ids
-        else {}
-    )
-
-    results = []
-    for question in questions:
-        topic_doc = topics.get(question.get("topic"), {})
-        problem = question.get("problem", "")
-        topic_name = topic_doc.get("name", "Unknown")
-        links = question_links(question)
-
-        if requested_platforms and not any(
-            link["platform"] in requested_platforms for link in links
-        ):
-            continue
-
-        results.append(
-            {
-                "id": str(question["_id"]),
-                "problem": problem,
-                "topic": topic_name,
-                "topic_id": str(question.get("topic")),
-                "topic_position": topic_doc.get("position", 999),
-                "links": links,
-                "external_searches": build_external_searches(
-                    problem, requested_platforms
-                ),
-                "score": question.get("score", 0),
-            }
-        )
-
-    return {
-        "query": query,
-        "requested_platforms": requested_platforms,
-        "results": results,
-        "external_searches": build_external_searches(query, requested_platforms),
-    }
+    return search_service.search_dsa_questions(raw_query, limit=limit, db_handle=db)
 
 
-def compute_c_score(user_doc):
+EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder")
+
+
+def compute_total_solved(progress, external_totals, all_questions=None):
+    progress = progress or {}
+    if all_questions is not None:
+        solved_items = {question_id: item for question_id, item in progress.items() if item.get("done")}
+        platforms = compute_user_platforms(solved_items, external_totals or {}, all_questions)
+        return sum(max(value, 0) for value in platforms.values())
+
+    dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
+    external_total = sum(max(value, 0) for key, value in (external_totals or {}).items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
+    return max(dsa_done, external_total)
+
+
+def compute_c_score(user_doc, all_questions=None):
     """Compute composite C-Score (0-999) for a user document."""
     progress = user_doc.get("progress", {})
     dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
@@ -227,14 +143,21 @@ def compute_c_score(user_doc):
     gfg_total = max(ext.get("GFG", 0), 0)
     hr_total = max(ext.get("HackerRank", 0), 0)
     cn_total = max(ext.get("Coding Ninjas", 0), 0)
+    external_total = sum(max(value, 0) for key, value in ext.items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
 
     ext_daily = user_doc.get("external_daily_counts", {})
-    daily_dates = set(ext_daily.keys()) if ext_daily else set()
+    extra_progress_days = set()
     for progress_item in progress.values():
         timestamp = progress_item.get("timestamp")
-        if timestamp and progress_item.get("done"):
-            daily_dates.add(timestamp.strftime("%Y-%m-%d"))
-    active_days = len(daily_dates)
+        if not timestamp or not progress_item.get("done"):
+            continue
+        if isinstance(timestamp, str):
+            day_key = timestamp[:10]
+        else:
+            day_key = timestamp.date().isoformat()
+        if day_key not in ext_daily:
+            extra_progress_days.add(day_key)
+    active_days = len(ext_daily) + len(extra_progress_days)
 
     s_dsa = min(dsa_done / 450, 1.0) * 250
     s_lc_total = min(lc_total / 500, 1.0) * 200
@@ -246,10 +169,7 @@ def compute_c_score(user_doc):
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
     c_score = min(c_score, 999)
 
-    global_total = max(
-        sum(max(value, 0) for key, value in ext.items() if key in ("LeetCode", "GFG", "Coding Ninjas", "HackerRank")),
-        0,
-    ) + dsa_done
+    global_total = compute_total_solved(progress, ext, all_questions) if all_questions is not None else max(dsa_done, external_total)
 
     return {
         "c_score": c_score,
@@ -265,116 +185,6 @@ def compute_c_score(user_doc):
         "active_days": active_days,
         "total_solved": global_total,
     }
-
-
-def build_leaderboard_data():
-    """Query all users and compute leaderboard rankings."""
-    users = list(
-        db.user.find(
-            {},
-            {
-                "name": 1,
-                "email": 1,
-                "profile_photo": 1,
-                "college": 1,
-                "leetcode_username": 1,
-                "github_username": 1,
-                "gfg_username": 1,
-                "hackerrank_username": 1,
-                "codingninjas_username": 1,
-                "progress": 1,
-                "external_totals": 1,
-                "external_daily_counts": 1,
-            },
-        )
-    )
-
-    entries = []
-    for user in users:
-        name = user.get("name", "Anonymous")
-        if not name or name.strip() == "":
-            continue
-        stats = compute_c_score(user)
-        entries.append(
-            {
-                "user_id": str(user["_id"]),
-                "name": name,
-                "profile_photo": user.get("profile_photo", ""),
-                "college": user.get("college", ""),
-                "leetcode_username": user.get("leetcode_username", ""),
-                "codingninjas_username": user.get("codingninjas_username", ""),
-                **stats,
-            }
-        )
-
-    return entries
-
-
-def build_college_leaderboard_data(entries=None):
-    """Aggregate user leaderboard entries into college rankings."""
-    entries = entries if entries is not None else build_leaderboard_data()
-    colleges = {}
-
-    for entry in entries:
-        college = (entry.get("college") or "").strip()
-        if not college:
-            continue
-
-        college_entry = colleges.setdefault(
-            college.lower(),
-            {
-                "college": college,
-                "member_count": 0,
-                "c_score": 0,
-                "total_solved": 0,
-                "dsa_done": 0,
-                "lc_total": 0,
-                "gfg_total": 0,
-                "cn_total": 0,
-                "hr_total": 0,
-                "lc_rating_total": 0,
-                "rated_member_count": 0,
-                "top_user": None,
-            },
-        )
-
-        college_entry["member_count"] += 1
-        college_entry["c_score"] += entry.get("c_score", 0)
-        college_entry["total_solved"] += entry.get("total_solved", 0)
-        college_entry["dsa_done"] += entry.get("dsa_done", 0)
-        college_entry["lc_total"] += entry.get("lc_total", 0)
-        college_entry["gfg_total"] += entry.get("gfg_total", 0)
-        college_entry["cn_total"] += entry.get("cn_total", 0)
-        college_entry["hr_total"] += entry.get("hr_total", 0)
-
-        lc_rating = entry.get("lc_rating", 0)
-        if lc_rating:
-            college_entry["lc_rating_total"] += lc_rating
-            college_entry["rated_member_count"] += 1
-
-        top_user = college_entry["top_user"]
-        if top_user is None or entry.get("c_score", 0) > top_user.get("c_score", 0):
-            college_entry["top_user"] = {
-                "name": entry.get("name", "Anonymous"),
-                "c_score": entry.get("c_score", 0),
-                "profile_photo": entry.get("profile_photo", ""),
-            }
-
-    college_entries = []
-    for college_entry in colleges.values():
-        rated_count = college_entry.pop("rated_member_count")
-        rating_total = college_entry.pop("lc_rating_total")
-        college_entry["lc_rating"] = round(rating_total / rated_count) if rated_count else 0
-        college_entry["user_id"] = ""
-        college_entry["name"] = college_entry["college"]
-        college_entry["profile_photo"] = ""
-        college_entries.append(college_entry)
-
-    return sorted(
-        college_entries,
-        key=lambda item: (item["c_score"], item["total_solved"], item["member_count"]),
-        reverse=True,
-    )
 
 
 def compute_user_platforms(solved_items, external_totals, all_questions):
@@ -397,10 +207,10 @@ def compute_user_platforms(solved_items, external_totals, all_questions):
                 platforms["Other"] += 1
 
     ext_totals = external_totals or {}
-    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0))
-    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0))
-    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0))
-    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0))
-    platforms["AtCoder"] = ext_totals.get("AtCoder", 0)
+    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0), 0)
+    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0), 0)
+    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0), 0)
+    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0), 0)
+    platforms["AtCoder"] = max(ext_totals.get("AtCoder", 0), 0)
 
     return platforms

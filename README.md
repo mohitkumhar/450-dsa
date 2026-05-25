@@ -1,167 +1,102 @@
-# 450 DSA Tracker - Flask Edition
+# 450 DSA Tracker
 
-A Python Flask web application to track your progress through the 450 DSA problems. This is a complete conversion from the original React + LocalBase version to Flask + SQLAlchemy with a SQLite database.
+🌐 **Live Demo:** [https://450-ds.vercel.app](https://450-ds.vercel.app)
+
+Track your progress through Love Babbar's 450 DSA problems — with platform sync, leaderboard, and more.
+
+[![Open For PR](https://img.shields.io/badge/Open%20For-PR-orange?style=for-the-badge&logo=github)](https://github.com/mohitkumhar/450-dsa)
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python)
+![Flask](https://img.shields.io/badge/Flask-2.3-black?style=flat&logo=flask)
+![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat&logo=mongodb)
+
+---
+
+## What is this?
+
+A full-stack Flask web app to help you track, manage, and share your DSA journey. Originally a React + LocalBase project, it's been completely rewritten in Python with MongoDB as the database.
+
+---
 
 ## Features
 
-- **Topic-wise tracking**: View progress for each Data Structures & Algorithms topic
-- **Question status**: Mark questions as done/incomplete
-- **Bookmarking**: Bookmark important questions for quick reference
-- **Notes**: Add and save notes for each problem
-- **Progress dashboard**: Visual progress bars showing completion percentage
-- **Persistent storage**: All data stored in SQLite database
+- **Topic-wise tracking** — browse all 24 DSA topics and mark questions done
+- **Bookmarks** — save questions for quick review
+- **Notes** — write and save personal notes per question
+- **Search** — full-text search with topic, difficulty, platform, and status filters
+- **OAuth login** — sign in with GitHub or Google, or register with email/password
+- **Platform sync** — connect LeetCode, GFG, GitHub, HackerRank, Coding Ninjas and pull your stats
+- **Profile dashboard** — activity heatmap, rating chart, difficulty breakdown, badges
+- **Leaderboard** — ranked by C-Score (composite score across all platforms)
+- **Public profiles** — shareable profile cards
+- **Admin panel** — manage users and content
+- **Export notes** — download your notes as Markdown
+- **Docker support** — run the whole app with one command
+
+---
 
 ## Quick Start
 
-1. **Install dependencies**
+### Option 1 — Local setup
+
+**1. Clone and set up environment**
 ```bash
+git clone https://github.com/mohitkumhar/450-dsa.git
+cd 450-dsa
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
+
 pip install -r requirements.txt
+
+# For development, linting, and tests
+pip install -r requirements-dev.txt
 ```
 
-2. **Set up environment variables**
+**2. Configure environment variables**
 ```bash
-copy .env.example .env
+cp .env.example .env   # macOS/Linux
+copy .env.example .env  # Windows
 ```
-Update `SECRET_KEY` and any OAuth or MongoDB credentials in `.env` before running the app.
 
-3. **Run the Flask app**
+Edit `.env` and fill in your values:
+```env
+# REQUIRED - generate your own first:
+# python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=replace-this-with-a-real-secret
+
+# MongoDB — use Atlas (free) or local
+MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/dsa_tracker
+
+# GitHub OAuth (optional)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Cloudinary — for profile photo uploads (optional)
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+The app now refuses to start if `SECRET_KEY` is missing or still set to an insecure placeholder. If a secret was ever committed or shared, rotate it before running the app again.
+
+**3. Run**
 ```bash
 python run.py
 ```
 
-4. **Open in browser**
-```
-http://localhost:5000
-```
+Open `http://localhost:5000` in your browser. The app seeds all 450+ questions from `data.json` on first run.
 
-## Project Structure
+---
 
-```
-450-DSA/
-├── app.py                 # Flask application & SQLAlchemy models
-├── .env.example           # Example environment variables
-├── data.json              # Question data (converted from JS)
-├── requirements.txt       # Python dependencies
-├── templates/             # Jinja2 HTML templates
-│   ├── base.html         # Base template (Bootstrap 4)
-│   ├── index.html        # Dashboard view
-│   └── topic.html        # Questions table view
-├── venv/                 # Python virtual environment
-└── instance/
-    └── dsa.db            # SQLite database (auto-created)
-```
-
-## Database Models
-
-The project uses SQLAlchemy ORM with SQLite:
-
-**Topic Model**
-- `id`: Primary key
-- `name`: Topic name (unique)
-- `position`: Order in curriculum
-- `started`: Whether user initiated this topic
-- `questions`: Relationship to Question records
-
-**Question Model**
-- `id`: Primary key
-- `topic_id`: Foreign key to Topic
-- `problem`: Problem statement
-- `done`: Completion status
-- `bookmark`: Bookmark flag
-- `notes`: User notes/solutions
-- `url`: Main problem link
-- `url2`: Alternative link (Coding Ninjas)
-
-## Features
-
-- ✅ **Dashboard**: Overview of all topics with progress bars
-- ✅ **Topic View**: All questions for a specific topic
-- ✅ **Status Tracking**: Mark questions as complete
-- ✅ **Bookmarks**: Bookmark important questions
-- ✅ **Notes**: Add personal notes for each question
-- ✅ **Progress**: Track completion percentage
-- ✅ **Persistent Storage**: All data saved to SQLite
-
-## API Endpoints
-
-Interactive Swagger/OpenAPI documentation is available after starting the app:
-
-```
-http://localhost:5000/apidocs
-```
-
-### Frontend Routes
-- `GET /` - Dashboard with all topics
-- `GET /topic/<topic_id>` - View questions for a topic
-
-### REST API
-- `GET /api/search_questions` - Search DSA questions by query and optional limit.
-- `GET /api/leaderboard` - Fetch paginated leaderboard data by ranking mode.
-- `POST /update_question/<question_id>` - Update question (body: `{done, bookmark, notes}`)
-- `POST /sync_platforms` - Sync authenticated user's coding platform statistics.
-- `POST /edit_profile` - Update authenticated user's profile fields.
-- `POST /upload_photo` - Upload a profile image when photo storage is configured.
-- `GET /search_universities` - Search university names for profile autocomplete.
-
-## Conversion from React
-
-This represents a complete rewrite from React + LocalBase to Flask + SQLAlchemy:
-
-| Original | New |
-|----------|-----|
-| React Components | Jinja2 Templates |
-| React Hooks/Context | Flask Routes & SQLAlchemy |
-| LocalBase | SQLite Database |
-| 450DSAFinal.js | data.json |
-| Package.json | requirements.txt |
-
-The `450DSAFinal.js` data was converted to valid JSON using `pyjson5` and loaded into the database on first run.
-
-## Technologies Used
-
-- **Backend**: Flask 2.3.2
-- **ORM**: Flask-SQLAlchemy 3.0.5  
-- **Database**: SQLite 3
-- **Frontend**: Jinja2, Bootstrap 4, jQuery
-- **Data Format**: JSON
-
-## Future Enhancements
-
-- [ ] User authentication & registration
-- [ ] Import/Export functionality
-- [ ] Dark mode theme
-- [ ] Advanced search and filtering
-- [ ] Statistics dashboard
-- [ ] REST API with API documentation
-- [ ] Rate limiting and caching
-- [ ] Deployment to cloud (Render, Heroku, etc.)
-
-## Notes
-
-- Database is created automatically on first run in `instance/dsa.db`
-- All 450+ problems are preloaded from `data.json`
-- Uses AJAX for seamless updates without page reload
-
-## Credits
-
-Original 450 DSA dataset by **Love Babbar** for his "Cracking the Coding Interview" course.
-
-Flask version conversion: 2026
-
-[![OPEN-PR](https://img.shields.io/badge/Open%20For-PR-orange?style=for-the-badge&logo=github)](https://github.com/mohitkumhar/450-dsa)
-
-## Credits 🙏🏻
-
-#### Curated list of question in [450dsa] is based on _[DSA Cracker Sheet]_ by [Love Babbar]
-
-
-
-## Docker Quick Start
-
-### Prerequisites
-- Docker Desktop installed
-
-### Run with Docker
+### Option 2 — Docker
 
 ```bash
 git clone https://github.com/mohitkumhar/450-dsa.git
@@ -169,6 +104,126 @@ cd 450-dsa
 docker compose up
 ```
 
-Open the application at:
+Open `http://localhost:5000`.
 
-http://localhost:5000
+---
+
+## Project Structure
+
+```
+450-dsa/
+├── app/
+│   ├── __init__.py          # App factory
+│   ├── extensions.py        # Shared Flask extensions (db, bcrypt, limiter...)
+│   ├── utils.py             # Helpers, search logic, leaderboard scoring
+│   ├── auth/                # Login, register, OAuth (GitHub, Google)
+│   ├── tracker/             # Topics, questions, bookmarks, notes
+│   ├── profile/             # Profile page, platform sync, photo upload
+│   ├── search/              # Search API with filters
+│   ├── leaderboard/         # Leaderboard routes and API
+│   ├── admin/               # Admin dashboard
+│   ├── public/              # Public profile pages
+│   ├── faq/                 # FAQ page
+│   └── platforms/
+│       └── fetchers.py      # LeetCode, GFG, GitHub, HackerRank, Coding Ninjas fetchers
+├── templates/               # Jinja2 HTML templates
+├── static/                  # CSS and JS assets
+├── tests/                   # Pytest test suite
+├── data.json                # All 450+ DSA questions
+├── run.py                   # App entry point
+├── requirements.txt         # Python dependencies
+├── requirements-dev.txt     # Dev/test dependencies
+├── .env.example             # Environment variable template
+├── Dockerfile
+└── docker-compose.yml
+```
+
+---
+
+## Database
+
+The app uses **MongoDB** (via Flask-PyMongo). There is no SQLite or SQLAlchemy — those were part of an earlier version.
+
+**Collections:**
+- `user` — user accounts, progress, platform usernames, external stats
+- `topic` — DSA topic names and ordering
+- `question` — all 450+ problems with URLs
+
+MongoDB is accessed through `app.extensions.db` (a `LocalProxy` to `mongo.db`). All indexes are created on startup in `app/__init__.py`.
+
+You can use [MongoDB Atlas](https://cloud.mongodb.com) (free M0 tier) or a local MongoDB instance.
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Dashboard — all topics with progress |
+| GET | `/topic/<id>` | Questions for a topic |
+| GET | `/search` | Search page |
+| GET | `/bookmarks` | Saved bookmarks |
+| GET | `/profile` | User profile dashboard |
+| GET | `/leaderboard` | Global leaderboard |
+| GET | `/u/<user_id>` | Public profile |
+| GET | `/api/search_questions` | Search API (supports `q`, `topic_id`, `difficulty`, `platform`, `status`, `limit`) |
+| GET | `/api/leaderboard` | Leaderboard API (supports `mode`: cscore, questions, rating, college) |
+| POST | `/update_question/<id>` | Update done/bookmark/notes for a question |
+| POST | `/sync_platforms` | Sync external platform stats |
+| POST | `/edit_profile` | Update profile fields |
+| POST | `/upload_photo` | Upload profile photo |
+| POST | `/delete_account` | Permanently delete account (GDPR) |
+| GET | `/search_universities` | University autocomplete |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Flask 2.3 |
+| Database | MongoDB (Flask-PyMongo) |
+| Auth | Flask-Login, Flask-Bcrypt, Authlib (OAuth) |
+| Rate limiting | Flask-Limiter |
+| Frontend | Jinja2, Bootstrap Icons, Chart.js |
+| Photo storage | Cloudinary |
+| Testing | Pytest |
+| Deployment | Docker, Vercel |
+
+---
+
+## Running Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+---
+
+## Environment Variables Reference
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SECRET_KEY` | Yes | Flask session secret. Must be a real generated secret, not a placeholder. |
+| `MONGO_URI` | Yes | MongoDB connection string |
+| `GITHUB_CLIENT_ID` | No | GitHub OAuth app client ID |
+| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth app client secret |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
+| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name for photo uploads |
+| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
+
+---
+
+## Credits
+
+- DSA problem set curated by **[Love Babbar](https://www.youtube.com/@LoveBabbar)** — [450 DSA Cracker Sheet](https://450dsa.com)
+- Flask conversion and ongoing development by the open-source community
+
+---
+
+## Contributing
+
+PRs are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening one.
