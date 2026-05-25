@@ -1,9 +1,9 @@
 import app.auth.routes as auth_routes
-from tests.test_tracker_routes import create_test_app
+from conftest import build_test_app
 
 
 def test_register_stores_normalized_email(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch)
     monkeypatch.setattr(auth_routes, "db", test_db)
     monkeypatch.setattr(
         auth_routes.bcrypt,
@@ -17,7 +17,8 @@ def test_register_stores_normalized_email(monkeypatch):
             data={
                 "name": "Case User",
                 "email": "  USER@Example.COM  ",
-                "password": "strong-password",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass1!",
             },
         )
 
@@ -27,7 +28,7 @@ def test_register_stores_normalized_email(monkeypatch):
 
 
 def test_login_looks_up_normalized_email(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch)
     monkeypatch.setattr(auth_routes, "db", test_db)
     monkeypatch.setattr(auth_routes.bcrypt, "check_password_hash", lambda stored, password: True)
 

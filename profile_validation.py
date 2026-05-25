@@ -29,6 +29,8 @@ def build_profile_updates(data):
             return None, f'{field} must be text'
 
         value = value.strip()
+        if field == 'name' and not value:
+            return None, 'name is required'
         if len(value) > max_length:
             return None, f'{field} must be at most {max_length} characters'
 

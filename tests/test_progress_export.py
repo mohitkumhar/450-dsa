@@ -20,8 +20,8 @@ def test_progress_csv_includes_all_questions_with_statuses():
     rows = parse_csv(build_progress_csv(questions, {'t1': 'Arrays', 't2': 'Search'}, progress))
 
     assert rows[0] == CSV_HEADERS
-    assert rows[1] == ['Arrays', 'Two Sum', 'True', 'True', 'Use a hash map.', 'https://example.com/two-sum']
-    assert rows[2] == ['Search', 'Binary Search', 'False', 'False', '', '']
+    assert rows[1] == ['Arrays', 'Two Sum', 'True', 'True', 'Use a hash map.','Medium', 'https://example.com/two-sum','']
+    assert rows[2] == ['Search', 'Binary Search', 'False', 'False','','Medium', '', '']
 
 
 def test_progress_csv_escapes_commas_and_newlines_in_notes():

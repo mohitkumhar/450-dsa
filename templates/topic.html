@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
 .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
@@ -11,15 +12,23 @@
 .filter-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
 .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.status-filter-buttons { margin-top: -8px; margin-bottom: 20px; }
 
-/* Difficulty badges */
-.difficulty-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
+/* Difficulty badges - improved for color contrast */
+.difficulty-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
 .difficulty-easy { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
 .difficulty-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
 .difficulty-hard { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
 
-.questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
-.q-table { width: 100%; border-collapse: collapse; }
+/* High contrast mode support for difficulty badges */
+@media (prefers-contrast: high) {
+    .difficulty-easy { background: #10b981; color: black; border: 2px solid black; }
+    .difficulty-medium { background: #f59e0b; color: black; border: 2px solid black; }
+    .difficulty-hard { background: #ef4444; color: white; border: 2px solid white; }
+}
+
+.questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow-x: auto; }
+.q-table { width: 100%; border-collapse: collapse; min-width: 600px; }
 .q-table thead th { background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
 .q-table tbody tr { border-bottom: 1px solid var(--border-subtle); transition: background 0.15s; }
 .q-table tbody tr:last-child { border-bottom: none; }
@@ -41,6 +50,7 @@
 .action-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; font-size: 1.1rem; color: var(--text-muted); transition: all 0.2s; }
 .action-icon:hover { background: var(--bg-secondary); color: var(--accent); }
 .action-icon.bookmarked { color: var(--warning); }
+.action-icon.skipped { color: var(--danger); }
 .action-icon:disabled, .q-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
 .notes-btn-sm { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 0.77rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .notes-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
@@ -50,17 +60,6 @@
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
-/* Modal */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-.modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
-.modal-textarea { width: 100%; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-family: inherit; resize: vertical; min-height: 120px; outline: none; }
-.modal-textarea:focus { border-color: var(--accent); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-.btn-modal-cancel { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-color); background: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-.btn-modal-save { padding: 9px 18px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit; }
-.btn-modal-save:hover { background: var(--accent-hover); }
 .topic-status {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -72,6 +71,16 @@
     font-weight: 600;
 }
 .topic-status:empty { display: none; }
+.topic-skeleton-shell { grid-template-columns: 1fr; }
+.topic-skeleton-toolbar { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; }
+.topic-skeleton-card { min-height: 420px; }
+.btn-busy { pointer-events: none; opacity: 0.75; }
+.btn-busy::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; animation: topic-spin 0.7s linear infinite; }
+.row-updating { opacity: 0.55; }
+
+@keyframes topic-spin {
+    to { transform: rotate(360deg); }
+}
 
 @media (max-width: 640px) {
     .topic-header { flex-direction: column; align-items: stretch; }
@@ -82,45 +91,87 @@
 }
 </style>
 
-<a href="{{ url_for('tracker.index') }}" class="back-btn">
-    <i class="bi bi-arrow-left"></i> Back to Topics
+<div class="page-load-skeleton topic-skeleton-shell">
+    <div class="skeleton-line" style="width: 140px;"></div>
+    <div class="skeleton-line" style="width: 260px;"></div>
+    <div class="topic-skeleton-toolbar">
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+        <div class="skeleton-chip"></div>
+    </div>
+    <div class="skeleton-block topic-skeleton-card"></div>
+</div>
+
+<div class="page-load-target">
+<a href="{{ url_for('tracker.index') }}" class="back-btn" aria-label="Back to Topics">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Topics
 </a>
 
 <div class="topic-header">
     <div class="topic-header-main">
-        <div class="topic-title">{{ topic.name }}</div>
+        <h1 class="topic-title">{{ topic.name }}</h1>
         <div class="topic-subtitle">
-            {% if difficulty_filter == 'all' %}
+            {% if not active_filters %}
                 {{ total_count }} questions in this topic
             {% else %}
-                Showing {{ questions|length }} of {{ total_count }} questions ({{ difficulty_filter }} difficulty)
+                Showing {{ questions|length }} of {{ total_count }} questions ({{ active_filters }})
             {% endif %}
         </div>
     </div>
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn">
-        <i class="bi bi-download"></i> Export Notes
+    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
+        <i class="bi bi-download" aria-hidden="true"></i> Export Notes
     </a>
     {% endif %}
 </div>
 
-<!-- Filter Buttons -->
-<div class="filter-buttons">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all">📋 All ({{ total_count }})</button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy">🟢 Easy ({{ easy_count }})</button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium">🟡 Medium ({{ medium_count }})</button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard">🔴 Hard ({{ hard_count }})</button>
+<!-- Filter Buttons with ARIA labels -->
+<div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+        📋 All ({{ total_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+        🟢 Easy ({{ easy_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+        🟡 Medium ({{ medium_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+        🔴 Hard ({{ hard_count }})
+    </button>
+</div>
+<!-- Practice Random Button -->
+<div style="margin-bottom: 16px;">
+    <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn-primary ui-btn-pill">
+        🎲 Practice Random
+    </button>
+</div>
+
+<div class="filter-buttons status-filter-buttons" role="group" aria-label="Filter questions by progress status">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'all' %}active{% endif %}" data-status="all" aria-pressed="{% if status_filter == 'all' %}true{% else %}false{% endif %}">
+        All Statuses ({{ total_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'todo' %}active{% endif %}" data-status="todo" aria-pressed="{% if status_filter == 'todo' %}true{% else %}false{% endif %}">
+        To Do ({{ todo_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'done' %}active{% endif %}" data-status="done" aria-pressed="{% if status_filter == 'done' %}true{% else %}false{% endif %}">
+        Done ({{ done_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'skipped' %}active{% endif %}" data-status="skipped" aria-pressed="{% if status_filter == 'skipped' %}true{% else %}false{% endif %}">
+        Skipped ({{ skipped_count }})
+    </button>
 </div>
 
 <div class="topic-status" id="topicStatus" role="status" aria-live="polite"></div>
 
 <div class="questions-table-wrap">
     <table class="q-table" id="questions-table" aria-label="Questions for {{ topic.name }}">
-        <caption class="visually-hidden">Questions for {{ topic.name }}</caption>
+        <caption class="visually-hidden">Questions for {{ topic.name }} topic - {{ total_count }} total questions</caption>
         <thead>
             <tr>
                 <th scope="col">#</th>
-                <th scope="col">Done</th>
+                <th scope="col">Status</th>
                 <th scope="col">Problem</th>
                 <th scope="col">Difficulty</th>
                 <th scope="col">Save</th>
@@ -138,7 +189,7 @@
                     <input type="checkbox" class="q-checkbox status-checkbox"
                         id="check_{{ q_id_str }}"
                         data-id="{{ q_id_str }}"
-                        aria-label="Mark '{{ q.problem }}' as done"
+                        aria-label="Mark '{{ q.problem }}' as {% if p and p.done %}incomplete{% else %}complete{% endif %}"
                         {% if p and p.done %}checked{% endif %}>
                 </td>
                 <td>
@@ -147,21 +198,24 @@
                         {% if q.url %}
                             {% set p1 = q.url|platform_name %}
                             <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}">
-                               <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i> {{ p1 }}
+                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               aria-label="Solve on {{ p1 }} (opens in new tab)">
+                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
                             </a>
                         {% endif %}
                         {% if q.url2 %}
                             {% set p2 = q.url2|platform_name %}
                             <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}">
-                               <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i> {{ p2 }}
+                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               aria-label="Solve on {{ p2 }} (opens in new tab)">
+                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
                             </a>
                         {% endif %}
                     </div>
                 </td>
                 <td>
-                    <span class="difficulty-badge difficulty-{{ difficulty|lower }}">
+                    <span class="difficulty-badge difficulty-{{ difficulty|lower }}" aria-label="{{ difficulty }} difficulty question">
+                        <span aria-hidden="true">{% if difficulty == 'Easy' %}🟢{% elif difficulty == 'Medium' %}🟡{% else %}🔴{% endif %}</span>
                         {{ difficulty }}
                     </span>
                 </td>
@@ -169,16 +223,23 @@
                     <button class="action-icon bookmark-btn {% if p and p.bookmark %}bookmarked{% endif %}"
                         data-id="{{ q_id_str }}"
                         data-bookmarked="{{ 'true' if p and p.bookmark else 'false' }}"
-                        aria-label="{% if p and p.bookmark %}Remove bookmark for {{ q.problem }}{% else %}Bookmark {{ q.problem }}{% endif %}"
+                        aria-label="{% if p and p.bookmark %}Remove bookmark for '{{ q.problem }}'{% else %}Bookmark '{{ q.problem }}'{% endif %}"
                         aria-pressed="{{ 'true' if p and p.bookmark else 'false' }}">
                         <i class="bi {% if p and p.bookmark %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}" aria-hidden="true"></i>
+                    </button>
+                    <button class="action-icon skip-btn {% if p and p.skipped %}skipped{% endif %}"
+                        data-id="{{ q_id_str }}"
+                        data-skipped="{{ 'true' if p and p.skipped else 'false' }}"
+                        aria-label="{% if p and p.skipped %}Remove skipped status for '{{ q.problem }}'{% else %}Mark '{{ q.problem }}' as skipped{% endif %}"
+                        aria-pressed="{{ 'true' if p and p.skipped else 'false' }}">
+                        <i class="bi {% if p and p.skipped %}bi-skip-forward-fill{% else %}bi-skip-forward{% endif %}" aria-hidden="true"></i>
                     </button>
                 </td>
                 <td>
                     <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn"
                         data-id="{{ q_id_str }}"
                         data-notes="{{ p.notes if p and p.notes else '' }}"
-                        aria-label="{% if p and p.notes %}Edit notes for {{ q.problem }}{% else %}Add notes for {{ q.problem }}{% endif %}">
+                        aria-label="{% if p and p.notes %}Edit notes for '{{ q.problem }}'{% else %}Add notes for '{{ q.problem }}'{% endif %}">
                         <i class="bi bi-journal-text" aria-hidden="true"></i>
                         {% if p and p.notes %}Edit{% else %}Add{% endif %}
                     </button>
@@ -187,34 +248,28 @@
             {% endfor %}
             <tr id="empty-state-row" style="display:none;">
                 <td colspan="6" class="text-center" style="padding: 2rem;">
-                <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
-                    No questions match the selected difficulty.
-                </p>
-                <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()">
-                    Clear filter &amp; show all
-                </button>
-            </td>
-        </tr>
-    </tbody>
+                    <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
+                        No questions match the selected difficulty.
+                    </p>
+                    <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()" aria-label="Clear filter and show all questions">
+                        Clear filter &amp; show all
+                    </button>
+                </td>
+            </tr>
+        </tbody>
     </table>
+</div>
 </div>
 
 <!-- Notes Modal -->
-<div class="modal-overlay" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
-    <div class="modal-box">
-        <h3 id="notesModalTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes</h3>
-        <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes"></textarea>
-        <input type="hidden" id="currentQuestionId">
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modalCancel">Cancel</button>
-            <button class="btn-modal-save" id="saveNotesBtn">Save Notes</button>
-        </div>
-    </div>
-</div>
+{{ notes_modal(textarea_label='Notes for this question') }}
 {% endblock %}
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+}|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -235,7 +290,7 @@ function setBookmarkState(btn, isBookmarked) {
 }
 
 function updateQuestion(id, data, callback) {
-    return fetch('/update_question/' + id, {
+    return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -249,7 +304,7 @@ function updateQuestion(id, data, callback) {
     });
 }
 
-// Update the checkbox event listener in topic.html
+// Update the checkbox event listener
 document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
         if (!isAuthenticated) { 
@@ -261,6 +316,12 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
         const previousChecked = !this.checked;
         const nextChecked = this.checked;
         this.disabled = true;
+        row.classList.add('row-updating');
+        
+        // Update ARIA label
+        const problemName = row.querySelector('.q-name')?.textContent || 'Question';
+        this.setAttribute('aria-label', nextChecked ? `Mark '${problemName}' as incomplete` : `Mark '${problemName}' as complete`);
+        
         row.classList.toggle('row-done', nextChecked);
         updateQuestion(this.dataset.id, {done: nextChecked})
             .catch(() => {
@@ -270,11 +331,19 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
             })
             .finally(() => {
                 this.disabled = false;
+                row.classList.remove('row-updating');
             });
     });
 });
 
-// Update bookmark button event listener
+function setSkippedState(btn, isSkipped) {
+    const icon = btn.querySelector('i');
+    btn.dataset.skipped = isSkipped ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', isSkipped ? 'true' : 'false');
+    btn.classList.toggle('skipped', isSkipped);
+    icon.className = isSkipped ? 'bi bi-skip-forward-fill' : 'bi bi-skip-forward';
+}
+
 document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         if (!isAuthenticated) { 
@@ -284,6 +353,7 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
         const isBookmarked = this.dataset.bookmarked === 'true';
         const newStatus = !isBookmarked;
         this.disabled = true;
+        this.classList.add('row-updating');
         setBookmarkState(this, newStatus);
         updateQuestion(this.dataset.id, {bookmark: newStatus})
             .catch(() => {
@@ -292,16 +362,65 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
             })
             .finally(() => {
                 this.disabled = false;
+                this.classList.remove('row-updating');
+            });
+    });
+});
+
+document.querySelectorAll('.skip-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+        const isSkipped = this.dataset.skipped === 'true';
+        const nextSkipped = !isSkipped;
+        const row = document.getElementById('row-' + this.dataset.id);
+        const checkbox = row.querySelector('.status-checkbox');
+        const previousChecked = checkbox.checked;
+        this.disabled = true;
+        checkbox.disabled = true;
+        row.classList.add('row-updating');
+        setSkippedState(this, nextSkipped);
+        if (nextSkipped) {
+            checkbox.checked = false;
+            row.classList.remove('row-done');
+        }
+        updateQuestion(this.dataset.id, {skipped: nextSkipped})
+            .catch(() => {
+                setSkippedState(this, isSkipped);
+                checkbox.checked = previousChecked;
+                row.classList.toggle('row-done', previousChecked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+                checkbox.disabled = false;
+                row.classList.remove('row-updating');
             });
     });
 });
 
 // Difficulty Filtering
-document.querySelectorAll('.filter-btn').forEach(btn => {
+document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
     btn.addEventListener('click', function() {
         const difficulty = this.dataset.difficulty;
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('difficulty', difficulty);
+        currentUrl.searchParams.set('status', '{{ status_filter }}');
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
+        window.location.href = currentUrl.toString();
+    });
+});
+document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const status = this.dataset.status;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('difficulty', '{{ difficulty_filter }}');
+        currentUrl.searchParams.set('status', status);
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
         window.location.href = currentUrl.toString();
     });
 });
@@ -313,7 +432,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     }
 })();
 
-// Notes Modal
+// Notes Modal with focus trap
 const modal = document.getElementById('notesModal');
 const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
 
@@ -323,6 +442,11 @@ function openModal(triggerEl) {
     const focusable = modal.querySelectorAll(FOCUSABLE);
     if (focusable.length) focusable[0].focus();
     modal.addEventListener('keydown', trapFocus);
+    // Announce modal open to screen readers
+    const modalTitle = document.getElementById('notesModalTitle');
+    if (modalTitle) {
+        modalTitle.setAttribute('aria-live', 'polite');
+    }
 }
 
 function closeModal() {
@@ -356,6 +480,9 @@ modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 document.getElementById('saveNotesBtn').addEventListener('click', function() {
     const qId = document.getElementById('currentQuestionId').value;
     const notes = document.getElementById('notesTextarea').value;
+    const previousContent = this.innerHTML;
+    this.disabled = true;
+    this.textContent = 'Saving...';
     updateQuestion(qId, {notes: notes}, () => {
         closeModal();
         const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
@@ -368,7 +495,34 @@ document.getElementById('saveNotesBtn').addEventListener('click', function() {
         }
     }).catch(() => {
         showUpdateError('Unable to save notes. Please try again.');
+    }).finally(() => {
+        this.disabled = false;
+        this.innerHTML = previousContent;
     });
 });
+//  Practice Random Button
+document.getElementById('practiceRandomBtn').addEventListener('click', function() {
+    this.classList.add('btn-busy');
+    this.setAttribute('aria-busy', 'true');
+    const rows = Array.from(document.querySelectorAll('#questions-table tbody tr:not(#empty-state-row)'))
+        .filter(row => row.style.display !== 'none');
+    
+    if (rows.length === 0) {
+        this.classList.remove('btn-busy');
+        this.removeAttribute('aria-busy');
+        alert('No questions available!');
+        return;
+    }
+    
+    const randomRow = rows[Math.floor(Math.random() * rows.length)];
+    randomRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    randomRow.style.outline = '2px solid var(--accent)';
+    setTimeout(() => {
+        randomRow.style.outline = '';
+        this.classList.remove('btn-busy');
+        this.removeAttribute('aria-busy');
+    }, 2000);
+});
+
 </script>
 {% endblock %}
