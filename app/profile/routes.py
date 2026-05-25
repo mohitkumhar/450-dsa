@@ -1,7 +1,8 @@
 import json
+import secrets
 
 import requests
-from flask import Blueprint, current_app, jsonify, render_template, request, send_file
+from flask import Blueprint, current_app, jsonify, render_template, request, send_file, session
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -487,6 +488,8 @@ def upload_photo():
 def profile():
     topics = list(db.topic.find().sort("position", 1))
     user = current_user
+    oauth_settings_csrf_token = secrets.token_hex(32)
+    session["oauth_settings_csrf_token"] = oauth_settings_csrf_token
 
     all_questions = list(db.question.find())
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
@@ -608,4 +611,5 @@ def profile():
         rating_history=rating_history,
         lc_badges=lc_badges,
         hr_badges=hr_badges,
+        oauth_settings_csrf_token=oauth_settings_csrf_token,
     )

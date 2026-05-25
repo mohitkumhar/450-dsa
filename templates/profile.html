@@ -230,6 +230,44 @@ body.modal-open {
     </div>
   </div>
 
+  <div class="card">
+    <div class="sec-title">Sign-In Methods</div>
+    <div class="platform-row">
+      <span><i class="bi bi-shield-lock" style="color:var(--accent);margin-right:6px" aria-hidden="true"></i>Password</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        {% if user.password %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><span class="link-out">Active</span>{% else %}<span class="link-out">OAuth only</span>{% endif %}
+      </span>
+    </div>
+    <div class="platform-row">
+      <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
+      <span style="display:flex;align-items:center;gap:8px">
+        {% if user.github_id %}
+          <i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>
+          <form method="post" action="{{ url_for('auth.unlink_oauth_provider', provider='github') }}" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ oauth_settings_csrf_token }}">
+            <button type="submit" class="add-btn" style="margin:0;padding:5px 10px" aria-label="Unlink GitHub sign-in">Unlink</button>
+          </form>
+        {% else %}
+          <a class="add-btn" href="{{ url_for('auth.connect_github') }}" style="margin:0;padding:5px 10px;text-decoration:none" aria-label="Link GitHub sign-in">Link</a>
+        {% endif %}
+      </span>
+    </div>
+    <div class="platform-row">
+      <span><i class="bi bi-google" style="color:#ea4335;margin-right:6px" aria-hidden="true"></i>Google</span>
+      <span style="display:flex;align-items:center;gap:8px">
+        {% if user.google_id %}
+          <i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>
+          <form method="post" action="{{ url_for('auth.unlink_oauth_provider', provider='google') }}" style="margin:0">
+            <input type="hidden" name="csrf_token" value="{{ oauth_settings_csrf_token }}">
+            <button type="submit" class="add-btn" style="margin:0;padding:5px 10px" aria-label="Unlink Google sign-in">Unlink</button>
+          </form>
+        {% else %}
+          <a class="add-btn" href="{{ url_for('auth.connect_google') }}" style="margin:0;padding:5px 10px;text-decoration:none" aria-label="Link Google sign-in">Link</a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
   <div class="rank-card">
     <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Leaderboard</div>
     <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>

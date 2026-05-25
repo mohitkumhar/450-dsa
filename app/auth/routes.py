@@ -11,6 +11,10 @@ from app.utils import utc_now
 
 auth_bp = Blueprint("auth", __name__)
 GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
+OAUTH_LINK_TARGET_USER_ID_SESSION_KEY = "oauth_link_target_user_id"
+OAUTH_SETTINGS_CSRF_SESSION_KEY = "oauth_settings_csrf_token"
+OAUTH_PROVIDER_FIELDS = {"github": "github_id", "google": "google_id"}
+OAUTH_PROVIDER_LABELS = {"github": "GitHub", "google": "Google"}
 COMMON_WEAK_PASSWORDS = {
     "12345678",
     "123456789",
@@ -21,6 +25,28 @@ COMMON_WEAK_PASSWORDS = {
     "letmein",
     "welcome1",
 }
+
+
+def link_oauth_provider(user_id, provider_field, provider_id, email=None):
+    email = (email or "").strip() or None
+    user_doc = db.user.find_one({"_id": user_id})
+    if not user_doc:
+        return None, "Unable to find the current account."
+
+    existing_provider_owner = db.user.find_one({provider_field: provider_id})
+    if existing_provider_owner and existing_provider_owner.get("_id") != user_id:
+        return None, "That provider is already linked to another account."
+
+    update_fields = {provider_field: provider_id}
+    if email and not user_doc.get("email"):
+        email_owner = db.user.find_one({"email": email})
+        if email_owner and email_owner.get("_id") != user_id:
+            return None, "That email is already linked to another account."
+        update_fields["email"] = email
+
+    db.user.update_one({"_id": user_id}, {"$set": update_fields})
+    user_doc.update(update_fields)
+    return user_doc, None
 
 
 def resolve_oauth_user(provider_field, provider_id, name, email=None):
@@ -229,6 +255,13 @@ def login_github():
     return github.authorize_redirect(redirect_uri)
 
 
+@auth_bp.route("/connect/github")
+@login_required
+def connect_github():
+    session[OAUTH_LINK_TARGET_USER_ID_SESSION_KEY] = str(current_user.id)
+    return login_github()
+
+
 @auth_bp.route("/login/github/authorize")
 def authorize_github():
     token = github.authorize_access_token()
@@ -249,6 +282,16 @@ def authorize_github():
             if email_item["primary"] and email_item["verified"]:
                 email = email_item["email"]
                 break
+
+    link_target_user_id = session.pop(OAUTH_LINK_TARGET_USER_ID_SESSION_KEY, None)
+    if current_user.is_authenticated and link_target_user_id == str(current_user.id):
+        user_doc, error = link_oauth_provider(current_user.id, "github_id", github_id, email=email)
+        if error:
+            flash(error, "danger")
+        else:
+            current_user.reload()
+            flash("GitHub is now linked to your account.", "success")
+        return redirect(url_for("profile.profile"))
 
     user_doc, action = resolve_oauth_user(
         "github_id",
@@ -273,6 +316,13 @@ def login_google():
     return google.authorize_redirect(redirect_uri, nonce=nonce)
 
 
+@auth_bp.route("/connect/google")
+@login_required
+def connect_google():
+    session[OAUTH_LINK_TARGET_USER_ID_SESSION_KEY] = str(current_user.id)
+    return login_google()
+
+
 @auth_bp.route("/login/google/authorize")
 def authorize_google():
     nonce = session.pop(GOOGLE_OAUTH_NONCE_SESSION_KEY, None)
@@ -290,6 +340,16 @@ def authorize_google():
     google_id = user_info["sub"]
     email = user_info.get("email")
 
+    link_target_user_id = session.pop(OAUTH_LINK_TARGET_USER_ID_SESSION_KEY, None)
+    if current_user.is_authenticated and link_target_user_id == str(current_user.id):
+        user_doc, error = link_oauth_provider(current_user.id, "google_id", google_id, email=email)
+        if error:
+            flash(error, "danger")
+        else:
+            current_user.reload()
+            flash("Google is now linked to your account.", "success")
+        return redirect(url_for("profile.profile"))
+
     user_doc, action = resolve_oauth_user(
         "google_id",
         google_id,
@@ -303,3 +363,40 @@ def authorize_google():
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
+
+
+@auth_bp.route("/unlink/<provider>", methods=["POST"])
+@login_required
+def unlink_oauth_provider(provider):
+    provider_field = OAUTH_PROVIDER_FIELDS.get(provider)
+    provider_label = OAUTH_PROVIDER_LABELS.get(provider, "Provider")
+    if not provider_field:
+        abort(404)
+
+    token = request.form.get("csrf_token", "")
+    expected = session.pop(OAUTH_SETTINGS_CSRF_SESSION_KEY, None)
+    if not token or not expected or token != expected:
+        abort(403)
+
+    user_doc = db.user.find_one({"_id": current_user.id}) or {}
+    if not user_doc.get(provider_field):
+        flash(f"{provider_label} is not linked to your account.", "warning")
+        return redirect(url_for("profile.profile"))
+
+    available_methods = sum(
+        1
+        for value in (
+            bool(user_doc.get("password")),
+            bool(user_doc.get("github_id")),
+            bool(user_doc.get("google_id")),
+        )
+        if value
+    )
+    if available_methods <= 1:
+        flash("Connect another sign-in method before unlinking this provider.", "danger")
+        return redirect(url_for("profile.profile"))
+
+    db.user.update_one({"_id": current_user.id}, {"$unset": {provider_field: ""}})
+    current_user.reload()
+    flash(f"{provider_label} was unlinked from your account.", "success")
+    return redirect(url_for("profile.profile"))

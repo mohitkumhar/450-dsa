@@ -2,6 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from bson import ObjectId
 
+from conftest import build_test_app, login_test_user
+
 
 EXISTING_USER_ID = ObjectId()
 
@@ -317,3 +319,86 @@ def test_resolve_oauth_user_creates_new_user_without_email(monkeypatch):
     assert action == "created"
     assert user_doc["github_id"] == str(GITHUB_USER_INFO["id"])
     assert user_doc["email"] is None
+
+
+def test_github_authorize_links_provider_for_logged_in_user(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+    user_id = test_db.user.insert_one(
+        {"email": "user@example.com", "password": "hashed", "progress": {}, "is_admin": False}
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        with client.session_transaction() as sess:
+            sess["oauth_link_target_user_id"] = str(user_id)
+        with patch("app.auth.routes.github", new=_make_github_mock()):
+            resp = client.get("/login/github/authorize")
+
+    linked_user = test_db.user.find_one({"_id": user_id})
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/profile")
+    assert linked_user["github_id"] == str(GITHUB_USER_INFO["id"])
+
+
+def test_github_authorize_rejects_provider_already_linked_elsewhere(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+    owner_id = test_db.user.insert_one(
+        {"email": "owner@example.com", "github_id": str(GITHUB_USER_INFO["id"]), "progress": {}, "is_admin": False}
+    ).inserted_id
+    target_id = test_db.user.insert_one(
+        {"email": "target@example.com", "password": "hashed", "progress": {}, "is_admin": False}
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, target_id)
+        with client.session_transaction() as sess:
+            sess["oauth_link_target_user_id"] = str(target_id)
+        with patch("app.auth.routes.github", new=_make_github_mock()):
+            resp = client.get("/login/github/authorize")
+
+    owner_user = test_db.user.find_one({"_id": owner_id})
+    target_user = test_db.user.find_one({"_id": target_id})
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/profile")
+    assert owner_user["github_id"] == str(GITHUB_USER_INFO["id"])
+    assert "github_id" not in target_user
+
+
+def test_unlink_oauth_provider_requires_alternative_login_method(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+    user_id = test_db.user.insert_one(
+        {"email": "oauth@example.com", "github_id": "github-only", "progress": {}, "is_admin": False}
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        with client.session_transaction() as sess:
+            sess["oauth_settings_csrf_token"] = "csrf-token"
+        resp = client.post("/unlink/github", data={"csrf_token": "csrf-token"})
+
+    user_doc = test_db.user.find_one({"_id": user_id})
+    assert resp.status_code == 302
+    assert user_doc["github_id"] == "github-only"
+
+
+def test_unlink_oauth_provider_succeeds_when_password_login_exists(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+    user_id = test_db.user.insert_one(
+        {
+            "email": "hybrid@example.com",
+            "password": "hashed",
+            "github_id": "github-hybrid",
+            "progress": {},
+            "is_admin": False,
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        with client.session_transaction() as sess:
+            sess["oauth_settings_csrf_token"] = "csrf-token"
+        resp = client.post("/unlink/github", data={"csrf_token": "csrf-token"})
+
+    user_doc = test_db.user.find_one({"_id": user_id})
+    assert resp.status_code == 302
+    assert "github_id" not in user_doc

@@ -62,9 +62,12 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/register" in routes
     assert "/logout" in routes
     assert "/login/github" in routes
+    assert "/connect/github" in routes
     assert "/login/github/authorize" in routes
     assert "/login/google" in routes
+    assert "/connect/google" in routes
     assert "/login/google/authorize" in routes
+    assert "/unlink/<provider>" in routes
     assert "/topic/<topic_id>" in routes
     assert "/topic/<topic_id>/export-notes" in routes
     assert "/update_question/<question_id>" in routes
