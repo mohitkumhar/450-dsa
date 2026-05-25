@@ -2,11 +2,12 @@ import json
 import os
 import secrets
 from pathlib import Path
+from time import perf_counter
 
 from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
-from flask import Flask, session
+from flask import Flask, g, request, session
 
 from app.admin import admin_bp
 from app.auth import auth_bp
@@ -19,6 +20,18 @@ from app.security import build_content_security_policy
 from app.search import search_bp
 from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
+
+
+ROUTE_TIMING_ENDPOINTS = {
+    "profile.profile",
+    "profile.sync_platforms",
+    "leaderboard.leaderboard",
+    "leaderboard.api_leaderboard",
+    "search.search",
+    "search.api_search_questions",
+    "tracker.export_csv",
+    "tracker.export_notes",
+}
 
 
 def _configure_rate_limit_storage(app, config_class):
@@ -146,6 +159,11 @@ def create_app(config_class=None):
             init_db()
             app._db_initialized = True
 
+    @app.before_request
+    def start_route_timer():
+        if request.endpoint in ROUTE_TIMING_ENDPOINTS:
+            g.route_timer_start = perf_counter()
+
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
     app.add_template_filter(platform_profile_url, "platform_url")
@@ -191,6 +209,21 @@ def create_app(config_class=None):
 
     @app.after_request
     def add_security_headers(response):
+        started_at = getattr(g, "route_timer_start", None)
+        if started_at is not None and request.endpoint in ROUTE_TIMING_ENDPOINTS:
+            app.logger.info(
+                "route_timing %s",
+                json.dumps(
+                    {
+                        "endpoint": request.endpoint,
+                        "method": request.method,
+                        "route": request.url_rule.rule if request.url_rule else request.path,
+                        "status_code": response.status_code,
+                        "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+                    },
+                    sort_keys=True,
+                ),
+            )
         response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
 
