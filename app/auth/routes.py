@@ -2,7 +2,7 @@ import re
 import secrets
 
 from bson import ObjectId
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
 from app.extensions import bcrypt, db, github, google, login_manager
@@ -231,24 +231,45 @@ def login_github():
 
 @auth_bp.route("/login/github/authorize")
 def authorize_github():
-    token = github.authorize_access_token()
+    try:
+        token = github.authorize_access_token()
+    except Exception:
+        current_app.logger.exception("GitHub OAuth token exchange failed")
+        flash("GitHub sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     if not token:
         return "GitHub authorization failed", 400
 
-    response = github.get("user")
+    try:
+        response = github.get("user")
+    except Exception:
+        current_app.logger.exception("GitHub OAuth user fetch failed")
+        flash("GitHub sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     if not response.ok:
         return "Failed to fetch GitHub user", 400
 
-    user_info = response.json()
+    try:
+        user_info = response.json()
+    except Exception:
+        current_app.logger.exception("GitHub OAuth user payload parsing failed")
+        flash("GitHub sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     github_id = str(user_info["id"])
 
-    response_emails = github.get("user/emails")
     email = None
-    if response_emails.status_code == 200:
-        for email_item in response_emails.json():
-            if email_item["primary"] and email_item["verified"]:
-                email = email_item["email"]
-                break
+    try:
+        response_emails = github.get("user/emails")
+        if response_emails.status_code == 200:
+            for email_item in response_emails.json():
+                if email_item["primary"] and email_item["verified"]:
+                    email = email_item["email"]
+                    break
+    except Exception:
+        current_app.logger.exception("GitHub OAuth email lookup failed")
 
     user_doc, action = resolve_oauth_user(
         "github_id",
@@ -279,10 +300,27 @@ def authorize_google():
     if not nonce:
         return "Google OAuth nonce missing", 400
 
-    token = google.authorize_access_token()
-    user_info = google.parse_id_token(token, nonce=nonce)
+    try:
+        token = google.authorize_access_token()
+    except Exception:
+        current_app.logger.exception("Google OAuth token exchange failed")
+        flash("Google sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
+    try:
+        user_info = google.parse_id_token(token, nonce=nonce)
+    except Exception:
+        current_app.logger.exception("Google OAuth ID token parsing failed")
+        flash("Google sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     if not user_info:
-        user_info = google.userinfo()
+        try:
+            user_info = google.userinfo()
+        except Exception:
+            current_app.logger.exception("Google OAuth userinfo fetch failed")
+            flash("Google sign-in is temporarily unavailable. Please try again.", "danger")
+            return redirect(url_for("auth.login"))
 
     if not user_info:
         return "Failed to fetch Google user info", 400

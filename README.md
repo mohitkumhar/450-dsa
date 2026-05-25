@@ -51,6 +51,9 @@ venv\Scripts\activate
 source venv/bin/activate
 
 pip install -r requirements.txt
+
+# For development, linting, and tests
+pip install -r requirements-dev.txt
 ```
 
 **2. Configure environment variables**
@@ -61,7 +64,9 @@ copy .env.example .env  # Windows
 
 Edit `.env` and fill in your values:
 ```env
-SECRET_KEY=your-random-secret-key
+# REQUIRED - generate your own first:
+# python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=replace-this-with-a-real-secret
 
 # MongoDB — use Atlas (free) or local
 MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/dsa_tracker
@@ -79,6 +84,8 @@ CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 ```
+
+The app now refuses to start if `SECRET_KEY` is missing or still set to an insecure placeholder. If a secret was ever committed or shared, rotate it before running the app again.
 
 **3. Run**
 ```bash
@@ -198,7 +205,7 @@ pytest
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SECRET_KEY` | Yes | Flask session secret |
+| `SECRET_KEY` | Yes | Flask session secret. Must be a real generated secret, not a placeholder. |
 | `MONGO_URI` | Yes | MongoDB connection string |
 | `GITHUB_CLIENT_ID` | No | GitHub OAuth app client ID |
 | `GITHUB_CLIENT_SECRET` | No | GitHub OAuth app client secret |

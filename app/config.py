@@ -8,6 +8,16 @@ def env_flag(name, default=False):
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def env_int(name, default):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value.strip())
+    except (TypeError, ValueError):
+        return default
+
+
 def current_environment_name():
     for key in ("APP_ENV", "FLASK_ENV", "ENV"):
         value = os.environ.get(key)
@@ -19,8 +29,12 @@ def current_environment_name():
 
 
 class BaseConfig:
-    SECRET_KEY = "supersecretkey"
+    SECRET_KEY = None
     MONGO_URI = "mongodb://localhost:27017/450_dsa"
+    MONGO_SERVER_SELECTION_TIMEOUT_MS = 5000
+    MONGO_CONNECT_TIMEOUT_MS = 5000
+    MONGO_MAX_POOL_SIZE = 20
+    MONGO_MIN_POOL_SIZE = 0
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     SESSION_COOKIE_HTTPONLY = True
@@ -31,11 +45,48 @@ class BaseConfig:
         "uiversion": 3,
     }
     RATELIMIT_STORAGE_URI = "memory://"
+    INSECURE_SECRET_KEYS = {
+        None,
+        "",
+        "supersecretkey",
+        "supersecretkey-change-me",
+        "change-me",
+        "change-me-to-a-random-string",
+        "dev",
+        "your-random-secret-key",
+        "replace-this-with-a-real-secret",
+    }
 
     @classmethod
     def apply_environment_overrides(cls, app):
-        app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", cls.SECRET_KEY)
+        secret_key = os.environ.get("SECRET_KEY")
+        if secret_key is None:
+            secret_key = cls.SECRET_KEY
+        if isinstance(secret_key, str):
+            secret_key = secret_key.strip()
+        if not app.config.get("TESTING") and secret_key in cls.INSECURE_SECRET_KEYS:
+            raise RuntimeError(
+                "SECRET_KEY is not set or is using an insecure default. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        app.config["SECRET_KEY"] = secret_key
         app.config["MONGO_URI"] = os.environ.get("MONGO_URI", cls.MONGO_URI)
+        app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] = env_int(
+            "MONGO_SERVER_SELECTION_TIMEOUT_MS",
+            cls.MONGO_SERVER_SELECTION_TIMEOUT_MS,
+        )
+        app.config["MONGO_CONNECT_TIMEOUT_MS"] = env_int(
+            "MONGO_CONNECT_TIMEOUT_MS",
+            cls.MONGO_CONNECT_TIMEOUT_MS,
+        )
+        app.config["MONGO_MAX_POOL_SIZE"] = env_int(
+            "MONGO_MAX_POOL_SIZE",
+            cls.MONGO_MAX_POOL_SIZE,
+        )
+        app.config["MONGO_MIN_POOL_SIZE"] = env_int(
+            "MONGO_MIN_POOL_SIZE",
+            cls.MONGO_MIN_POOL_SIZE,
+        )
         app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get(
             "SESSION_COOKIE_SAMESITE",
             cls.SESSION_COOKIE_SAMESITE,
@@ -52,6 +103,7 @@ class DevelopmentConfig(BaseConfig):
 
 class TestingConfig(BaseConfig):
     TESTING = True
+    SECRET_KEY = "test-only-secret-not-for-production"
     SESSION_COOKIE_SECURE = False
 
 

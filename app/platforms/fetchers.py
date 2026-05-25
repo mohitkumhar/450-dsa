@@ -1,10 +1,32 @@
 import json
 import re
+import threading
 from datetime import datetime
 
 import requests
 
 from app.utils import normalize_coding_ninjas_profile_id
+
+
+_session_local = threading.local()
+
+
+def clear_platform_http_session():
+    session = getattr(_session_local, "session", None)
+    if session is not None:
+        try:
+            session.close()
+        except Exception:
+            pass
+        delattr(_session_local, "session")
+
+
+def _get_http_session():
+    session = getattr(_session_local, "session", None)
+    if session is None:
+        session = requests.Session()
+        _session_local.session = session
+    return session
 
 
 LEETCODE_PROFILE_QUERY = """
@@ -39,7 +61,7 @@ def build_leetcode_profile_payload(username):
 
 def fetch_leetcode(username):
     try:
-        response = requests.post(
+        response = _get_http_session().post(
             "https://leetcode.com/graphql",
             json=build_leetcode_profile_payload(username),
             timeout=8,
@@ -86,7 +108,7 @@ def fetch_leetcode_rating_history(username):
             contest { title startTime }
           }
         }"""
-        response = requests.post(
+        response = _get_http_session().post(
             "https://leetcode.com/graphql",
             json={"query": query, "variables": {"username": username}},
             timeout=10,
@@ -115,7 +137,7 @@ def fetch_lc_badges(username):
             upcomingBadges { name icon }
           }
         }"""
-        response = requests.post(
+        response = _get_http_session().post(
             "https://leetcode.com/graphql",
             json={"query": query, "variables": {"username": username}},
             timeout=8,
@@ -139,7 +161,7 @@ def fetch_lc_badges(username):
 def fetch_hr_badges(username):
     """Fetch HackerRank badges and total solved count."""
     try:
-        response = requests.get(
+        response = _get_http_session().get(
             f"https://www.hackerrank.com/rest/hackers/{username}/badges",
             timeout=8,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
@@ -161,27 +183,27 @@ def fetch_hr_badges(username):
 
 def fetch_github(username):
     try:
-        response = requests.get(f"https://github.com/users/{username}/contributions", timeout=5)
+        response = _get_http_session().get(f"https://github.com/users/{username}/contributions", timeout=5)
         matches = re.findall(r"(\d+|No)\s+contributions?\s+on\s+(\d{4}-\d{2}-\d{2})", response.text)
         result_calendar = {}
         for count_str, date_str in matches:
             count = 0 if count_str == "No" else int(count_str)
             result_calendar[date_str] = count
 
-        response_issues = requests.get(
+        response_issues = _get_http_session().get(
             f"https://api.github.com/search/issues?q=type:issue+author:{username}",
             timeout=5,
         ).json()
-        response_prs = requests.get(
+        response_prs = _get_http_session().get(
             f"https://api.github.com/search/issues?q=type:pr+author:{username}",
             timeout=5,
         ).json()
-        response_merged = requests.get(
+        response_merged = _get_http_session().get(
             f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
             timeout=5,
         ).json()
         headers = {"Accept": "application/vnd.github.cloak-preview+json"}
-        response_commits = requests.get(
+        response_commits = _get_http_session().get(
             f"https://api.github.com/search/commits?q=author:{username}",
             headers=headers,
             timeout=5,
@@ -204,7 +226,7 @@ def fetch_gfg(username):
     """Fetch GFG solved count via multiple fallback methods."""
     try:
         try:
-            response = requests.get(
+            response = _get_http_session().get(
                 f"https://geeks-for-geeks-stats-api.vercel.app/?raw=Y&userName={username}",
                 timeout=6,
             )
@@ -218,7 +240,7 @@ def fetch_gfg(username):
 
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-            response = requests.get(
+            response = _get_http_session().get(
                 f"https://practiceapi.geeksforgeeks.org/api/v1/user/practice/stats/?user={username}",
                 headers=headers,
                 timeout=6,
@@ -232,7 +254,7 @@ def fetch_gfg(username):
             print("GFG Error", exc)
 
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120"}
-        response = requests.get(f"https://www.geeksforgeeks.org/user/{username}/", timeout=8, headers=headers)
+        response = _get_http_session().get(f"https://www.geeksforgeeks.org/user/{username}/", timeout=8, headers=headers)
         for pattern in [
             r'"total_problems_solved"\s*[:=]\s*(\d+)',
             r'"totalProblemsSolved"\s*[:=]\s*(\d+)',
@@ -251,7 +273,7 @@ def fetch_gfg(username):
 
 def fetch_atcoder(handle):
     try:
-        r = requests.get(
+        r = _get_http_session().get(
             'https://kenkoooo.com/atcoder/atcoder-api/v3/user/acceptance_count',
             params={'user': handle}, timeout=8)
         if r.status_code == 200:
@@ -274,7 +296,7 @@ def fetch_coding_ninjas(username):
 
     try:
         api_url = "https://www.naukri.com/code360/api/v3/public_section/profile/user_details"
-        response = requests.get(api_url, params={"uuid": profile_id}, headers=headers, timeout=8)
+        response = _get_http_session().get(api_url, params={"uuid": profile_id}, headers=headers, timeout=8)
         if response.status_code == 200:
             data = response.json().get("data") or {}
             total = 0
@@ -304,7 +326,7 @@ def fetch_coding_ninjas(username):
     try:
         for url in urls:
             try:
-                response = requests.get(url, headers=headers, timeout=8)
+                response = _get_http_session().get(url, headers=headers, timeout=8)
                 if response.status_code != 200:
                     continue
                 for pattern in patterns:
