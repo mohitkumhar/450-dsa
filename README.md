@@ -192,6 +192,14 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
+## Import Sorting
+
+Use Ruff's import-sorting rule for focused cleanup PRs:
+
+```bash
+ruff check . --select I --fix
+```
+
 ---
 
 ## Environment Variables Reference

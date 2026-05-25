@@ -1,0 +1,9 @@
+[tool.ruff]
+target-version = "py310"
+extend-exclude = ["venv"]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
