@@ -138,3 +138,56 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
     assert update_fields["rating_history"] == [{"x": "2026-05-25", "y": 1800}]
     assert update_fields["lc_badges_json"] == '[{"name": "Knight"}]'
     assert update_fields["hr_badges_json"] == '[{"name": "Problem Solving", "stars": 5}]'
+
+
+def test_sync_platforms_tolerates_missing_cache_extension(monkeypatch):
+    app = create_profile_test_app()
+    captured = {}
+
+    monkeypatch.setattr(
+        profile_routes,
+        "current_user",
+        SimpleNamespace(
+            id="user-1",
+            is_authenticated=True,
+            last_sync=None,
+            leetcode_username="",
+            github_username="",
+            gfg_username="",
+            hackerrank_username="",
+            codingninjas_username="",
+            atcoder_username="",
+            reload=lambda: captured.setdefault("reloaded", True),
+        ),
+    )
+    monkeypatch.setattr(
+        profile_routes,
+        "db",
+        SimpleNamespace(
+            user=SimpleNamespace(
+                update_one=lambda query, update: captured.setdefault("db_update", (query, update))
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        profile_routes.cache,
+        "delete",
+        lambda key: (_ for _ in ()).throw(KeyError("cache")),
+    )
+    monkeypatch.setattr(
+        profile_routes,
+        "run_fetch_jobs",
+        lambda fetch_jobs, max_workers=5: ({}, {"github": "rate-limited"}),
+    )
+
+    response = app.test_client().post(
+        "/sync_platforms",
+        json={"github": "gh-user"},
+    )
+
+    payload = response.get_json()
+    assert response.status_code == 200
+    assert payload["success"] is False
+    assert payload["error"] == "Sync failed for all platforms."
+    assert captured["db_update"][1]["$set"]["github_username"] == "gh-user"
+    assert captured["reloaded"] is True
