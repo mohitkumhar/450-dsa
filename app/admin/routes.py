@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import ObjectId
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask import session
 from flask_login import current_user, login_required
 
@@ -130,8 +130,6 @@ def dashboard():
     )
 
     stats = _compute_system_stats()
-    logs = _recent_error_logs(max_entries=80)
-
     return render_template(
         "admin/dashboard.html",
         users=users,
@@ -141,8 +139,14 @@ def dashboard():
         total_matching=total_matching,
         total_pages=total_pages,
         stats=stats,
-        logs=logs,
     )
+
+
+@admin_bp.route("/logs", methods=["GET"])
+@login_required
+@admin_required
+def recent_logs():
+    return jsonify({"logs": _recent_error_logs(max_entries=80)})
 
 
 @admin_bp.route("/users/<user_id>/delete", methods=["POST"])

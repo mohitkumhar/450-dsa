@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline | 450 DSA Tracker</title>
+  <meta name="theme-color" content="#111111">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111111;
+      --panel: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #ff6b00;
+      --text: #f0f0f0;
+      --muted: #a0a0a0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(255, 107, 0, 0.16), transparent 32%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    .offline-shell {
+      width: min(100%, 420px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      text-align: center;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+    }
+
+    .badge {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #ff6b00, #ff8c38);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 1.4rem;
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    a,
+    button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: #202020;
+      color: var(--text);
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <main class="offline-shell">
+    <div class="badge">450</div>
+    <h1>You’re offline</h1>
+    <p>The app can still open this basic shell, but live progress sync and network-backed pages will resume when your connection returns.</p>
+    <div class="actions">
+      <button class="primary" type="button" onclick="window.location.reload()">Try again</button>
+      <a href="/">Go home</a>
+    </div>
+  </main>
+</body>
+</html>
