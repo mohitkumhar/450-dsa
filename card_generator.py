@@ -1,5 +1,29 @@
 import io
+from functools import lru_cache
 from PIL import Image, ImageDraw, ImageFont
+
+
+@lru_cache(maxsize=1)
+def load_card_fonts():
+    """Load and cache progress-card fonts for the current process."""
+    try:
+        return (
+            ImageFont.truetype("arialbd.ttf", 40),
+            ImageFont.truetype("arialbd.ttf", 60),
+            ImageFont.truetype("arial.ttf", 24),
+            ImageFont.truetype("arial.ttf", 20),
+        )
+    except IOError:
+        try:
+            return (
+                ImageFont.truetype("DejaVuSans-Bold.ttf", 40),
+                ImageFont.truetype("DejaVuSans-Bold.ttf", 60),
+                ImageFont.truetype("DejaVuSans.ttf", 24),
+                ImageFont.truetype("DejaVuSans.ttf", 20),
+            )
+        except IOError:
+            fallback = ImageFont.load_default()
+            return (fallback, fallback, fallback, fallback)
 
 
 def generate_progress_card(name, c_score, dsa_progress, current_streak, platforms):
@@ -7,25 +31,8 @@ def generate_progress_card(name, c_score, dsa_progress, current_streak, platform
     bg_color = (24, 24, 27) # zinc-900
     card = Image.new('RGB', (width, height), color=bg_color)
     draw = ImageDraw.Draw(card)
-    
-    # Attempt to load a truetype font, fallback to default if not found on OS
-    try:
-        font_title = ImageFont.truetype("arialbd.ttf", 40)
-        font_metric = ImageFont.truetype("arialbd.ttf", 60)
-        font_label = ImageFont.truetype("arial.ttf", 24)
-        font_small = ImageFont.truetype("arial.ttf", 20)
-    except IOError:
-        try:
-            # Unix-like typical font paths
-            font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 40)
-            font_metric = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
-            font_label = ImageFont.truetype("DejaVuSans.ttf", 24)
-            font_small = ImageFont.truetype("DejaVuSans.ttf", 20)
-        except IOError:
-            font_title = ImageFont.load_default()
-            font_metric = ImageFont.load_default()
-            font_label = ImageFont.load_default()
-            font_small = ImageFont.load_default()
+
+    font_title, font_metric, font_label, font_small = load_card_fonts()
             
     text_color = (255, 255, 255)
     accent_color = (59, 130, 246) # blue-500

@@ -2,6 +2,7 @@
 import io
 from unittest.mock import patch
 from bson.objectid import ObjectId
+from PIL import ImageFont
 
 # pyrefly: ignore [missing-import]
 import pytest
@@ -419,6 +420,43 @@ def test_card_generator_empty_platforms():
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
+
+
+def test_card_generator_caches_loaded_fonts(monkeypatch):
+    """Repeated card renders should reuse cached font objects."""
+    from card_generator import generate_progress_card, load_card_fonts
+
+    load_card_fonts.cache_clear()
+    truetype_calls = []
+    fallback_font = ImageFont.load_default()
+
+    def fake_truetype(path, size):
+        truetype_calls.append((path, size))
+        return fallback_font
+
+    monkeypatch.setattr("card_generator.ImageFont.truetype", fake_truetype)
+
+    generate_progress_card(
+        name="First Render",
+        c_score=10,
+        dsa_progress=10,
+        current_streak=1,
+        platforms={},
+    )
+    generate_progress_card(
+        name="Second Render",
+        c_score=20,
+        dsa_progress=20,
+        current_streak=2,
+        platforms={},
+    )
+
+    assert truetype_calls == [
+        ("arialbd.ttf", 40),
+        ("arialbd.ttf", 60),
+        ("arial.ttf", 24),
+        ("arial.ttf", 20),
+    ]
 
 
 def test_card_generator_single_platform():
