@@ -16,7 +16,14 @@ from app.platforms.fetchers import (
     fetch_leetcode_rating_history,
 )
 from app.profile.card_service import CACHE_TTL, get_public_card_image
-from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
+from app.utils import (
+    compute_user_platforms,
+    ensure_utc_datetime,
+    json_error,
+    json_success,
+    normalize_platform_username,
+    utc_now,
+)
 from platform_fetcher import run_fetch_jobs
 from profile_validation import build_profile_updates
 
@@ -167,31 +174,64 @@ def sync_platforms():
 
     update_fields = {"last_sync": now}
 
-    leetcode_username = current_user.leetcode_username or ""
-    github_username = current_user.github_username or ""
-    gfg_username = current_user.gfg_username or ""
-    hackerrank_username = current_user.hackerrank_username or ""
-    codingninjas_username = current_user.codingninjas_username or ""
-    atcoder_username = current_user.atcoder_username or ""
+    def _safe_existing_username(platform_key, value):
+        try:
+            return normalize_platform_username(platform_key, value)
+        except ValueError:
+            return ""
+
+    leetcode_username = _safe_existing_username("leetcode", current_user.leetcode_username or "")
+    github_username = _safe_existing_username("github", current_user.github_username or "")
+    gfg_username = _safe_existing_username("gfg", current_user.gfg_username or "")
+    hackerrank_username = _safe_existing_username("hackerrank", current_user.hackerrank_username or "")
+    codingninjas_username = _safe_existing_username("codingninjas", current_user.codingninjas_username or "")
+    atcoder_username = _safe_existing_username("atcoder", current_user.atcoder_username or "")
+
+    field_errors = {}
 
     if "leetcode" in data:
-        leetcode_username = data.get("leetcode", "").strip()
+        try:
+            leetcode_username = normalize_platform_username("leetcode", data.get("leetcode", ""))
+        except ValueError as exc:
+            field_errors["leetcode"] = str(exc)
         update_fields["leetcode_username"] = leetcode_username
     if "github" in data:
-        github_username = data.get("github", "").strip()
+        try:
+            github_username = normalize_platform_username("github", data.get("github", ""))
+        except ValueError as exc:
+            field_errors["github"] = str(exc)
         update_fields["github_username"] = github_username
     if "gfg" in data:
-        gfg_username = data.get("gfg", "").strip()
+        try:
+            gfg_username = normalize_platform_username("gfg", data.get("gfg", ""))
+        except ValueError as exc:
+            field_errors["gfg"] = str(exc)
         update_fields["gfg_username"] = gfg_username
     if "hackerrank" in data:
-        hackerrank_username = data.get("hackerrank", "").strip()
+        try:
+            hackerrank_username = normalize_platform_username("hackerrank", data.get("hackerrank", ""))
+        except ValueError as exc:
+            field_errors["hackerrank"] = str(exc)
         update_fields["hackerrank_username"] = hackerrank_username
     if "codingninjas" in data:
-        codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
+        try:
+            codingninjas_username = normalize_platform_username("codingninjas", data.get("codingninjas", ""))
+        except ValueError as exc:
+            field_errors["codingninjas"] = str(exc)
         update_fields["codingninjas_username"] = codingninjas_username
     if "atcoder" in data:
-        atcoder_username = data.get("atcoder", "").strip()
+        try:
+            atcoder_username = normalize_platform_username("atcoder", data.get("atcoder", ""))
+        except ValueError as exc:
+            field_errors["atcoder"] = str(exc)
         update_fields["atcoder_username"] = atcoder_username
+
+    if field_errors:
+        return json_error(
+            "Invalid platform username.",
+            status_code=400,
+            field_errors=field_errors,
+        )
 
     combined_daily_counts = {}
     platform_totals = {}
