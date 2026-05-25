@@ -3,6 +3,7 @@ from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.leaderboard.service import clear_leaderboard_snapshots
 from app.utils import json_error, json_success, utc_now
 from notes_export import build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
@@ -261,6 +262,7 @@ def update_question(question_id):
     if update_fields:
         db.user.update_one({"_id": user_id}, {"$set": update_fields})
         current_user.reload()
+        clear_leaderboard_snapshots()
         return json_success(message=message)
 
     return json_success(message="No changes made")

@@ -74,6 +74,8 @@ def test_search_uses_mongodb_text_search_and_score_sort(monkeypatch):
                 "topic": 1,
                 "url": 1,
                 "url2": 1,
+                "primary_platform": 1,
+                "secondary_platform": 1,
                 "score": {"$meta": "textScore"},
             },
         )
@@ -92,6 +94,8 @@ def test_search_preserves_topic_names_and_platform_links(monkeypatch):
                 "topic": "intervals",
                 "url": "https://leetcode.com/problems/merge-intervals/",
                 "url2": "https://practice.geeksforgeeks.org/problems/overlapping-intervals/",
+                "primary_platform": "LeetCode",
+                "secondary_platform": "GFG",
                 "score": 2.25,
             }
         ],
@@ -113,6 +117,40 @@ def test_search_preserves_topic_names_and_platform_links(monkeypatch):
         {
             "platform": "GFG",
             "url": "https://practice.geeksforgeeks.org/problems/overlapping-intervals/",
+            "color": "gfg",
+        },
+    ]
+
+
+def test_search_prefers_denormalized_platform_fields(monkeypatch):
+    fake_db = FakeDB(
+        questions=[
+            {
+                "_id": "q1",
+                "problem": "Interesting Problem",
+                "topic": "mixed",
+                "url": "https://example.com/not-a-platform",
+                "url2": "https://another.example/link",
+                "primary_platform": "LeetCode",
+                "secondary_platform": "GFG",
+                "score": 1.5,
+            }
+        ],
+        topics=[{"_id": "mixed", "name": "Mixed", "position": 9}],
+    )
+    monkeypatch.setattr(utils, "db", fake_db)
+
+    result = utils.search_dsa_questions("interesting problem")["results"][0]
+
+    assert result["links"] == [
+        {
+            "platform": "LeetCode",
+            "url": "https://example.com/not-a-platform",
+            "color": "lc",
+        },
+        {
+            "platform": "GFG",
+            "url": "https://another.example/link",
             "color": "gfg",
         },
     ]

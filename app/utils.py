@@ -48,20 +48,7 @@ def normalize_coding_ninjas_profile_id(value):
 
 
 def platform_name_filter(url):
-    if not url:
-        return None
-    url = url.lower()
-    if "leetcode.com" in url:
-        return "LeetCode"
-    if "geeksforgeeks.org" in url:
-        return "GFG"
-    if "codingninjas.com" in url or "naukri.com/code360" in url:
-        return "Coding Ninjas"
-    if "youtube.com" in url or "youtu.be" in url:
-        return "YouTube"
-    if "hackerrank.com" in url:
-        return "HackerRank"
-    return "Link"
+    return search_service.platform_name_filter(url)
 
 
 def platform_color_filter(name):
@@ -194,14 +181,14 @@ def compute_user_platforms(solved_items, external_totals, all_questions):
     for question in all_questions:
         question_id = str(question.get("_id", ""))
         if question_id in solved_items:
-            url = (question.get("url") or "").lower()
-            if "leetcode.com" in url:
+            primary_platform, _ = search_service.derive_question_platforms(question)
+            if primary_platform == "LeetCode":
                 platforms["LeetCode"] += 1
-            elif "geeksforgeeks.org" in url:
+            elif primary_platform == "GFG":
                 platforms["GFG"] += 1
-            elif "codingninjas.com" in url or "naukri.com/code360" in url:
+            elif primary_platform == "Coding Ninjas":
                 platforms["Coding Ninjas"] += 1
-            elif "hackerrank.com" in url:
+            elif primary_platform == "HackerRank":
                 platforms["HackerRank"] += 1
             else:
                 platforms["Other"] += 1

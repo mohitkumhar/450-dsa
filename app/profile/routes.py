@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
+from app.leaderboard.service import clear_leaderboard_snapshots
 from app.platforms.fetchers import (
     fetch_atcoder,
     fetch_coding_ninjas,
@@ -82,6 +83,13 @@ def build_platform_sync_jobs(
         jobs["atcoder"] = lambda: fetch_atcoder(atcoder_username)
 
     return jobs
+
+
+def clear_profile_caches(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except KeyError:
+        pass
 
 
 @profile_bp.route("/sync_platforms", methods=["POST"])
@@ -318,7 +326,8 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
-    cache.delete(f"card_{str(current_user.id)}")
+    clear_leaderboard_snapshots()
+    clear_profile_caches(current_user.id)
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -396,7 +405,8 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
-        cache.delete(f"card_{str(current_user.id)}")
+        clear_leaderboard_snapshots()
+        clear_profile_caches(current_user.id)
     return json_success()
 
 

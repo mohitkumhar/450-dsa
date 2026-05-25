@@ -18,6 +18,7 @@ from app.profile import profile_bp
 from app.security import build_content_security_policy
 from app.search import search_bp
 from app.tracker import tracker_bp
+from app.search.service import derive_question_platforms
 from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
 
 
@@ -25,6 +26,14 @@ def _configure_rate_limit_storage(app, config_class):
     storage_uri = app.config["RATELIMIT_STORAGE_URI"]
     if storage_uri == "memory://" and config_class is ProductionConfig:
         raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
+
+
+def _question_platform_updates(question):
+    primary_platform, secondary_platform = derive_question_platforms(question)
+    return {
+        "primary_platform": primary_platform,
+        "secondary_platform": secondary_platform,
+    }
 
 
 def _mongo_client_options(app):
@@ -128,17 +137,33 @@ def create_app(config_class=None):
                 questions = []
                 for question in topic["questions"]:
                     difficulty = question.get("difficulty", "Medium")
-                    questions.append(
-                        {
-                            "topic": topic_id,
-                            "problem": question["Problem"],
-                            "url": question["URL"],
-                            "url2": question.get("URL2", ""),
-                            "difficulty": difficulty,
-                        }
-                    )
+                    question_doc = {
+                        "topic": topic_id,
+                        "problem": question["Problem"],
+                        "url": question["URL"],
+                        "url2": question.get("URL2", ""),
+                        "difficulty": difficulty,
+                    }
+                    question_doc.update(_question_platform_updates(question_doc))
+                    questions.append(question_doc)
                 if questions:
                     db.question.insert_many(questions)
+
+        if hasattr(db.question, "find") and hasattr(db.question, "update_one"):
+            missing_platform_rows = db.question.find(
+                {
+                    "$or": [
+                        {"primary_platform": {"$exists": False}},
+                        {"secondary_platform": {"$exists": False}},
+                    ]
+                },
+                {"url": 1, "url2": 1},
+            )
+            for question in missing_platform_rows:
+                db.question.update_one(
+                    {"_id": question["_id"]},
+                    {"$set": _question_platform_updates(question)},
+                )
 
     @app.before_request
     def ensure_db_initialized():
