@@ -1,5 +1,4 @@
-import pytest
-from app.utils import compute_c_score
+from app.utils import compute_c_score, compute_total_solved
 
 
 def make_user(progress=None, external_totals=None, external_daily_counts=None):
@@ -102,7 +101,32 @@ def test_mixed_dsa_and_external():
     result = compute_c_score(user)
     assert result["dsa_done"] == 100
     assert result["lc_total"] == 100
-    assert result["total_solved"] == 250  # 100 dsa + 100 lc + 50 gfg
+    assert result["total_solved"] == 150
+
+
+def test_total_solved_uses_platform_maxes_when_questions_are_available():
+    progress = {
+        "lc1": {"done": True},
+        "lc2": {"done": True},
+        "other": {"done": True},
+    }
+    questions = [
+        {"_id": "lc1", "url": "https://leetcode.com/problems/two-sum/"},
+        {"_id": "lc2", "url": "https://leetcode.com/problems/binary-search/"},
+        {"_id": "other", "url": "https://example.com/problem"},
+    ]
+
+    total = compute_total_solved(progress, {"LeetCode": 2, "GFG": 5}, questions)
+
+    assert total == 8
+
+
+def test_total_solved_fallback_does_not_add_overlapping_dsa_and_external_counts():
+    progress = {str(index): {"done": True} for index in range(10)}
+
+    total = compute_total_solved(progress, {"LeetCode": 10})
+
+    assert total == 10
 
 
 # --- Active day consistency ---

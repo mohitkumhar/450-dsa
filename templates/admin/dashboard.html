@@ -424,14 +424,8 @@
             </div>
         </div>
 
-        <div class="log-area">
-            {% if logs %}
-                {% for entry in logs %}
-                <div class="log-line"><span class="log-source">[{{ entry.source }}]</span>{{ entry.line }}</div>
-                {% endfor %}
-            {% else %}
-                <p class="empty-state">No log files found yet. Add app logging to populate this panel.</p>
-            {% endif %}
+        <div class="log-area" id="admin-log-area" data-logs-url="{{ url_for('admin.recent_logs') }}" aria-busy="true">
+            <p class="empty-state">Loading recent logs...</p>
         </div>
     </article>
 </section>

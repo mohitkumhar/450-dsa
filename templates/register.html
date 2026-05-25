@@ -1,48 +1,9 @@
 {% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
 {% block content %}
-<style>
-.auth-wrap { min-height: calc(100vh - 56px - 120px); display: flex; align-items: center; justify-content: center; }
-.auth-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
-.auth-logo { width: 52px; height: 52px; background: var(--accent); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; color: white; margin: 0 auto 24px; }
-.auth-card h2 { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--text-primary); }
-.auth-card p.subtitle { text-align: center; color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 28px; }
-.form-group { margin-bottom: 16px; position: relative; }
-.form-label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
-.input-wrap { position: relative; }
-.form-control { width: 100%; padding: 11px 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.9rem; font-family: inherit; transition: all 0.2s; outline: none; box-sizing: border-box; }
-.form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-.form-control::placeholder { color: var(--text-muted); }
-.form-control.is-valid { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
-.form-control.is-invalid { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
-.field-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.9rem; pointer-events: none; }
-.field-error { font-size: 0.75rem; color: #f87171; margin-top: 5px; display: none; }
-.field-error.show { display: block; }
-.password-wrap { position: relative; }
-.toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; font-size: 1rem; }
-.toggle-password:hover { color: var(--text-primary); }
-.strength-bar-wrap { margin-top: 8px; }
-.strength-bar { height: 4px; border-radius: 99px; background: var(--border-color); overflow: hidden; margin-bottom: 4px; }
-.strength-fill { height: 100%; border-radius: 99px; transition: width 0.3s, background 0.3s; width: 0%; }
-.strength-label { font-size: 0.72rem; color: var(--text-muted); }
-.strength-rules { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
-.rule { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
-.rule.met { color: #4ade80; }
-.rule i { font-size: 0.75rem; }
-.btn-primary-full { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: white; font-weight: 700; font-size: 0.95rem; font-family: inherit; cursor: pointer; transition: all 0.2s; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-primary-full:hover { background: var(--accent-hover); transform: translateY(-1px); }
-.btn-primary-full:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-.divider { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--text-muted); font-size: 0.8rem; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
-.oauth-btn { width: 100%; padding: 11px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: all 0.2s; margin-bottom: 10px; }
-.oauth-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
-.auth-footer { text-align: center; margin-top: 24px; font-size: 0.84rem; color: var(--text-secondary); }
-.auth-footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
-.auth-footer a:hover { text-decoration: underline; }
-.flash-inline { padding: 10px 14px; border-radius: 8px; font-size: 0.83rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-.flash-inline.danger { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
-.flash-inline.success { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; }
-</style>
-
 <div class="auth-wrap">
     <div class="auth-card">
         <div class="auth-logo">D</div>
@@ -94,10 +55,19 @@
                 <div class="strength-rules" id="strengthRules">
                     <div class="rule" id="rule-length"><i class="bi bi-circle"></i> At least 8 characters</div>
                     <div class="rule" id="rule-upper"><i class="bi bi-circle"></i> One uppercase letter</div>
+                    <div class="rule" id="rule-lower"><i class="bi bi-circle"></i> One lowercase letter</div>
                     <div class="rule" id="rule-number"><i class="bi bi-circle"></i> One number</div>
                     <div class="rule" id="rule-special"><i class="bi bi-circle"></i> One special character</div>
                 </div>
                 <div class="field-error" id="passwordError">Password must meet the requirements above.</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <div class="input-wrap">
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
+                    <span class="field-icon" id="confirmPasswordIcon"></span>
+                </div>
+                <div class="field-error" id="confirmPasswordError">Passwords must match.</div>
             </div>
             <button type="submit" class="btn-primary-full" id="submitBtn">
                 <i class="bi bi-person-plus"></i> Create Account
@@ -115,34 +85,17 @@
     </div>
 </div>
 
+<script src="{{ url_for('static', filename='js/auth_forms.js') }}"></script>
 <script>
-function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-
-function setFieldState(input, iconEl, errorEl, valid, empty) {
-    if (empty) {
-        input.classList.remove('is-valid', 'is-invalid');
-        iconEl.innerHTML = '';
-        errorEl.classList.remove('show');
-    } else if (valid) {
-        input.classList.add('is-valid'); input.classList.remove('is-invalid');
-        iconEl.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#22c55e"></i>';
-        errorEl.classList.remove('show');
-    } else {
-        input.classList.add('is-invalid'); input.classList.remove('is-valid');
-        iconEl.innerHTML = '<i class="bi bi-x-circle-fill" style="color:#ef4444"></i>';
-        errorEl.classList.add('show');
-    }
-}
-
 const nameInput = document.getElementById('name');
 const nameIcon = document.getElementById('nameIcon');
 const nameError = document.getElementById('nameError');
 nameInput.addEventListener('input', () => {
     const v = nameInput.value.trim();
-    setFieldState(nameInput, nameIcon, nameError, v.length >= 2, v === '');
+    AuthForms.setFieldState(nameInput, nameIcon, nameError, v.length >= 2, v === '');
 });
 nameInput.addEventListener('blur', () => {
-    if (nameInput.value.trim().length === 0) setFieldState(nameInput, nameIcon, nameError, false, false);
+    if (nameInput.value.trim().length === 0) AuthForms.setFieldState(nameInput, nameIcon, nameError, false, false);
 });
 
 const emailInput = document.getElementById('email');
@@ -150,11 +103,11 @@ const emailIcon = document.getElementById('emailIcon');
 const emailError = document.getElementById('emailError');
 emailInput.addEventListener('input', () => {
     const v = emailInput.value.trim();
-    setFieldState(emailInput, emailIcon, emailError, validateEmail(v), v === '');
+    AuthForms.setFieldState(emailInput, emailIcon, emailError, AuthForms.validateEmail(v), v === '');
 });
 emailInput.addEventListener('blur', () => {
-    if (emailInput.value.trim() && !validateEmail(emailInput.value.trim()))
-        setFieldState(emailInput, emailIcon, emailError, false, false);
+    if (emailInput.value.trim() && !AuthForms.validateEmail(emailInput.value.trim()))
+        AuthForms.setFieldState(emailInput, emailIcon, emailError, false, false);
 });
 
 const passwordInput = document.getElementById('password');
@@ -163,10 +116,14 @@ const strengthLabel = document.getElementById('strengthLabel');
 const passwordError = document.getElementById('passwordError');
 const togglePassword = document.getElementById('togglePassword');
 const toggleIcon = document.getElementById('toggleIcon');
+const confirmPasswordInput = document.getElementById('confirm_password');
+const confirmPasswordIcon = document.getElementById('confirmPasswordIcon');
+const confirmPasswordError = document.getElementById('confirmPasswordError');
 
 const rules = {
     length: { el: document.getElementById('rule-length'), test: v => v.length >= 8 },
     upper:  { el: document.getElementById('rule-upper'),  test: v => /[A-Z]/.test(v) },
+    lower:  { el: document.getElementById('rule-lower'),  test: v => /[a-z]/.test(v) },
     number: { el: document.getElementById('rule-number'), test: v => /[0-9]/.test(v) },
     special:{ el: document.getElementById('rule-special'),test: v => /[^A-Za-z0-9]/.test(v) },
 };
@@ -199,34 +156,41 @@ passwordInput.addEventListener('input', () => {
         passwordError.classList.remove('show');
         passwordInput.classList.remove('is-valid', 'is-invalid');
     } else {
-        const lvl = levels[score - 1] || levels[0];
+        const lvl = levels[Math.min(score, levels.length) - 1] || levels[0];
         strengthFill.style.width = lvl.width;
         strengthFill.style.background = lvl.color;
         strengthLabel.textContent = lvl.label;
         strengthLabel.style.color = lvl.color;
-        if (score === 4) {
+        if (score === Object.keys(rules).length) {
             passwordInput.classList.add('is-valid'); passwordInput.classList.remove('is-invalid');
             passwordError.classList.remove('show');
         } else {
             passwordInput.classList.remove('is-valid', 'is-invalid');
         }
     }
+    validateConfirmPassword();
 });
 
-togglePassword.addEventListener('click', () => {
-    const show = passwordInput.type === 'password';
-    passwordInput.type = show ? 'text' : 'password';
-    toggleIcon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
-});
+AuthForms.setupPasswordToggle(togglePassword, passwordInput, toggleIcon);
+
+function validateConfirmPassword() {
+    const empty = confirmPasswordInput.value === '';
+    const matches = confirmPasswordInput.value === passwordInput.value;
+    setFieldState(confirmPasswordInput, confirmPasswordIcon, confirmPasswordError, matches, empty);
+    return !empty && matches;
+}
+
+confirmPasswordInput.addEventListener('input', validateConfirmPassword);
+confirmPasswordInput.addEventListener('blur', validateConfirmPassword);
 
 document.getElementById('registerForm').addEventListener('submit', (e) => {
     let valid = true;
     if (nameInput.value.trim().length < 2) {
-        setFieldState(nameInput, nameIcon, nameError, false, false);
+        AuthForms.setFieldState(nameInput, nameIcon, nameError, false, false);
         valid = false;
     }
-    if (!validateEmail(emailInput.value.trim())) {
-        setFieldState(emailInput, emailIcon, emailError, false, false);
+    if (!AuthForms.validateEmail(emailInput.value.trim())) {
+        AuthForms.setFieldState(emailInput, emailIcon, emailError, false, false);
         valid = false;
     }
     const v = passwordInput.value;
@@ -236,10 +200,10 @@ document.getElementById('registerForm').addEventListener('submit', (e) => {
         passwordError.classList.add('show');
         valid = false;
     }
+    if (!validateConfirmPassword()) valid = false;
     if (!valid) { e.preventDefault(); return; }
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Creating account...';
+    AuthForms.setSubmitLoading(btn, 'Creating account...');
 });
 </script>
 {% endblock %}

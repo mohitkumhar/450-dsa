@@ -2,7 +2,7 @@ import csv
 from io import StringIO
 
 
-CSV_HEADERS = ['Topic', 'Problem', 'Done', 'Bookmarked', 'Notes', 'URL']
+CSV_HEADERS = ['Topic', 'Problem', 'Done', 'Bookmarked', 'Notes', 'Difficulty', 'URL', 'URL2']
 
 
 def build_progress_csv(questions, topic_lookup, progress):
@@ -20,7 +20,9 @@ def build_progress_csv(questions, topic_lookup, progress):
             bool(item_progress.get('done', False)),
             bool(item_progress.get('bookmark', False)),
             item_progress.get('notes', ''),
+            question.get('difficulty', 'Medium'),
             question.get('url', ''),
+            question.get('url2', ''),
         ])
 
     return output.getvalue()
