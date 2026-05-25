@@ -28,6 +28,26 @@ def _tail_file(file_path, max_lines=80):
         return list(deque(file_obj, maxlen=max_lines))
 
 
+def _actor_label():
+    return current_user.name or current_user.email or str(current_user.id)
+
+
+def _write_admin_audit_log(action, target_type, target_id, target_label, result, metadata=None):
+    payload = {
+        "action": action,
+        "target_type": target_type,
+        "target_id": str(target_id) if target_id is not None else None,
+        "target_label": target_label,
+        "actor_user_id": str(current_user.id),
+        "actor_label": _actor_label(),
+        "result": result,
+        "created_at": datetime.now(timezone.utc),
+    }
+    if metadata:
+        payload["metadata"] = metadata
+    db.admin_audit_log.insert_one(payload)
+
+
 def _recent_error_logs(max_entries=120):
     root_dir = Path(__file__).resolve().parents[2]
     candidates = [
@@ -56,6 +76,34 @@ def _recent_error_logs(max_entries=120):
             entries.append({"source": rel_path, "line": text})
             if len(entries) >= max_entries:
                 return entries
+
+    return entries
+
+
+def _recent_admin_audit_logs(max_entries=20):
+    entries = list(
+        db.admin_audit_log.find(
+            {},
+            {
+                "action": 1,
+                "target_type": 1,
+                "target_id": 1,
+                "target_label": 1,
+                "actor_label": 1,
+                "result": 1,
+                "created_at": 1,
+            },
+        )
+        .sort("created_at", -1)
+        .limit(max_entries)
+    )
+
+    for entry in entries:
+        created_at = entry.get("created_at")
+        if hasattr(created_at, "astimezone"):
+            entry["created_at_display"] = created_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        else:
+            entry["created_at_display"] = "-"
 
     return entries
 
@@ -131,6 +179,7 @@ def dashboard():
 
     stats = _compute_system_stats()
     logs = _recent_error_logs(max_entries=80)
+    audit_entries = _recent_admin_audit_logs(max_entries=12)
 
     return render_template(
         "admin/dashboard.html",
@@ -142,6 +191,7 @@ def dashboard():
         total_pages=total_pages,
         stats=stats,
         logs=logs,
+        audit_entries=audit_entries,
     )
 
 
@@ -163,6 +213,7 @@ def delete_user(user_id):
 
     target_id = ObjectId(user_id)
     if str(current_user.id) == str(target_id):
+        _write_admin_audit_log("delete_user", "user", target_id, _actor_label(), "blocked_self")
         flash("You cannot delete your own account.", "warning")
         return redirect(url_for("admin.dashboard", q=search_term, page=page))
 
@@ -176,5 +227,6 @@ def delete_user(user_id):
         abort(500)
 
     display_name = target_user.get("name") or target_user.get("email") or "user"
+    _write_admin_audit_log("delete_user", "user", target_id, display_name, "deleted")
     flash(f"Deleted account for {display_name}.", "success")
     return redirect(url_for("admin.dashboard", q=search_term, page=page))

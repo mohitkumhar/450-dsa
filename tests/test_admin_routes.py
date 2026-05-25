@@ -129,6 +129,9 @@ def test_admin_cannot_delete_self(monkeypatch):
     assert response.status_code == 200
     assert test_db.user.find_one({"_id": ObjectId(str(admin_id))}) is not None
     assert "You cannot delete your own account." in response.data.decode("utf-8")
+    audit_entry = test_db.admin_audit_log.find_one({"action": "delete_user"})
+    assert audit_entry["actor_user_id"] == str(admin_id)
+    assert audit_entry["result"] == "blocked_self"
 
 
 def test_admin_can_delete_other_user(monkeypatch):
@@ -162,6 +165,10 @@ def test_admin_can_delete_other_user(monkeypatch):
     assert response.status_code == 200
     assert test_db.user.find_one({"_id": victim_id}) is None
     assert "Deleted account for Spam Bot." in response.data.decode("utf-8")
+    audit_entry = test_db.admin_audit_log.find_one({"action": "delete_user", "result": "deleted"})
+    assert audit_entry["actor_user_id"] == str(admin_id)
+    assert audit_entry["target_id"] == str(victim_id)
+    assert audit_entry["target_label"] == "Spam Bot"
 
 
 def test_admin_delete_rejects_missing_csrf(monkeypatch):
@@ -217,3 +224,39 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
+
+
+def test_admin_dashboard_shows_recent_audit_entries(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Audit Admin",
+            "email": "audit@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+
+    test_db.admin_audit_log.insert_one(
+        {
+            "action": "delete_user",
+            "target_type": "user",
+            "target_id": str(ObjectId()),
+            "target_label": "Dormant User",
+            "actor_user_id": str(admin_id),
+            "actor_label": "Audit Admin",
+            "result": "deleted",
+            "created_at": datetime(2026, 5, 26, 9, 15, tzinfo=timezone.utc),
+        }
+    )
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.get("/admin")
+
+    body = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert "Admin Audit Trail" in body
+    assert "Delete User" in body
+    assert "Audit Admin" in body
+    assert "Dormant User" in body

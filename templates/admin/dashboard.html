@@ -57,6 +57,11 @@
     gap: 16px;
 }
 
+.admin-side-panels {
+    display: grid;
+    gap: 16px;
+}
+
 .panel {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -239,6 +244,54 @@
     margin-right: 6px;
 }
 
+.audit-list {
+    display: grid;
+    gap: 12px;
+}
+
+.audit-entry {
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: var(--bg-secondary);
+}
+
+.audit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.audit-action {
+    font-weight: 700;
+}
+
+.audit-result {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #86efac;
+    font-weight: 700;
+}
+
+.audit-result.blocked-self {
+    color: #fbbf24;
+}
+
+.audit-meta {
+    margin-top: 8px;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+}
+
+.audit-timestamp {
+    margin-top: 6px;
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+}
+
 .empty-state {
     color: var(--text-secondary);
     font-size: 0.88rem;
@@ -416,6 +469,35 @@
         </div>
     </article>
 
+    <div class="admin-side-panels">
+    <article class="panel">
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">Admin Audit Trail</h2>
+                <p class="panel-subtitle">Recent destructive admin actions and outcomes.</p>
+            </div>
+        </div>
+
+        <div class="audit-list">
+            {% if audit_entries %}
+                {% for entry in audit_entries %}
+                <article class="audit-entry">
+                    <div class="audit-row">
+                        <span class="audit-action">{{ entry.action|replace('_', ' ')|title }}</span>
+                        <span class="audit-result {{ entry.result|replace('_', '-') }}">{{ entry.result|replace('_', ' ') }}</span>
+                    </div>
+                    <div class="audit-meta">
+                        {{ entry.actor_label }} → {{ entry.target_type|title }}: {{ entry.target_label or entry.target_id or '-' }}
+                    </div>
+                    <div class="audit-timestamp">{{ entry.created_at_display }}</div>
+                </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">No destructive admin actions have been recorded yet.</p>
+            {% endif %}
+        </div>
+    </article>
+
     <article class="panel">
         <div class="panel-title-row">
             <div>
@@ -434,6 +516,7 @@
             {% endif %}
         </div>
     </article>
+    </div>
 </section>
 
 <div class="modal-backdrop" id="delete-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
