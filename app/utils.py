@@ -99,12 +99,13 @@ EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", 
 
 
 def compute_total_solved(progress, external_totals, all_questions=None):
-    solved_items = {question_id: item for question_id, item in (progress or {}).items() if item.get("done")}
+    progress = progress or {}
     if all_questions is not None:
+        solved_items = {question_id: item for question_id, item in progress.items() if item.get("done")}
         platforms = compute_user_platforms(solved_items, external_totals or {}, all_questions)
         return sum(max(value, 0) for value in platforms.values())
 
-    dsa_done = len(solved_items)
+    dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
     external_total = sum(max(value, 0) for key, value in (external_totals or {}).items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
     return max(dsa_done, external_total)
 
@@ -123,14 +124,21 @@ def compute_c_score(user_doc, all_questions=None):
     gfg_total = max(ext.get("GFG", 0), 0)
     hr_total = max(ext.get("HackerRank", 0), 0)
     cn_total = max(ext.get("Coding Ninjas", 0), 0)
+    external_total = sum(max(value, 0) for key, value in ext.items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
 
     ext_daily = user_doc.get("external_daily_counts", {})
-    daily_dates = set(ext_daily.keys()) if ext_daily else set()
+    extra_progress_days = set()
     for progress_item in progress.values():
         timestamp = progress_item.get("timestamp")
-        if timestamp and progress_item.get("done"):
-            daily_dates.add(timestamp.strftime("%Y-%m-%d"))
-    active_days = len(daily_dates)
+        if not timestamp or not progress_item.get("done"):
+            continue
+        if isinstance(timestamp, str):
+            day_key = timestamp[:10]
+        else:
+            day_key = timestamp.date().isoformat()
+        if day_key not in ext_daily:
+            extra_progress_days.add(day_key)
+    active_days = len(ext_daily) + len(extra_progress_days)
 
     s_dsa = min(dsa_done / 450, 1.0) * 250
     s_lc_total = min(lc_total / 500, 1.0) * 200
@@ -142,7 +150,7 @@ def compute_c_score(user_doc, all_questions=None):
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
     c_score = min(c_score, 999)
 
-    global_total = compute_total_solved(progress, ext, all_questions)
+    global_total = compute_total_solved(progress, ext, all_questions) if all_questions is not None else max(dsa_done, external_total)
 
     return {
         "c_score": c_score,
