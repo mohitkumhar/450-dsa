@@ -32,6 +32,13 @@ profile_bp = Blueprint("profile", __name__)
 __all__ = ["CACHE_TTL", "get_public_card_image"]
 
 
+def clear_profile_card_cache(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except Exception:
+        current_app.logger.debug("Skipping profile card cache clear", exc_info=True)
+
+
 def build_sync_platforms_response(platform_status: dict):
     attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
     synced = sum(1 for value in platform_status.values() if value.get("status") == "synced")
@@ -358,7 +365,7 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
-    cache.delete(f"card_{str(current_user.id)}")
+    clear_profile_card_cache(current_user.id)
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -436,7 +443,7 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
-        cache.delete(f"card_{str(current_user.id)}")
+        clear_profile_card_cache(current_user.id)
     return json_success()
 
 
