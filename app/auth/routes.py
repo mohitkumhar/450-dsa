@@ -178,8 +178,14 @@ def register():
     return render_template("register.html")
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
+@login_required
 def logout():
+    token = request.form.get("csrf_token", "")
+    expected = session.get("csrf_token", "")
+    if not token or not expected or token != expected:
+        abort(403)
+
     logout_user()
     return redirect(url_for("auth.login"))
 
