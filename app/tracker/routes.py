@@ -1,3 +1,6 @@
+import calendar
+from datetime import datetime
+
 from bson import ObjectId
 from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
@@ -34,6 +37,64 @@ CSV_EXPORT_QUESTION_PROJECTION = {
 }
 
 
+def _parse_target_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _plan_status(target_date, completed, today):
+    if not target_date:
+        return (
+            "Unscheduled",
+            "status-unscheduled",
+            "No plan",
+            "pace-none",
+            "row-unscheduled",
+            "unscheduled",
+            "none",
+        )
+
+    if completed:
+        if today <= target_date:
+            pace_label, pace_class, pace_key = "Ahead", "pace-ahead", "ahead"
+        else:
+            pace_label, pace_class, pace_key = "Late", "pace-late", "late"
+        return (
+            "Completed",
+            "status-completed",
+            pace_label,
+            pace_class,
+            "row-completed",
+            "completed",
+            pace_key,
+        )
+
+    if today > target_date:
+        return (
+            "Overdue",
+            "status-overdue",
+            "Behind",
+            "pace-behind",
+            "row-overdue",
+            "overdue",
+            "behind",
+        )
+
+    return (
+        "Upcoming",
+        "status-upcoming",
+        "On track",
+        "pace-track",
+        "row-upcoming",
+        "upcoming",
+        "track",
+    )
+
+
 @tracker_bp.route("/")
 def index():
     topics = list(db.topic.find().sort("position", 1))
@@ -68,6 +129,103 @@ def index():
         total_questions=total_questions,
         done_questions=done_questions,
         topic_progress=topic_progress,
+    )
+
+
+@tracker_bp.route("/plan")
+@login_required
+def plan():
+    topics = list(db.topic.find().sort("position", 1))
+    all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
+    progress = current_user.progress or {}
+    target_map = current_user.topic_targets or {}
+    today = utc_now().date()
+
+    topic_question_count = {}
+    for question in all_questions:
+        topic_id = str(question["topic"])
+        topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
+
+    plan_items = []
+    for topic in topics:
+        topic_id = str(topic["_id"])
+        question_ids = topic_question_count.get(topic_id, [])
+        done_count = sum(1 for question_id in question_ids if progress.get(question_id, {}).get("done"))
+        total_count = len(question_ids)
+        percent = round((done_count / total_count * 100), 1) if total_count else 0
+        target_str = (target_map.get(topic_id) or "").strip()
+        target_date = _parse_target_date(target_str)
+        if not target_date:
+            target_str = ""
+
+        completed = bool(total_count and done_count == total_count)
+        status_label, status_class, pace_label, pace_class, row_class, status_key, pace_key = _plan_status(
+            target_date,
+            completed,
+            today,
+        )
+
+        plan_items.append(
+            {
+                "id": topic_id,
+                "name": topic.get("name", "Unknown"),
+                "done": done_count,
+                "total": total_count,
+                "percent": percent,
+                "target_date": target_str,
+                "completed": completed,
+                "status_label": status_label,
+                "status_class": status_class,
+                "pace_label": pace_label,
+                "pace_class": pace_class,
+                "row_class": row_class,
+                "status_key": status_key,
+                "pace_key": pace_key,
+            }
+        )
+
+    plan_items.sort(key=lambda item: (item["target_date"] == "", item["target_date"] or "9999-12-31", item["name"].lower()))
+
+    scheduled_count = sum(1 for item in plan_items if item["target_date"])
+    overdue_count = sum(1 for item in plan_items if item["status_key"] == "overdue")
+    completed_count = sum(1 for item in plan_items if item["status_key"] == "completed")
+    ahead_count = sum(1 for item in plan_items if item["pace_key"] == "ahead")
+    behind_count = sum(1 for item in plan_items if item["pace_key"] == "behind")
+
+    calendar_month = today.month
+    calendar_year = today.year
+    calendar_name = calendar.month_name[calendar_month]
+    calendar_weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(calendar_year, calendar_month)
+
+    calendar_events = {}
+    for item in plan_items:
+        if not item["target_date"]:
+            continue
+        target_date = _parse_target_date(item["target_date"])
+        if not target_date:
+            continue
+        if target_date.month != calendar_month or target_date.year != calendar_year:
+            continue
+        date_key = target_date.isoformat()
+        calendar_events.setdefault(date_key, []).append(item)
+
+    weekday_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    return render_template(
+        "plan.html",
+        plan_items=plan_items,
+        scheduled_count=scheduled_count,
+        overdue_count=overdue_count,
+        completed_count=completed_count,
+        ahead_count=ahead_count,
+        behind_count=behind_count,
+        calendar_weeks=calendar_weeks,
+        calendar_month=calendar_month,
+        calendar_year=calendar_year,
+        calendar_name=calendar_name,
+        calendar_events=calendar_events,
+        weekday_labels=weekday_labels,
+        today_iso=today.isoformat(),
     )
 
 
@@ -132,6 +290,45 @@ def topic(topic_id):
         skipped_count=skipped_count,
         todo_count=todo_count,
     )
+
+
+@tracker_bp.route("/plan/target/<topic_id>", methods=["POST"])
+@login_required
+def update_topic_target(topic_id):
+    try:
+        topic_doc = db.topic.find_one({"_id": ObjectId(topic_id)}, {"_id": 1})
+    except Exception:
+        return json_error("Topic not found", status_code=404)
+    if not topic_doc:
+        return json_error("Topic not found", status_code=404)
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return json_error("Request body must be a JSON object.", status_code=400)
+
+    target_value = data.get("target_date")
+    if target_value in (None, ""):
+        db.user.update_one(
+            {"_id": current_user.id},
+            {"$unset": {f"topic_targets.{topic_id}": ""}},
+        )
+        current_user.reload()
+        return json_success(target_date=None)
+
+    if not isinstance(target_value, str):
+        return json_error("target_date must be a string.", status_code=400)
+
+    target_value = target_value.strip()
+    target_date = _parse_target_date(target_value)
+    if not target_date:
+        return json_error("target_date must be in YYYY-MM-DD format.", status_code=400)
+
+    db.user.update_one(
+        {"_id": current_user.id},
+        {"$set": {f"topic_targets.{topic_id}": target_date.isoformat()}},
+    )
+    current_user.reload()
+    return json_success(target_date=target_date.isoformat())
 
 
 @tracker_bp.route("/topic/<topic_id>/export-notes")

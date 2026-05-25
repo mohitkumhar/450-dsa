@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.plan-header {
+    margin-bottom: 20px;
+}
+
+.plan-header h1 {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.plan-header p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.plan-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.plan-summary-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.plan-summary-label {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.plan-summary-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.plan-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.plan-toggle .ui-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.plan-view {
+    display: block;
+}
+
+.plan-view.is-hidden {
+    display: none;
+}
+
+.plan-table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow-x: auto;
+}
+
+.plan-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 680px;
+}
+
+.plan-table thead th {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.plan-table tbody tr {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.2s ease;
+}
+
+.plan-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.plan-table tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+    font-size: 0.86rem;
+}
+
+.plan-row.row-overdue {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.plan-row.row-completed {
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.plan-topic-link {
+    color: var(--text-primary);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.plan-topic-link:hover {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.plan-topic-meta {
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.plan-progress {
+    margin-top: 8px;
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.plan-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+}
+
+.plan-date-cell {
+    min-width: 200px;
+}
+
+.plan-date-input {
+    width: 150px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.82rem;
+}
+
+.plan-date-input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.plan-clear-btn {
+    margin-left: 6px;
+}
+
+.plan-save-state {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    min-height: 16px;
+}
+
+.plan-save-state.is-error {
+    color: var(--danger);
+}
+
+.plan-status-badge,
+.plan-pace-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.status-overdue { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.35); }
+.status-completed { background: rgba(34, 197, 94, 0.15); color: var(--success); border-color: rgba(34, 197, 94, 0.35); }
+.status-upcoming { background: rgba(59, 130, 246, 0.15); color: var(--info); border-color: rgba(59, 130, 246, 0.35); }
+.status-unscheduled { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-color); }
+
+.pace-behind { background: rgba(239, 68, 68, 0.12); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+.pace-ahead { background: rgba(34, 197, 94, 0.12); color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
+.pace-track { background: rgba(59, 130, 246, 0.12); color: var(--info); border-color: rgba(59, 130, 246, 0.3); }
+.pace-late { background: rgba(245, 158, 11, 0.12); color: var(--warning); border-color: rgba(245, 158, 11, 0.35); }
+.pace-none { background: var(--bg-secondary); color: var(--text-secondary); border-color: var(--border-color); }
+
+.plan-calendar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+}
+
+.plan-calendar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.plan-calendar-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.plan-calendar-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.plan-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.plan-calendar-weekday {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    text-align: center;
+    padding-bottom: 6px;
+}
+
+.plan-calendar-day {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px;
+    min-height: 100px;
+    background: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.plan-calendar-day.is-outside {
+    opacity: 0.4;
+}
+
+.plan-calendar-date {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.plan-calendar-events {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.plan-calendar-event {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plan-calendar-event.status-overdue { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+.plan-calendar-event.status-completed { background: rgba(34, 197, 94, 0.15); color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
+.plan-calendar-event.status-upcoming { background: rgba(59, 130, 246, 0.15); color: var(--info); border-color: rgba(59, 130, 246, 0.3); }
+
+@media (max-width: 840px) {
+    .plan-table { min-width: 520px; }
+    .plan-date-input { width: 130px; }
+}
+
+@media (max-width: 640px) {
+    .plan-calendar-grid { gap: 6px; }
+    .plan-calendar-day { min-height: 86px; }
+}
+</style>
+
+<div class="plan-header">
+    <h1>Topic Planner</h1>
+    <p>Assign target dates to topics and track whether you are ahead or behind plan.</p>
+</div>
+
+<div class="plan-summary-grid" role="region" aria-label="Plan summary">
+    <div class="plan-summary-card">
+        <div class="plan-summary-label">Scheduled</div>
+        <div class="plan-summary-value" data-summary="scheduled">{{ scheduled_count }}</div>
+    </div>
+    <div class="plan-summary-card">
+        <div class="plan-summary-label">Overdue</div>
+        <div class="plan-summary-value" data-summary="overdue">{{ overdue_count }}</div>
+    </div>
+    <div class="plan-summary-card">
+        <div class="plan-summary-label">Completed</div>
+        <div class="plan-summary-value" data-summary="completed">{{ completed_count }}</div>
+    </div>
+    <div class="plan-summary-card">
+        <div class="plan-summary-label">Ahead</div>
+        <div class="plan-summary-value" data-summary="ahead">{{ ahead_count }}</div>
+    </div>
+    <div class="plan-summary-card">
+        <div class="plan-summary-label">Behind</div>
+        <div class="plan-summary-value" data-summary="behind">{{ behind_count }}</div>
+    </div>
+</div>
+
+<div class="plan-toggle" role="tablist" aria-label="Planner views">
+    <button type="button" class="ui-btn ui-btn-secondary ui-btn-pill active" data-plan-view="list" role="tab" aria-selected="true">List view</button>
+    <button type="button" class="ui-btn ui-btn-secondary ui-btn-pill" data-plan-view="calendar" role="tab" aria-selected="false">Calendar view</button>
+</div>
+
+<div id="plan-list-view" class="plan-view" role="tabpanel" aria-label="Topic list view">
+    <div class="plan-table-wrap">
+        <table class="plan-table">
+            <thead>
+                <tr>
+                    <th scope="col">Topic</th>
+                    <th scope="col">Target date</th>
+                    <th scope="col">Milestone</th>
+                    <th scope="col">Pace</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in plan_items %}
+                <tr class="plan-row {{ item.row_class }}" data-topic-id="{{ item.id }}" data-target-date="{{ item.target_date }}" data-completed="{{ 'true' if item.completed else 'false' }}">
+                    <td>
+                        <a href="{{ url_for('tracker.topic', topic_id=item.id) }}" class="plan-topic-link">{{ item.name }}</a>
+                        <div class="plan-topic-meta">{{ item.done }} of {{ item.total }} completed</div>
+                        <div class="plan-progress" aria-label="Progress for {{ item.name }}">
+                            <div class="plan-progress-fill" style="width: {{ item.percent }}%;" aria-valuenow="{{ item.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </td>
+                    <td class="plan-date-cell">
+                        <input type="date" class="plan-date-input" value="{{ item.target_date }}" data-topic-id="{{ item.id }}" aria-label="Target date for {{ item.name }}">
+                        <button type="button" class="ui-btn ui-btn-secondary ui-btn-pill plan-clear-btn" data-topic-id="{{ item.id }}">Clear</button>
+                        <div class="plan-save-state" data-role="save-state" aria-live="polite"></div>
+                    </td>
+                    <td>
+                        <span class="plan-status-badge {{ item.status_class }}" data-role="status">{{ item.status_label }}</span>
+                    </td>
+                    <td>
+                        <span class="plan-pace-badge {{ item.pace_class }}" data-role="pace">{{ item.pace_label }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="plan-calendar-view" class="plan-view is-hidden" role="tabpanel" aria-label="Calendar view">
+    <div class="plan-calendar">
+        <div class="plan-calendar-head">
+            <div class="plan-calendar-title">{{ calendar_name }} {{ calendar_year }}</div>
+            <div class="plan-calendar-legend" aria-hidden="true">
+                <span class="plan-status-badge status-overdue">Overdue</span>
+                <span class="plan-status-badge status-completed">Completed</span>
+                <span class="plan-status-badge status-upcoming">Upcoming</span>
+            </div>
+        </div>
+        <div class="plan-calendar-grid" role="grid" aria-label="{{ calendar_name }} {{ calendar_year }} calendar">
+            {% for day_name in weekday_labels %}
+            <div class="plan-calendar-weekday" role="columnheader">{{ day_name }}</div>
+            {% endfor %}
+            {% for week in calendar_weeks %}
+                {% for day in week %}
+                <div class="plan-calendar-day {% if day.month != calendar_month %}is-outside{% endif %}" role="gridcell" aria-label="{{ day.isoformat() }}">
+                    <div class="plan-calendar-date">{{ day.day }}</div>
+                    <div class="plan-calendar-events" data-date="{{ day.isoformat() }}">
+                        {% for event in calendar_events.get(day.isoformat(), []) %}
+                        <div class="plan-calendar-event {{ event.status_class }}" data-topic-id="{{ event.id }}" title="{{ event.name }}">{{ event.name }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const endpointConfig = {{ {
+    "updateTargetBase": url_for('tracker.update_topic_target', topic_id='__TOPIC_ID__'),
+}|tojson }};
+const todayIso = "{{ today_iso }}";
+
+const viewButtons = document.querySelectorAll('[data-plan-view]');
+const listView = document.getElementById('plan-list-view');
+const calendarView = document.getElementById('plan-calendar-view');
+
+function parseIsoDate(value) {
+    if (!value) {
+        return null;
+    }
+    const parts = value.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(Number.isNaN)) {
+        return null;
+    }
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+const todayParts = todayIso.split('-').map(Number);
+const todayDate = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+
+function computeStatus(targetDateValue, completed) {
+    const targetDate = parseIsoDate(targetDateValue);
+    if (!targetDate) {
+        return {
+            statusLabel: 'Unscheduled',
+            statusClass: 'status-unscheduled',
+            paceLabel: 'No plan',
+            paceClass: 'pace-none',
+            rowClass: 'row-unscheduled',
+            statusKey: 'unscheduled',
+            paceKey: 'none',
+        };
+    }
+
+    if (completed) {
+        if (todayDate <= targetDate) {
+            return {
+                statusLabel: 'Completed',
+                statusClass: 'status-completed',
+                paceLabel: 'Ahead',
+                paceClass: 'pace-ahead',
+                rowClass: 'row-completed',
+                statusKey: 'completed',
+                paceKey: 'ahead',
+            };
+        }
+        return {
+            statusLabel: 'Completed',
+            statusClass: 'status-completed',
+            paceLabel: 'Late',
+            paceClass: 'pace-late',
+            rowClass: 'row-completed',
+            statusKey: 'completed',
+            paceKey: 'late',
+        };
+    }
+
+    if (todayDate > targetDate) {
+        return {
+            statusLabel: 'Overdue',
+            statusClass: 'status-overdue',
+            paceLabel: 'Behind',
+            paceClass: 'pace-behind',
+            rowClass: 'row-overdue',
+            statusKey: 'overdue',
+            paceKey: 'behind',
+        };
+    }
+
+    return {
+        statusLabel: 'Upcoming',
+        statusClass: 'status-upcoming',
+        paceLabel: 'On track',
+        paceClass: 'pace-track',
+        rowClass: 'row-upcoming',
+        statusKey: 'upcoming',
+        paceKey: 'track',
+    };
+}
+
+function applyRowState(row) {
+    const completed = row.dataset.completed === 'true';
+    const targetDate = row.dataset.targetDate || '';
+    const status = computeStatus(targetDate, completed);
+
+    row.classList.remove('row-overdue', 'row-completed', 'row-upcoming', 'row-unscheduled');
+    row.classList.add(status.rowClass);
+
+    const statusBadge = row.querySelector('[data-role="status"]');
+    const paceBadge = row.querySelector('[data-role="pace"]');
+
+    if (statusBadge) {
+        statusBadge.textContent = status.statusLabel;
+        statusBadge.className = `plan-status-badge ${status.statusClass}`;
+    }
+
+    if (paceBadge) {
+        paceBadge.textContent = status.paceLabel;
+        paceBadge.className = `plan-pace-badge ${status.paceClass}`;
+    }
+
+    row.dataset.status = status.statusKey;
+    row.dataset.pace = status.paceKey;
+    return status;
+}
+
+function updateSummary() {
+    let scheduled = 0;
+    let overdue = 0;
+    let completed = 0;
+    let ahead = 0;
+    let behind = 0;
+
+    document.querySelectorAll('.plan-row').forEach((row) => {
+        if (row.dataset.targetDate) {
+            scheduled += 1;
+        }
+        if (row.dataset.status === 'overdue') {
+            overdue += 1;
+        }
+        if (row.dataset.status === 'completed') {
+            completed += 1;
+        }
+        if (row.dataset.pace === 'ahead') {
+            ahead += 1;
+        }
+        if (row.dataset.pace === 'behind') {
+            behind += 1;
+        }
+    });
+
+    const counters = {
+        scheduled,
+        overdue,
+        completed,
+        ahead,
+        behind,
+    };
+
+    Object.keys(counters).forEach((key) => {
+        const el = document.querySelector(`[data-summary="${key}"]`);
+        if (el) {
+            el.textContent = counters[key];
+        }
+    });
+}
+
+function updateCalendar(row, status) {
+    const topicId = row.dataset.topicId;
+    const targetDate = row.dataset.targetDate;
+
+    document.querySelectorAll(`.plan-calendar-event[data-topic-id="${topicId}"]`).forEach((event) => {
+        event.remove();
+    });
+
+    if (!targetDate) {
+        return;
+    }
+
+    const container = document.querySelector(`.plan-calendar-events[data-date="${targetDate}"]`);
+    if (!container) {
+        return;
+    }
+
+    const nameEl = row.querySelector('.plan-topic-link');
+    const label = nameEl ? nameEl.textContent.trim() : 'Topic';
+    const event = document.createElement('div');
+    event.className = `plan-calendar-event ${status.statusClass}`;
+    event.dataset.topicId = topicId;
+    event.title = label;
+    event.textContent = label;
+    container.appendChild(event);
+}
+
+function setSaveState(row, message, isError) {
+    const stateEl = row.querySelector('[data-role="save-state"]');
+    if (!stateEl) {
+        return;
+    }
+    stateEl.textContent = message || '';
+    stateEl.classList.toggle('is-error', Boolean(isError));
+}
+
+async function saveTargetDate(row, value) {
+    const topicId = row.dataset.topicId;
+    const input = row.querySelector('.plan-date-input');
+    const clearBtn = row.querySelector('.plan-clear-btn');
+    const previousDate = row.dataset.targetDate || '';
+
+    setSaveState(row, 'Saving...', false);
+    if (input) input.disabled = true;
+    if (clearBtn) clearBtn.disabled = true;
+
+    try {
+        const response = await fetch(
+            endpointConfig.updateTargetBase.replace('__TOPIC_ID__', encodeURIComponent(topicId)),
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_date: value }),
+            }
+        );
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+            throw new Error(payload.error || 'Update failed');
+        }
+
+        row.dataset.targetDate = payload.target_date || '';
+        if (input && !payload.target_date) {
+            input.value = '';
+        }
+        const status = applyRowState(row);
+        updateCalendar(row, status);
+        updateSummary();
+        setSaveState(row, 'Saved', false);
+        if (typeof window.showToast === 'function') {
+            window.showToast('Target date saved.', 'success');
+        }
+    } catch (error) {
+        if (input) input.value = previousDate;
+        row.dataset.targetDate = previousDate;
+        applyRowState(row);
+        setSaveState(row, 'Save failed', true);
+        if (typeof window.showToast === 'function') {
+            window.showToast('Unable to save target date.', 'error');
+        }
+    } finally {
+        if (input) input.disabled = false;
+        if (clearBtn) clearBtn.disabled = false;
+    }
+}
+
+function setPlanView(view) {
+    const isCalendar = view === 'calendar';
+    listView.classList.toggle('is-hidden', isCalendar);
+    calendarView.classList.toggle('is-hidden', !isCalendar);
+
+    viewButtons.forEach((button) => {
+        const isActive = button.dataset.planView === view;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    localStorage.setItem('plan_view', view);
+}
+
+viewButtons.forEach((button) => {
+    button.addEventListener('click', () => setPlanView(button.dataset.planView));
+});
+
+const savedView = localStorage.getItem('plan_view');
+if (savedView === 'calendar' || savedView === 'list') {
+    setPlanView(savedView);
+}
+
+const rows = document.querySelectorAll('.plan-row');
+rows.forEach((row) => applyRowState(row));
+updateSummary();
+
+rows.forEach((row) => {
+    const input = row.querySelector('.plan-date-input');
+    const clearBtn = row.querySelector('.plan-clear-btn');
+
+    if (input) {
+        input.addEventListener('change', () => {
+            saveTargetDate(row, input.value);
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (input) {
+                input.value = '';
+            }
+            saveTargetDate(row, '');
+        });
+    }
+});
+</script>
+{% endblock %}
