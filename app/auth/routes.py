@@ -124,10 +124,10 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
+        email = (request.form.get("email") or "").strip()
+        password = request.form.get("password") or ""
         user_doc = db.user.find_one({"email": email})
-        if user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
+        if email and password and user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
             login_user(UserWrapper(user_doc))
             flash(f"Welcome back, {user_doc.get('name', 'User')}! 👋", "success")
             return redirect(url_for("tracker.index"))
