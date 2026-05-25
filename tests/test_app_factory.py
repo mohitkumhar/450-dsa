@@ -126,7 +126,7 @@ def test_create_app_caches_faq_page_render(monkeypatch):
     rendered_templates = []
 
     monkeypatch.setattr(app_module, "db", FakeDB())
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
     monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
     monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
