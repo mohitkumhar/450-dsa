@@ -348,7 +348,10 @@ def create_app(config_class=None):
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        retry_after = getattr(e, 'retry_after', 60)
+        retry_after = getattr(e, 'retry_after', None)
+        if retry_after in (None, "", "None"):
+            retry_after = 60
+        from flask import jsonify
         response = jsonify({
             'error': 'Too many requests',
             'message': str(e.description),
