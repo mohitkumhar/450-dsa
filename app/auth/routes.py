@@ -212,6 +212,47 @@ def delete_account():
     return redirect(url_for("auth.login"))
 
 
+@auth_bp.route("/change_password", methods=["POST"])
+@login_required
+def change_password():
+    token = request.form.get("csrf_token", "")
+    expected = session.get("csrf_token")
+    if not token or not expected or token != expected:
+        abort(403)
+
+    user_doc = db.user.find_one({"_id": current_user.id})
+    if not user_doc:
+        logout_user()
+        return redirect(url_for("auth.login"))
+
+    if not user_doc.get("password"):
+        flash("Password changes are only available for password-based accounts.", "warning")
+        return redirect(url_for("profile.profile"))
+
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    if not current_password or not bcrypt.check_password_hash(user_doc["password"], current_password):
+        flash("Current password is incorrect.", "danger")
+        return redirect(url_for("profile.profile"))
+
+    password_errors = validate_registration_password(new_password, confirm_password)
+    if password_errors:
+        flash(" ".join(password_errors), "danger")
+        return redirect(url_for("profile.profile"))
+
+    if bcrypt.check_password_hash(user_doc["password"], new_password):
+        flash("New password must be different from your current password.", "danger")
+        return redirect(url_for("profile.profile"))
+
+    hashed_password = bcrypt.generate_password_hash(new_password).decode("utf-8")
+    db.user.update_one({"_id": current_user.id}, {"$set": {"password": hashed_password}})
+    current_user.reload()
+    flash("Password updated successfully.", "success")
+    return redirect(url_for("profile.profile"))
+
+
 @auth_bp.route("/delete_account/token", methods=["GET"])
 @login_required
 def delete_account_token():
