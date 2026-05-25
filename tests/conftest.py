@@ -32,6 +32,7 @@ def pytest_collection_modifyitems(config, items):
 
 def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
     test_db = mongomock.MongoClient().db
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     for target in (app_module, auth_routes, *extra_db_targets):
         monkeypatch.setattr(target, "db", test_db)
@@ -40,7 +41,7 @@ def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
         for client_name, client in oauth_clients.items():
             monkeypatch.setattr(auth_routes, client_name, client)
 
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
 
     flask_app = app_module.create_app()

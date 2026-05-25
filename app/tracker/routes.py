@@ -10,6 +10,29 @@ from progress_export import build_progress_csv
 
 tracker_bp = Blueprint("tracker", __name__)
 
+INDEX_QUESTION_PROJECTION = {"topic": 1}
+TOPIC_PAGE_QUESTION_PROJECTION = {
+    "problem": 1,
+    "difficulty": 1,
+    "url": 1,
+    "url2": 1,
+}
+TOPIC_NOTES_EXPORT_PROJECTION = {"problem": 1}
+QUESTION_STATUS_PROJECTION = {"problem": 1}
+BOOKMARKS_QUESTION_PROJECTION = {
+    "topic": 1,
+    "problem": 1,
+    "url": 1,
+    "url2": 1,
+}
+CSV_EXPORT_QUESTION_PROJECTION = {
+    "topic": 1,
+    "problem": 1,
+    "difficulty": 1,
+    "url": 1,
+    "url2": 1,
+}
+
 
 @tracker_bp.route("/")
 def index():
@@ -23,7 +46,7 @@ def index():
         progress = {}
         done_questions = 0
 
-    all_questions = list(db.question.find())
+    all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
     topic_question_count = {}
     for question in all_questions:
         topic_id = str(question["topic"])
@@ -57,21 +80,41 @@ def topic(topic_id):
     if not topic_doc:
         return "Topic not found", 404
 
-    questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    questions = list(db.question.find({"topic": topic_doc["_id"]}, TOPIC_PAGE_QUESTION_PROJECTION))
+    progress_dict = current_user.progress if current_user.is_authenticated else {}
     
     # Calculate counts based on the unfiltered list of questions
     total_count = len(questions)
     easy_count = sum(1 for q in questions if q.get('difficulty', 'Medium') == 'Easy')
     medium_count = sum(1 for q in questions if q.get('difficulty', 'Medium') == 'Medium')
     hard_count = sum(1 for q in questions if q.get('difficulty', 'Medium') == 'Hard')
+    done_count = sum(1 for q in questions if progress_dict.get(str(q["_id"]), {}).get("done"))
+    skipped_count = sum(1 for q in questions if progress_dict.get(str(q["_id"]), {}).get("skipped"))
+    todo_count = total_count - done_count - skipped_count
     
     # Get difficulty filter from query parameter
     difficulty_filter = request.args.get('difficulty', 'all')
+    status_filter = request.args.get('status', 'all')
     
     if difficulty_filter != 'all':
         questions = [q for q in questions if q.get('difficulty', 'Medium') == difficulty_filter]
-    
-    progress_dict = current_user.progress if current_user.is_authenticated else {}
+
+    if status_filter == 'done':
+        questions = [q for q in questions if progress_dict.get(str(q["_id"]), {}).get("done")]
+    elif status_filter == 'skipped':
+        questions = [q for q in questions if progress_dict.get(str(q["_id"]), {}).get("skipped")]
+    elif status_filter == 'todo':
+        questions = [
+            q for q in questions
+            if not progress_dict.get(str(q["_id"]), {}).get("done")
+            and not progress_dict.get(str(q["_id"]), {}).get("skipped")
+        ]
+
+    active_filters = []
+    if difficulty_filter != 'all':
+        active_filters.append(f"{difficulty_filter} difficulty")
+    if status_filter != 'all':
+        active_filters.append(f"{status_filter.capitalize()} status")
     
     return render_template(
         "topic.html", 
@@ -79,10 +122,15 @@ def topic(topic_id):
         questions=questions, 
         progress_dict=progress_dict,
         difficulty_filter=difficulty_filter,
+        status_filter=status_filter,
+        active_filters=", ".join(active_filters),
         total_count=total_count,
         easy_count=easy_count,
         medium_count=medium_count,
-        hard_count=hard_count
+        hard_count=hard_count,
+        done_count=done_count,
+        skipped_count=skipped_count,
+        todo_count=todo_count,
     )
 
 
@@ -96,7 +144,7 @@ def export_topic_notes(topic_id):
     if not topic_doc:
         return "Topic not found", 404
 
-    questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    questions = list(db.question.find({"topic": topic_doc["_id"]}, TOPIC_NOTES_EXPORT_PROJECTION))
     markdown = build_topic_notes_markdown(topic_doc["name"], questions, current_user.progress)
     response = Response(markdown, mimetype="text/markdown")
     response.headers["Content-Disposition"] = f'attachment; filename={topic_notes_filename(topic_doc["name"])}'
@@ -128,6 +176,9 @@ def update_question(question_id):
             bookmark:
               type: boolean
               description: Whether the question is bookmarked.
+            skipped:
+              type: boolean
+              description: Whether the question is postponed for later review.
             notes:
               type: string
               description: User notes for the question.
@@ -159,7 +210,7 @@ def update_question(question_id):
               example: Question not found
     """
     try:
-        question = db.question.find_one({"_id": ObjectId(question_id)})
+        question = db.question.find_one({"_id": ObjectId(question_id)}, QUESTION_STATUS_PROJECTION)
     except Exception:
         return json_error("Question not found", status_code=404)
     if not question:
@@ -169,7 +220,7 @@ def update_question(question_id):
     if not isinstance(data, dict):
         return jsonify({"success": False, "error": "Request body must be a JSON object"}), 400
 
-    for field in ("done", "bookmark"):
+    for field in ("done", "bookmark", "skipped"):
         if field in data and not isinstance(data[field], bool):
             return jsonify({"success": False, "error": f"{field} must be a boolean"}), 400
 
@@ -183,9 +234,18 @@ def update_question(question_id):
         if data["done"] and not existing.get("done"):
             update_fields[f"progress.{question_id}.timestamp"] = utc_now()
             message = f"✅ Marked '{question.get('problem', 'Question')}' as complete!"
+            update_fields[f"progress.{question_id}.skipped"] = False
         elif not data["done"] and existing.get("done"):
             message = f"📝 Marked '{question.get('problem', 'Question')}' as incomplete"
         update_fields[f"progress.{question_id}.done"] = data["done"]
+
+    if "skipped" in data:
+        if data["skipped"] and not existing.get("skipped"):
+            message = f"⏭️ Marked '{question.get('problem', 'Question')}' as skipped for now"
+            update_fields[f"progress.{question_id}.done"] = False
+        elif not data["skipped"] and existing.get("skipped"):
+            message = f"↩️ Removed skipped status for '{question.get('problem', 'Question')}'"
+        update_fields[f"progress.{question_id}.skipped"] = data["skipped"]
     
     if "bookmark" in data:
         if data["bookmark"] and not existing.get("bookmark"):
@@ -218,7 +278,7 @@ def bookmarks():
             object_ids.append(ObjectId(question_id))
         except Exception:
             pass
-    questions = list(db.question.find({"_id": {"$in": object_ids}}))
+    questions = list(db.question.find({"_id": {"$in": object_ids}}, BOOKMARKS_QUESTION_PROJECTION))
 
     topic_ids = list(set(question["topic"] for question in questions))
     topic_docs = {topic["_id"]: topic["name"] for topic in db.topic.find({"_id": {"$in": topic_ids}})}
@@ -231,7 +291,7 @@ def bookmarks():
 @tracker_bp.route("/export/csv")
 @login_required
 def export_csv():
-    questions = list(db.question.find())
+    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
     topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
     topic_lookup = {
         topic['_id']: topic.get('name', 'Unknown')
