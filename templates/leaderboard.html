@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-/* ── Leaderboard Page ── */
+/* Leaderboard Page */
 .lb-header { margin-bottom: 24px; }
 .lb-header h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
 .lb-header p { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
@@ -229,7 +229,7 @@
 
 <div class="lb-header">
   <h1><i class="bi bi-trophy-fill" style="color:var(--accent)" aria-hidden="true"></i> Leaderboard</h1>
-  <p>Compete with fellow coders — ranked across LeetCode, GFG, Coding Ninjas, HackerRank, and DSA progress</p>
+  <p>Compete with fellow coders - ranked across LeetCode, GFG, Coding Ninjas, HackerRank, and DSA progress</p>
 </div>
 
 <!-- Tab Switcher -->
@@ -268,9 +268,9 @@
 
 <!-- Pagination -->
 <div class="pagination" id="pagination" aria-label="Leaderboard pagination">
-  <button class="pagination-btn" id="prevBtn" disabled aria-label="Previous page">← Previous</button>
+  <button class="pagination-btn" id="prevBtn" disabled aria-label="Previous page">Previous</button>
   <span class="page-info" id="pageInfo" aria-live="polite">Page 1</span>
-  <button class="pagination-btn" id="nextBtn" aria-label="Next page">Next →</button>
+  <button class="pagination-btn" id="nextBtn" aria-label="Next page">Next</button>
 </div>
 
 {% endblock %}
@@ -392,7 +392,7 @@ function renderTable(entries, mode) {
     const rank = e.rank;
     const isMe = e.user_id === CURRENT_USER_ID;
     const rankClass = rank === 1 ? 'top-1' : rank === 2 ? 'top-2' : rank === 3 ? 'top-3' : '';
-    const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+    const rankIcon = `#${rank}`;
     
     let score = 0;
     if (mode === 'cscore') score = e.c_score;
@@ -408,8 +408,8 @@ function renderTable(entries, mode) {
       : `<a href="${profileURL}" aria-label="View profile of ${escapeHTML(e.name)}">${escapeHTML(e.name)}</a>${isMe ? '<span class="me-tag" aria-label="This is you">YOU</span>' : ''}`;
     
     const subtitleHTML = isCollegeMode
-      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} · Top: ${escapeHTML(e.top_user?.name || 'N/A')}`
-      : (escapeHTML(e.college) || '—');
+      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} | Top: ${escapeHTML(e.top_user?.name || 'N/A')}`
+      : (escapeHTML(e.college) || 'N/A');
     
     const dsaHTML = `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
     
@@ -445,7 +445,7 @@ function renderTable(entries, mode) {
       <td colspan="5" style="text-align: center; padding: 12px;">
         <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
         You are ranked #${escapeHTML(currentUserRank)} in this category. 
-        <a href="?page=${targetPage}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
+        <a href="?page=${targetPage}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank</a>
       </td>
     </tr>`;
   }
