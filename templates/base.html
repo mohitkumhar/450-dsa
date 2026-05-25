@@ -954,9 +954,9 @@
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <span class="tooltip-label">Search</span>
             </a>
-            <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
-                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Stats</span>
+            <a href="{{ url_for('tracker.plan') }}" class="sidebar-link {% if request.endpoint == 'tracker.plan' %}active{% endif %}" id="nav-plan" aria-label="Planner">
+                <i class="bi bi-calendar2-week-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Planner</span>
             </a>
             <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
                 <i class="bi bi-trophy-fill" aria-hidden="true"></i>
