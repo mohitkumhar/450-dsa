@@ -8,14 +8,17 @@ def env_flag(name, default=False):
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def env_int(name, default):
+def env_int(name, default, minimum=None):
     value = os.environ.get(name)
     if value is None:
         return default
     try:
-        return int(value.strip())
+        parsed = int(value.strip())
     except (TypeError, ValueError):
         return default
+    if minimum is not None and parsed < minimum:
+        return minimum
+    return parsed
 
 
 def current_environment_name():
@@ -33,8 +36,10 @@ class BaseConfig:
     MONGO_URI = "mongodb://localhost:27017/450_dsa"
     MONGO_SERVER_SELECTION_TIMEOUT_MS = 5000
     MONGO_CONNECT_TIMEOUT_MS = 5000
+    MONGO_SOCKET_TIMEOUT_MS = 10000
     MONGO_MAX_POOL_SIZE = 20
     MONGO_MIN_POOL_SIZE = 0
+    MONGO_WAIT_QUEUE_TIMEOUT_MS = 5000
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
     SESSION_COOKIE_HTTPONLY = True
@@ -74,18 +79,32 @@ class BaseConfig:
         app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] = env_int(
             "MONGO_SERVER_SELECTION_TIMEOUT_MS",
             cls.MONGO_SERVER_SELECTION_TIMEOUT_MS,
+            minimum=1,
         )
         app.config["MONGO_CONNECT_TIMEOUT_MS"] = env_int(
             "MONGO_CONNECT_TIMEOUT_MS",
             cls.MONGO_CONNECT_TIMEOUT_MS,
+            minimum=1,
+        )
+        app.config["MONGO_SOCKET_TIMEOUT_MS"] = env_int(
+            "MONGO_SOCKET_TIMEOUT_MS",
+            cls.MONGO_SOCKET_TIMEOUT_MS,
+            minimum=1,
         )
         app.config["MONGO_MAX_POOL_SIZE"] = env_int(
             "MONGO_MAX_POOL_SIZE",
             cls.MONGO_MAX_POOL_SIZE,
+            minimum=1,
         )
         app.config["MONGO_MIN_POOL_SIZE"] = env_int(
             "MONGO_MIN_POOL_SIZE",
             cls.MONGO_MIN_POOL_SIZE,
+            minimum=0,
+        )
+        app.config["MONGO_WAIT_QUEUE_TIMEOUT_MS"] = env_int(
+            "MONGO_WAIT_QUEUE_TIMEOUT_MS",
+            cls.MONGO_WAIT_QUEUE_TIMEOUT_MS,
+            minimum=1,
         )
         app.config["SESSION_COOKIE_SAMESITE"] = os.environ.get(
             "SESSION_COOKIE_SAMESITE",
