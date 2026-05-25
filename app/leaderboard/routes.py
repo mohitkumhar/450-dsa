@@ -3,8 +3,7 @@ from flask_login import current_user
 
 from app.extensions import limiter, cache
 from app.leaderboard.service import (
-    build_college_leaderboard_data,
-    build_leaderboard_data,
+    get_leaderboard_snapshot,
 )
 
 
@@ -15,31 +14,28 @@ leaderboard_bp = Blueprint("leaderboard", __name__)
 @limiter.limit("20 per minute")
 @cache.cached(timeout=300)
 def leaderboard():
-    entries = build_leaderboard_data()
+    by_cscore = get_leaderboard_snapshot("cscore")
+    by_questions = get_leaderboard_snapshot("questions")
+    by_rating = get_leaderboard_snapshot("rating")
+    by_college = get_leaderboard_snapshot("college")
 
-    by_cscore = sorted(entries, key=lambda item: item["c_score"], reverse=True)
-    by_questions = sorted(entries, key=lambda item: item["total_solved"], reverse=True)
-    by_rating = sorted(entries, key=lambda item: item["lc_rating"], reverse=True)
-    by_college = build_college_leaderboard_data(entries)
-
-    def assign_ranks(sorted_list, key):
-        for index, entry in enumerate(sorted_list):
-            entry[f"rank_{key}"] = index + 1
-        return sorted_list
-
-    assign_ranks(by_cscore, "cscore")
-    assign_ranks(by_questions, "questions")
-    assign_ranks(by_rating, "rating")
-    assign_ranks(by_college, "college")
+    for entry in by_cscore:
+        entry["rank_cscore"] = entry["rank"]
+    for entry in by_questions:
+        entry["rank_questions"] = entry["rank"]
+    for entry in by_rating:
+        entry["rank_rating"] = entry["rank"]
+    for entry in by_college:
+        entry["rank_college"] = entry["rank"]
 
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
     
     # Find current user's rank in each category
     current_user_rank = None
     if current_user_id:
-        for i, entry in enumerate(by_cscore):
+        for entry in by_cscore:
             if entry.get("user_id") == current_user_id:
-                current_user_rank = i + 1
+                current_user_rank = entry["rank"]
                 break
     
     return render_template(
@@ -138,20 +134,7 @@ def api_leaderboard():
     page = int(request.args.get("page", 1))
     per_page = min(int(request.args.get("per_page", 20)), 100)
     
-    entries = build_leaderboard_data()
-
-    if mode == "questions":
-        entries.sort(key=lambda item: item["total_solved"], reverse=True)
-    elif mode == "rating":
-        entries.sort(key=lambda item: item["lc_rating"], reverse=True)
-    elif mode == "college":
-        entries = build_college_leaderboard_data(entries)
-    else:
-        entries.sort(key=lambda item: item["c_score"], reverse=True)
-
-    # Assign ranks
-    for index, entry in enumerate(entries):
-        entry["rank"] = index + 1
+    entries = get_leaderboard_snapshot(mode)
 
     # Pagination
     total = len(entries)

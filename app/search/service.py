@@ -1,7 +1,11 @@
 import re
 from urllib.parse import quote_plus
 
-from app.extensions import db
+from app.extensions import cache, db
+
+
+SEARCH_QUERY_CACHE_TTL = 120
+SEARCH_QUERY_CACHE_VERSION_KEY = "search:questions:version"
 
 
 PLATFORM_SEARCHES = {
@@ -84,6 +88,24 @@ def question_links(question):
     return links
 
 
+def _normalize_search_cache_query(query):
+    return " ".join(tokenize_search_text(query))
+
+
+def _search_cache_version():
+    return cache.get(SEARCH_QUERY_CACHE_VERSION_KEY) or 1
+
+
+def _search_cache_key(query, requested_platforms, limit):
+    normalized_query = _normalize_search_cache_query(query)
+    normalized_platforms = ",".join(sorted(requested_platforms or ()))
+    return f"search:questions:{_search_cache_version()}:{limit}:{normalized_platforms}:{normalized_query}"
+
+
+def invalidate_search_question_cache():
+    cache.set(SEARCH_QUERY_CACHE_VERSION_KEY, _search_cache_version() + 1, timeout=0)
+
+
 def search_dsa_questions(raw_query, limit=40, db_handle=None):
     db_handle = db_handle or db
     query, requested_platforms = parse_search_query(raw_query)
@@ -94,6 +116,16 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
             "requested_platforms": requested_platforms,
             "results": [],
             "external_searches": [],
+        }
+
+    cache_key = _search_cache_key(query, requested_platforms, limit)
+    cached_results = cache.get(cache_key)
+    if cached_results is not None:
+        return {
+            "query": query,
+            "requested_platforms": requested_platforms,
+            "results": cached_results,
+            "external_searches": build_external_searches(query, requested_platforms),
         }
 
     cursor = (
@@ -144,6 +176,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
             }
         )
 
+    cache.set(cache_key, results, timeout=SEARCH_QUERY_CACHE_TTL)
     return {
         "query": query,
         "requested_platforms": requested_platforms,

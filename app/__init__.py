@@ -17,6 +17,7 @@ from app.web.routes import public_bp
 from app.profile import profile_bp
 from app.security import build_content_security_policy
 from app.search import search_bp
+from app.search.service import invalidate_search_question_cache
 from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
 
@@ -139,6 +140,7 @@ def create_app(config_class=None):
                     )
                 if questions:
                     db.question.insert_many(questions)
+                    invalidate_search_question_cache()
 
     @app.before_request
     def ensure_db_initialized():
