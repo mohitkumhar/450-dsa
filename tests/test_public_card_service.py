@@ -2,7 +2,21 @@ from io import BytesIO
 
 from bson.objectid import ObjectId
 
-from app.profile.card_service import card_cache, get_public_card_image
+from app.profile.card_service import get_public_card_image
+
+
+class FakeCache:
+    def __init__(self):
+        self._store = {}
+
+    def get(self, key):
+        return self._store.get(key)
+
+    def set(self, key, value, timeout=None):
+        self._store[key] = value
+
+    def delete(self, key):
+        self._store.pop(key, None)
 
 
 class FakeUserCollection:
@@ -41,6 +55,7 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
         "external_totals": {"LeetCode": 12},
     }
     fake_db = FakeDB(user, [{"_id": "q1", "url": "https://leetcode.com/problems/two-sum"}])
+    fake_cache = FakeCache()
     generated = []
 
     def fake_generate(name, c_score, dsa_progress, current_streak, platforms):
@@ -48,18 +63,11 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
         return BytesIO(b"fake-png")
 
     monkeypatch.setattr("app.profile.card_service.db", fake_db)
-    monkeypatch.setattr(
-        "app.profile.card_service.compute_c_score",
-        lambda user_doc: {"c_score": 144, "dsa_done": 1},
-    )
+    monkeypatch.setattr("app.profile.card_service.cache", fake_cache)
+    monkeypatch.setattr("app.profile.card_service.compute_c_score", lambda user_doc: {"c_score": 144, "dsa_done": 1})
     monkeypatch.setattr("app.profile.card_service.compute_streak", lambda progress: (4, 8))
-    monkeypatch.setattr(
-        "app.profile.card_service.compute_user_platforms",
-        lambda solved, totals, all_questions: {"LeetCode": 12},
-    )
+    monkeypatch.setattr("app.profile.card_service.compute_user_platforms", lambda solved, totals, all_questions: {"LeetCode": 12})
     monkeypatch.setattr("app.profile.card_service.card_generator.generate_progress_card", fake_generate)
-
-    card_cache.clear()
 
     first, first_etag, first_last_modified = get_public_card_image(str(user_id), user_id)
     second, second_etag, second_last_modified = get_public_card_image(str(user_id), user_id)
@@ -76,10 +84,11 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
 
 def test_get_public_card_image_raises_for_missing_user(monkeypatch):
     fake_db = FakeDB(None, [])
+    fake_cache = FakeCache()
     user_id = ObjectId()
 
     monkeypatch.setattr("app.profile.card_service.db", fake_db)
-    card_cache.clear()
+    monkeypatch.setattr("app.profile.card_service.cache", fake_cache)
 
     try:
         get_public_card_image(str(user_id), user_id)
