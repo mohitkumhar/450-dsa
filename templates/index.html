@@ -189,10 +189,28 @@
     outline-offset: 2px;
     transform: translateY(-2px);
 }
+.topic-skeleton-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.topic-skeleton-card {
+    min-height: 160px;
+}
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="page-load-skeleton">
+    <div class="skeleton-line" style="width: 180px;"></div>
+    <div class="skeleton-line" style="width: 320px;"></div>
+    <div class="skeleton-block" style="min-height: 96px;"></div>
+    <div class="page-load-skeleton topic-skeleton-grid">
+        {% for _ in range(8) %}
+        <div class="skeleton-block topic-skeleton-card"></div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="page-load-target">
 <div class="page-header">
     <h1>DSA Topics</h1>
     <p>Track your progress across all 450 DSA questions</p>
@@ -262,5 +280,6 @@
         </div>
     </a>
     {% endfor %}
+</div>
 </div>
 {% endblock %}

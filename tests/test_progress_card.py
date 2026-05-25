@@ -72,7 +72,8 @@ def app(mock_db):
     # Patch db globally before importing app
     with patch('app.extensions.db', mock_db), \
          patch('app.db', mock_db), \
-         patch('app.mongo'):
+         patch('app.mongo'), \
+         patch.dict('os.environ', {'SECRET_KEY': 'test-secret-key'}, clear=False):
         from app import create_app
         app = create_app()
         app.config['TESTING'] = True
@@ -237,6 +238,49 @@ def test_public_card_caching(client, app):
         
         # Both should return the same PNG data
         assert data1 == data2
+
+
+def test_public_card_sets_cache_headers_and_etag(client, app):
+    user_id = ObjectId()
+    now = datetime.now(timezone.utc)
+    app.mock_db.question.data = {"q1": {"_id": "q1"}}
+    app.mock_db.user.data[str(user_id)] = {
+        "_id": user_id,
+        "name": "Header User",
+        "progress": {"q1": {"done": True, "timestamp": now}},
+        "external_totals": {},
+    }
+
+    with patch("app.profile.routes.db", app.mock_db):
+        response = client.get(f"/u/{user_id}/card.png")
+
+    assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "public, max-age=3600"
+    assert response.headers["ETag"].startswith('"progress-card-')
+    assert response.headers["Last-Modified"]
+
+
+def test_public_card_returns_304_for_matching_etag(client, app):
+    user_id = ObjectId()
+    now = datetime.now(timezone.utc)
+    app.mock_db.question.data = {"q1": {"_id": "q1"}}
+    app.mock_db.user.data[str(user_id)] = {
+        "_id": user_id,
+        "name": "Conditional User",
+        "progress": {"q1": {"done": True, "timestamp": now}},
+        "external_totals": {},
+    }
+
+    with patch("app.profile.routes.db", app.mock_db):
+        initial = client.get(f"/u/{user_id}/card.png")
+        response = client.get(
+            f"/u/{user_id}/card.png",
+            headers={"If-None-Match": initial.headers["ETag"]},
+        )
+
+    assert initial.status_code == 200
+    assert response.status_code == 304
+    assert response.data == b""
 
 
 def test_public_card_exception_handling(client, app):

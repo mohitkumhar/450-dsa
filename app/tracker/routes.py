@@ -10,6 +10,29 @@ from progress_export import build_progress_csv
 
 tracker_bp = Blueprint("tracker", __name__)
 
+INDEX_QUESTION_PROJECTION = {"topic": 1}
+TOPIC_PAGE_QUESTION_PROJECTION = {
+    "problem": 1,
+    "difficulty": 1,
+    "url": 1,
+    "url2": 1,
+}
+TOPIC_NOTES_EXPORT_PROJECTION = {"problem": 1}
+QUESTION_STATUS_PROJECTION = {"problem": 1}
+BOOKMARKS_QUESTION_PROJECTION = {
+    "topic": 1,
+    "problem": 1,
+    "url": 1,
+    "url2": 1,
+}
+CSV_EXPORT_QUESTION_PROJECTION = {
+    "topic": 1,
+    "problem": 1,
+    "difficulty": 1,
+    "url": 1,
+    "url2": 1,
+}
+
 
 @tracker_bp.route("/")
 def index():
@@ -23,7 +46,7 @@ def index():
         progress = {}
         done_questions = 0
 
-    all_questions = list(db.question.find())
+    all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
     topic_question_count = {}
     for question in all_questions:
         topic_id = str(question["topic"])
@@ -57,7 +80,7 @@ def topic(topic_id):
     if not topic_doc:
         return "Topic not found", 404
 
-    questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    questions = list(db.question.find({"topic": topic_doc["_id"]}, TOPIC_PAGE_QUESTION_PROJECTION))
     
     # Calculate counts based on the unfiltered list of questions
     total_count = len(questions)
@@ -96,7 +119,7 @@ def export_topic_notes(topic_id):
     if not topic_doc:
         return "Topic not found", 404
 
-    questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    questions = list(db.question.find({"topic": topic_doc["_id"]}, TOPIC_NOTES_EXPORT_PROJECTION))
     markdown = build_topic_notes_markdown(topic_doc["name"], questions, current_user.progress)
     response = Response(markdown, mimetype="text/markdown")
     response.headers["Content-Disposition"] = f'attachment; filename={topic_notes_filename(topic_doc["name"])}'
@@ -159,7 +182,7 @@ def update_question(question_id):
               example: Question not found
     """
     try:
-        question = db.question.find_one({"_id": ObjectId(question_id)})
+        question = db.question.find_one({"_id": ObjectId(question_id)}, QUESTION_STATUS_PROJECTION)
     except Exception:
         return json_error("Question not found", status_code=404)
     if not question:
@@ -218,7 +241,7 @@ def bookmarks():
             object_ids.append(ObjectId(question_id))
         except Exception:
             pass
-    questions = list(db.question.find({"_id": {"$in": object_ids}}))
+    questions = list(db.question.find({"_id": {"$in": object_ids}}, BOOKMARKS_QUESTION_PROJECTION))
 
     topic_ids = list(set(question["topic"] for question in questions))
     topic_docs = {topic["_id"]: topic["name"] for topic in db.topic.find({"_id": {"$in": topic_ids}})}
@@ -231,7 +254,7 @@ def bookmarks():
 @tracker_bp.route("/export/csv")
 @login_required
 def export_csv():
-    questions = list(db.question.find())
+    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
     topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
     topic_lookup = {
         topic['_id']: topic.get('name', 'Unknown')
