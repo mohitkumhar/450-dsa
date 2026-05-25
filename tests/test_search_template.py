@@ -31,3 +31,14 @@ def test_search_template_includes_saved_search_management_hooks():
     assert "async function saveCurrentSearch()" in template
     assert "async function renameSavedSearch(searchId)" in template
     assert "async function deleteSavedSearch(searchId)" in template
+
+
+def test_search_template_includes_recent_search_storage_and_panel():
+    template = SEARCH_TEMPLATE.read_text()
+
+    assert "id=\"recentSearches\"" in template
+    assert "const RECENT_SEARCHES_KEY = 'dsa_recent_searches_v1';" in template
+    assert "const MAX_RECENT_SEARCHES = 5;" in template
+    assert "function rememberRecentSearch(text, token)" in template
+    assert "function applyRecentSearch(index)" in template
+    assert "renderRecentSearches();" in template

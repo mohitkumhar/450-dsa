@@ -10,6 +10,7 @@ import app.auth.routes as auth_routes
 
 def create_test_app(monkeypatch):
     test_db = mongomock.MongoClient().db
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     monkeypatch.setattr(app_module, "db", test_db)
     monkeypatch.setattr(admin_routes, "db", test_db)
