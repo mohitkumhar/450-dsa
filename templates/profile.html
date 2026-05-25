@@ -179,6 +179,9 @@ body.modal-open {
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
     <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    {% if user.password %}
+    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openChangePasswordModal()" style="margin-top:8px" aria-label="Change your account password"><i class="bi bi-key" aria-hidden="true"></i> Change Password</button>
+    {% endif %}
     <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
@@ -536,6 +539,25 @@ body.modal-open {
     </div>
 {% endcall %}
 
+{% if user.password %}
+{% call modal_shell('changePasswordModal', '<i class="bi bi-key" style="color:var(--accent)"></i> Change Password', 'changePasswordModalTitle', 'closeChangePasswordModal()', box_style='max-width:420px') %}
+    <form method="post" action="{{ url_for('auth.change_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="m-lbl" for="current_password">Current Password</label>
+      <input class="m-inp" id="current_password" name="current_password" type="password" autocomplete="current-password" required>
+      <label class="m-lbl" for="new_password">New Password</label>
+      <input class="m-inp" id="new_password" name="new_password" type="password" autocomplete="new-password" required>
+      <label class="m-lbl" for="confirm_password">Confirm New Password</label>
+      <input class="m-inp" id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" required>
+      <div class="m-note">Use at least 8 characters with uppercase, lowercase, number, and special character.</div>
+      <div class="m-actions">
+        <button type="button" class="m-cancel" onclick="closeChangePasswordModal()">Cancel</button>
+        <button type="submit" class="m-save"><i class="bi bi-shield-lock" aria-hidden="true"></i> Update Password</button>
+      </div>
+    </form>
+{% endcall %}
+{% endif %}
+
 <!-- Toast notification -->
 <div class="toast" id="toast" style=""></div>
 
@@ -781,8 +803,10 @@ function showToast(msg){
 }
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
+function openChangePasswordModal(){document.getElementById('changePasswordModal').classList.add('open')}
+function closeChangePasswordModal(){document.getElementById('changePasswordModal').classList.remove('open')}
 
-['syncModal','cardModal','editProfileModal'].forEach(id=>{
+['syncModal','cardModal','editProfileModal','changePasswordModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
 });
