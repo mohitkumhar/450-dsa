@@ -12,6 +12,7 @@
 .filter-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
 .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.status-filter-buttons { margin-top: -8px; margin-bottom: 20px; }
 
 /* Difficulty badges - improved for color contrast */
 .difficulty-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
@@ -49,6 +50,7 @@
 .action-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; font-size: 1.1rem; color: var(--text-muted); transition: all 0.2s; }
 .action-icon:hover { background: var(--bg-secondary); color: var(--accent); }
 .action-icon.bookmarked { color: var(--warning); }
+.action-icon.skipped { color: var(--danger); }
 .action-icon:disabled, .q-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
 .notes-btn-sm { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 0.77rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .notes-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
@@ -110,10 +112,10 @@
     <div class="topic-header-main">
         <h1 class="topic-title">{{ topic.name }}</h1>
         <div class="topic-subtitle">
-            {% if difficulty_filter == 'all' %}
+            {% if not active_filters %}
                 {{ total_count }} questions in this topic
             {% else %}
-                Showing {{ questions|length }} of {{ total_count }} questions ({{ difficulty_filter }} difficulty)
+                Showing {{ questions|length }} of {{ total_count }} questions ({{ active_filters }})
             {% endif %}
         </div>
     </div>
@@ -143,6 +145,21 @@
 <div style="margin-bottom: 16px;">
     <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn-primary ui-btn-pill">
         🎲 Practice Random
+    </button>
+</div>
+
+<div class="filter-buttons status-filter-buttons" role="group" aria-label="Filter questions by progress status">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'all' %}active{% endif %}" data-status="all" aria-pressed="{% if status_filter == 'all' %}true{% else %}false{% endif %}">
+        All Statuses ({{ total_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'todo' %}active{% endif %}" data-status="todo" aria-pressed="{% if status_filter == 'todo' %}true{% else %}false{% endif %}">
+        To Do ({{ todo_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'done' %}active{% endif %}" data-status="done" aria-pressed="{% if status_filter == 'done' %}true{% else %}false{% endif %}">
+        Done ({{ done_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'skipped' %}active{% endif %}" data-status="skipped" aria-pressed="{% if status_filter == 'skipped' %}true{% else %}false{% endif %}">
+        Skipped ({{ skipped_count }})
     </button>
 </div>
 
@@ -209,6 +226,13 @@
                         aria-label="{% if p and p.bookmark %}Remove bookmark for '{{ q.problem }}'{% else %}Bookmark '{{ q.problem }}'{% endif %}"
                         aria-pressed="{{ 'true' if p and p.bookmark else 'false' }}">
                         <i class="bi {% if p and p.bookmark %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}" aria-hidden="true"></i>
+                    </button>
+                    <button class="action-icon skip-btn {% if p and p.skipped %}skipped{% endif %}"
+                        data-id="{{ q_id_str }}"
+                        data-skipped="{{ 'true' if p and p.skipped else 'false' }}"
+                        aria-label="{% if p and p.skipped %}Remove skipped status for '{{ q.problem }}'{% else %}Mark '{{ q.problem }}' as skipped{% endif %}"
+                        aria-pressed="{{ 'true' if p and p.skipped else 'false' }}">
+                        <i class="bi {% if p and p.skipped %}bi-skip-forward-fill{% else %}bi-skip-forward{% endif %}" aria-hidden="true"></i>
                     </button>
                 </td>
                 <td>
@@ -312,6 +336,14 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
     });
 });
 
+function setSkippedState(btn, isSkipped) {
+    const icon = btn.querySelector('i');
+    btn.dataset.skipped = isSkipped ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', isSkipped ? 'true' : 'false');
+    btn.classList.toggle('skipped', isSkipped);
+    icon.className = isSkipped ? 'bi bi-skip-forward-fill' : 'bi bi-skip-forward';
+}
+
 document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         if (!isAuthenticated) { 
@@ -335,12 +367,58 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
     });
 });
 
+document.querySelectorAll('.skip-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+        const isSkipped = this.dataset.skipped === 'true';
+        const nextSkipped = !isSkipped;
+        const row = document.getElementById('row-' + this.dataset.id);
+        const checkbox = row.querySelector('.status-checkbox');
+        const previousChecked = checkbox.checked;
+        this.disabled = true;
+        checkbox.disabled = true;
+        row.classList.add('row-updating');
+        setSkippedState(this, nextSkipped);
+        if (nextSkipped) {
+            checkbox.checked = false;
+            row.classList.remove('row-done');
+        }
+        updateQuestion(this.dataset.id, {skipped: nextSkipped})
+            .catch(() => {
+                setSkippedState(this, isSkipped);
+                checkbox.checked = previousChecked;
+                row.classList.toggle('row-done', previousChecked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+                checkbox.disabled = false;
+                row.classList.remove('row-updating');
+            });
+    });
+});
+
 // Difficulty Filtering
 document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
     btn.addEventListener('click', function() {
         const difficulty = this.dataset.difficulty;
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('difficulty', difficulty);
+        currentUrl.searchParams.set('status', '{{ status_filter }}');
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
+        window.location.href = currentUrl.toString();
+    });
+});
+document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const status = this.dataset.status;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('difficulty', '{{ difficulty_filter }}');
+        currentUrl.searchParams.set('status', status);
         this.classList.add('btn-busy');
         this.setAttribute('aria-busy', 'true');
         window.location.href = currentUrl.toString();

@@ -104,6 +104,7 @@ def make_app(monkeypatch, db_override):
     import app.auth.routes as auth_routes
     import app.extensions as ext
 
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(app_module, "db", db_override)
     monkeypatch.setattr(auth_routes, "db", db_override)
     monkeypatch.setattr(ext, "db", db_override)

@@ -73,7 +73,9 @@ copy .env.example .env  # Windows
 
 Edit `.env` with your values:
 ```env
-SECRET_KEY=any-random-string
+# REQUIRED - generate your own first:
+# python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=replace-this-with-a-real-secret
 
 # MongoDB connection string (see MongoDB Setup below)
 MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/dsa_tracker
@@ -91,6 +93,8 @@ CLOUDINARY_CLOUD_NAME=your-cloud-name
 CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 ```
+
+Do not leave `SECRET_KEY` at a placeholder value. The app will now stop at startup if the secret is missing or still using a known insecure default, and any leaked or committed secret should be rotated immediately.
 
 **4. Run the app**
 ```bash

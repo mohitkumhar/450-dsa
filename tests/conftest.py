@@ -32,6 +32,7 @@ def pytest_collection_modifyitems(config, items):
 
 def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
     test_db = mongomock.MongoClient().db
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     for target in (app_module, auth_routes, *extra_db_targets):
         monkeypatch.setattr(target, "db", test_db)

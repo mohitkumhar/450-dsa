@@ -75,6 +75,25 @@ def platform_color_filter(name):
     return colors.get(name, "primary")
 
 
+def platform_profile_url(username, platform):
+    if not username:
+        return "#"
+    platform = platform.lower()
+    if platform == "leetcode":
+        return f"https://leetcode.com/{username}"
+    if platform == "gfg":
+        return f"https://www.geeksforgeeks.org/user/{username}"
+    if platform == "codingninjas" or platform == "coding ninjas":
+        return f"https://www.naukri.com/code360/profile/{username}"
+    if platform == "hackerrank":
+        return f"https://www.hackerrank.com/{username}"
+    if platform == "github":
+        return f"https://github.com/{username}"
+    if platform == "atcoder":
+        return f"https://atcoder.jp/users/{username}"
+    return "#"
+
+
 def parse_search_query(raw_query):
     return search_service.parse_search_query(raw_query)
 
