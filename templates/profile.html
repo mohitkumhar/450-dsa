@@ -18,6 +18,14 @@
 .social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;padding:10px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
 .social-icon{color:var(--text-muted);font-size:1.1rem;text-decoration:none;transition:color 0.2s}
 .social-icon:hover{color:var(--accent)}
+.repo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.repo-card{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.repo-card:hover{border-color:var(--accent)}
+.repo-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.repo-name{font-weight:700;color:var(--text-primary);text-decoration:none}
+.repo-name:hover{color:var(--accent)}
+.repo-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:.72rem;color:var(--text-muted)}
+.repo-desc{font-size:.78rem;color:var(--text-secondary);min-height:2.4em}
 .meta-row{display:flex;align-items:center;gap:6px;font-size:0.79rem;color:var(--text-secondary);margin-bottom:6px}
 .sec-title{font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
 .platform-row{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:8px;margin-bottom:4px;font-size:0.82rem}
@@ -171,6 +179,25 @@ body.modal-open {
       {% if user.github_username %}<a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
       {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}
     </div>
+    {% if github_repos %}
+    <div class="sec-title">Pinned GitHub Repositories</div>
+    <div class="repo-grid" style="margin-bottom:12px">
+      {% for repo in github_repos %}
+      <div class="repo-card">
+        <div class="repo-head">
+          <a href="{{ repo.url }}" target="_blank" rel="noopener noreferrer" class="repo-name">{{ repo.name }}</a>
+          <i class="bi bi-github" aria-hidden="true"></i>
+        </div>
+        <div class="repo-desc">{{ repo.description or 'Public repository showcase' }}</div>
+        <div class="repo-meta">
+          {% if repo.language %}<span>{{ repo.language }}</span>{% endif %}
+          <span><i class="bi bi-star-fill" aria-hidden="true"></i> {{ repo.stars }}</span>
+          <span><i class="bi bi-diagram-3" aria-hidden="true"></i> {{ repo.forks }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% if user.location or user.college %}
     <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
     <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> {{ user.college }}{% endif %}</div>
@@ -528,6 +555,7 @@ body.modal-open {
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}"></div>
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
+    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-github"></i> Featured GitHub Repositories</label><textarea class="m-inp" id="ep_github_repo_list" rows="3" placeholder="owner/repo or just repo-name, one per line">{{ user.github_repo_list or '' }}</textarea><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Use one repository per line. If you enter only a repo name, your GitHub username will be used as the owner.</div></div>
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
     </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
@@ -579,6 +607,7 @@ window.handleSaveProfile = function(btn){
     linkedin_url: document.getElementById('ep_linkedin').value,
     twitter_url: document.getElementById('ep_twitter').value,
     website_url: document.getElementById('ep_website').value,
+    github_repo_list: document.getElementById('ep_github_repo_list').value,
     resume_url: document.getElementById('ep_resume').value,
   };
   btn.disabled=true;

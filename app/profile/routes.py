@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
+from app.github_showcase import fetch_github_repo_showcase, normalize_repo_list
 from app.platforms.fetchers import (
     fetch_atcoder,
     fetch_coding_ninjas,
@@ -23,6 +24,13 @@ from profile_validation import build_profile_updates
 profile_bp = Blueprint("profile", __name__)
 
 __all__ = ["CACHE_TTL", "get_public_card_image"]
+
+
+def clear_profile_card_cache(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except Exception:
+        current_app.logger.debug("Skipping profile card cache clear", exc_info=True)
 
 
 def build_sync_platforms_response(platform_status: dict):
@@ -318,7 +326,7 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
-    cache.delete(f"card_{str(current_user.id)}")
+    clear_profile_card_cache(current_user.id)
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -393,10 +401,19 @@ def edit_profile():
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
+    if "github_repo_list" in data:
+        try:
+            normalized_repo_list = normalize_repo_list(
+                data.get("github_repo_list", ""),
+                data.get("github_username", current_user.github_username or ""),
+            )
+        except ValueError as exc:
+            return json_error(str(exc), status_code=400)
+        update_fields["github_repo_list"] = normalized_repo_list
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
-        cache.delete(f"card_{str(current_user.id)}")
+        clear_profile_card_cache(current_user.id)
     return json_success()
 
 
@@ -632,6 +649,15 @@ def profile():
     except (json.JSONDecodeError, ValueError):
         print("Unable to handle hackerrank badges")
 
+    github_repos = []
+    try:
+        github_repos = fetch_github_repo_showcase(
+            user.github_username,
+            user.github_repo_list or "",
+        )
+    except Exception:
+        current_app.logger.exception("Failed to load GitHub repository showcase")
+
     return render_template(
         "profile.html",
         user=user,
@@ -657,4 +683,5 @@ def profile():
         rating_history=rating_history,
         lc_badges=lc_badges,
         hr_badges=hr_badges,
+        github_repos=github_repos,
     )

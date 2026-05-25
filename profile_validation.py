@@ -11,6 +11,7 @@ PROFILE_FIELD_LIMITS = {
     'twitter_url': 300,
     'website_url': 300,
     'resume_url': 300,
+    'github_repo_list': 600,
 }
 PROFILE_URL_FIELDS = {'linkedin_url', 'twitter_url', 'website_url', 'resume_url'}
 

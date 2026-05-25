@@ -25,6 +25,12 @@
 .stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
 .stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
 .stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+.repo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.repo-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.repo-name{font-weight:700;color:var(--text-primary);text-decoration:none}
+.repo-name:hover{color:var(--accent)}
+.repo-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:.72rem;color:var(--text-muted)}
+.repo-desc{font-size:.8rem;color:var(--text-secondary)}
 @media(max-width:520px){.stat-row{grid-template-columns:1fr}}
 </style>
 
@@ -106,6 +112,25 @@
         </div>
       </div>
     </div>
+
+    {% if github_repos %}
+    <div class="card">
+      <div class="sec-title">Featured GitHub Repositories</div>
+      <div class="repo-grid">
+        {% for repo in github_repos %}
+        <div class="repo-card">
+          <a href="{{ repo.url }}" target="_blank" rel="noopener noreferrer" class="repo-name">{{ repo.name }}</a>
+          <div class="repo-desc">{{ repo.description or 'Public repository showcase' }}</div>
+          <div class="repo-meta">
+            {% if repo.language %}<span>{{ repo.language }}</span>{% endif %}
+            <span><i class="bi bi-star-fill" aria-hidden="true"></i> {{ repo.stars }}</span>
+            <span><i class="bi bi-diagram-3" aria-hidden="true"></i> {{ repo.forks }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
     <div class="card" style="text-align:center;color:var(--text-secondary);font-size:.82rem">
       This is a public profile page.

@@ -43,6 +43,47 @@ def test_public_profile_route_is_accessible_without_login(monkeypatch):
     assert "This is a public profile page." in html
 
 
+def test_public_profile_renders_github_repository_showcase(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(public_routes,))
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Public User",
+            "profile_photo": "https://example.com/avatar.png",
+            "progress": {},
+            "external_totals": {},
+            "github_username": "saurabhhhcodes",
+            "github_repo_list": "saurabhhhcodes/repo-one",
+        }
+    ).inserted_id
+
+    monkeypatch.setattr(
+        public_routes,
+        "fetch_github_repo_showcase",
+        lambda username, repo_list: [
+            {
+                "name": "repo-one",
+                "url": "https://github.com/saurabhhhcodes/repo-one",
+                "description": "Featured repository",
+                "language": "Python",
+                "stars": 42,
+                "forks": 5,
+            }
+        ],
+    )
+
+    with flask_app.test_client() as client:
+        response = client.get(f"/u/{user_id}")
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "Featured GitHub Repositories" in html
+    assert "repo-one" in html
+    assert "Featured repository" in html
+    assert "Python" in html
+    assert "42" in html
+    assert "5" in html
+
+
 def test_public_profile_invalid_id_returns_400(monkeypatch):
     flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(public_routes,))
 
