@@ -2,6 +2,7 @@ from app.utils import (
     compute_c_score,
     compute_in_sheet_platform_counts,
     compute_total_solved,
+    compute_user_platforms,
     merge_platform_counts,
 )
 
@@ -174,6 +175,152 @@ def test_merge_platform_counts_keeps_external_totals_as_floor():
 
     assert counts["LeetCode"] == 10
     assert counts["GFG"] == 4
+
+
+def test_numeric_string_external_totals_are_coerced_safely():
+    user = make_user(
+        external_totals={
+            "LeetCode": "12",
+            "LeetCode_Easy": "5",
+            "LeetCode_Medium": "4",
+            "LeetCode_Hard": "3",
+            "LeetCode_Rating": "1500",
+            "GFG": "7",
+            "HackerRank": "2.5",
+            "Coding Ninjas": "1",
+        }
+    )
+
+    result = compute_c_score(user)
+
+    assert result["lc_total"] == 12.0
+    assert result["lc_easy"] == 5.0
+    assert result["lc_medium"] == 4.0
+    assert result["lc_hard"] == 3.0
+    assert result["lc_rating"] == 1500.0
+    assert result["gfg_total"] == 7.0
+    assert result["hr_total"] == 2.5
+    assert result["cn_total"] == 1.0
+    assert result["c_score"] > 0
+
+
+def test_invalid_external_total_types_are_ignored_as_zero():
+    user = make_user(
+        external_totals={
+            "LeetCode": {},
+            "LeetCode_Easy": [],
+            "LeetCode_Medium": None,
+            "LeetCode_Hard": "not-a-number",
+            "LeetCode_Rating": True,
+            "GFG": False,
+            "HackerRank": object(),
+            "Coding Ninjas": "",
+        }
+    )
+
+    result = compute_c_score(user)
+
+    assert result["lc_total"] == 0
+    assert result["lc_easy"] == 0
+    assert result["lc_medium"] == 0
+    assert result["lc_hard"] == 0
+    assert result["lc_rating"] == 0
+    assert result["gfg_total"] == 0
+    assert result["hr_total"] == 0
+    assert result["cn_total"] == 0
+    assert result["c_score"] == 0
+
+
+def test_negative_external_values_clamp_to_zero():
+    user = make_user(
+        external_totals={
+            "LeetCode": "-12",
+            "LeetCode_Easy": -5,
+            "LeetCode_Medium": "-4.5",
+            "LeetCode_Hard": -3,
+            "LeetCode_Rating": "-1500",
+            "GFG": -7,
+        }
+    )
+
+    result = compute_c_score(user)
+
+    assert result["lc_total"] == 0
+    assert result["lc_easy"] == 0
+    assert result["lc_medium"] == 0
+    assert result["lc_hard"] == 0
+    assert result["lc_rating"] == 0
+    assert result["gfg_total"] == 0
+
+
+def test_malformed_external_daily_counts_do_not_crash_and_ignore_invalid_values():
+    progress = {
+        "q1": {"done": True, "timestamp": "2024-01-03T10:00:00"},
+        "q2": {"done": True, "timestamp": "2024-01-02T11:00:00"},
+    }
+    user = make_user(
+        progress=progress,
+        external_daily_counts={
+            "2024-01-01": "2",
+            "2024-01-02": 0,
+            "2024-01-03": -1,
+            "2024-01-04": None,
+            "2024-01-05": [],
+            "2024-01-06": "bad",
+            "2024-01-07": True,
+        },
+    )
+
+    result = compute_c_score(user)
+
+    assert result["active_days"] == 3
+
+
+def test_non_dict_external_daily_counts_do_not_crash():
+    user = make_user(external_daily_counts=["bad", "shape"])
+
+    result = compute_c_score(user)
+
+    assert result["active_days"] == 0
+
+
+def test_compute_total_solved_handles_malformed_external_totals():
+    total = compute_total_solved(
+        {},
+        {
+            "LeetCode": "12",
+            "GFG": {},
+            "HackerRank": None,
+            "Coding Ninjas": "-4",
+            "AtCoder": "3.5",
+        },
+    )
+
+    assert total == 15.5
+
+
+def test_compute_user_platforms_handles_malformed_external_totals():
+    platforms = compute_user_platforms(
+        {},
+        {
+            "LeetCode": "12",
+            "GFG": {},
+            "Coding Ninjas": "-4",
+            "HackerRank": "2.5",
+            "AtCoder": [],
+        },
+        [],
+    )
+
+    assert platforms == {
+        "LeetCode": 12.0,
+        "GFG": 0,
+        "Coding Ninjas": 0,
+        "HackerRank": 2.5,
+        "AtCoder": 0,
+        "Other": 0,
+    }
+
 
 
 # --- Return structure ---

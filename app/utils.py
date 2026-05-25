@@ -1,4 +1,5 @@
 import re
+from math import isfinite
 from datetime import datetime, timezone
 
 from flask import jsonify
@@ -142,15 +143,53 @@ def platform_from_question_url(url):
     return "Other"
 
 
+def coerce_non_negative_number(value):
+    """Return a safe finite non-negative numeric value for persisted stats."""
+    if isinstance(value, bool) or value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return value if isfinite(value) and value > 0 else 0
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return 0
+        try:
+            parsed = float(stripped)
+        except ValueError:
+            return 0
+        return parsed if isfinite(parsed) and parsed > 0 else 0
+    return 0
+
+
+def count_valid_external_daily_entries(external_daily_counts):
+    if not isinstance(external_daily_counts, dict):
+        return 0
+    return sum(1 for value in external_daily_counts.values() if coerce_non_negative_number(value) > 0)
+
+
+def valid_external_daily_keys(external_daily_counts):
+    if not isinstance(external_daily_counts, dict):
+        return set()
+    return {
+        day_key
+        for day_key, value in external_daily_counts.items()
+        if coerce_non_negative_number(value) > 0
+    }
+
+
 def compute_total_solved(progress, external_totals, all_questions=None):
     progress = progress or {}
     if all_questions is not None:
         solved_items = {question_id: item for question_id, item in progress.items() if item.get("done")}
         platforms = compute_user_platforms(solved_items, external_totals or {}, all_questions)
-        return sum(max(value, 0) for value in platforms.values())
+        return sum(coerce_non_negative_number(value) for value in platforms.values())
 
     dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
-    external_total = sum(max(value, 0) for key, value in (external_totals or {}).items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
+    external_total = sum(
+        coerce_non_negative_number(value)
+        for key, value in (external_totals or {}).items()
+        if key in EXTERNAL_SOLVED_TOTAL_KEYS
+    )
     return max(dsa_done, external_total)
 
 
@@ -160,17 +199,25 @@ def compute_c_score(user_doc, all_questions=None):
     dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
 
     ext = user_doc.get("external_totals", {})
-    lc_total = max(ext.get("LeetCode", 0), 0)
-    lc_easy = max(ext.get("LeetCode_Easy", 0), 0)
-    lc_medium = max(ext.get("LeetCode_Medium", 0), 0)
-    lc_hard = max(ext.get("LeetCode_Hard", 0), 0)
-    lc_rating = max(ext.get("LeetCode_Rating", 0), 0)
-    gfg_total = max(ext.get("GFG", 0), 0)
-    hr_total = max(ext.get("HackerRank", 0), 0)
-    cn_total = max(ext.get("Coding Ninjas", 0), 0)
-    external_total = sum(max(value, 0) for key, value in ext.items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
+    if not isinstance(ext, dict):
+        ext = {}
+    lc_total = coerce_non_negative_number(ext.get("LeetCode", 0))
+    lc_easy = coerce_non_negative_number(ext.get("LeetCode_Easy", 0))
+    lc_medium = coerce_non_negative_number(ext.get("LeetCode_Medium", 0))
+    lc_hard = coerce_non_negative_number(ext.get("LeetCode_Hard", 0))
+    lc_rating = coerce_non_negative_number(ext.get("LeetCode_Rating", 0))
+    gfg_total = coerce_non_negative_number(ext.get("GFG", 0))
+    hr_total = coerce_non_negative_number(ext.get("HackerRank", 0))
+    cn_total = coerce_non_negative_number(ext.get("Coding Ninjas", 0))
+    external_total = sum(
+        coerce_non_negative_number(value)
+        for key, value in ext.items()
+        if key in EXTERNAL_SOLVED_TOTAL_KEYS
+    )
 
     ext_daily = user_doc.get("external_daily_counts", {})
+    valid_external_days = count_valid_external_daily_entries(ext_daily)
+    ext_daily_keys = valid_external_daily_keys(ext_daily)
     extra_progress_days = set()
     for progress_item in progress.values():
         timestamp = progress_item.get("timestamp")
@@ -180,9 +227,9 @@ def compute_c_score(user_doc, all_questions=None):
             day_key = timestamp[:10]
         else:
             day_key = timestamp.date().isoformat()
-        if day_key not in ext_daily:
+        if day_key not in ext_daily_keys:
             extra_progress_days.add(day_key)
-    active_days = len(ext_daily) + len(extra_progress_days)
+    active_days = valid_external_days + len(extra_progress_days)
 
     s_dsa = min(dsa_done / 450, 1.0) * 250
     s_lc_total = min(lc_total / 500, 1.0) * 200
@@ -234,10 +281,17 @@ def merge_platform_counts(in_sheet_counts, external_totals):
         if platform in platforms:
             platforms[platform] = max(int(count or 0), 0)
 
-    ext_totals = external_totals or {}
-    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0), 0)
-    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0), 0)
-    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0), 0)
-    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0), 0)
-    platforms["AtCoder"] = max(platforms["AtCoder"], ext_totals.get("AtCoder", 0), 0)
+    ext_totals = external_totals if isinstance(external_totals, dict) else {}
+    platforms["LeetCode"] = max(platforms["LeetCode"], coerce_non_negative_number(ext_totals.get("LeetCode", 0)))
+    platforms["GFG"] = max(platforms["GFG"], coerce_non_negative_number(ext_totals.get("GFG", 0)))
+    platforms["Coding Ninjas"] = max(
+        platforms["Coding Ninjas"],
+        coerce_non_negative_number(ext_totals.get("Coding Ninjas", 0)),
+    )
+    platforms["HackerRank"] = max(
+        platforms["HackerRank"],
+        coerce_non_negative_number(ext_totals.get("HackerRank", 0)),
+    )
+    platforms["AtCoder"] = max(platforms["AtCoder"], coerce_non_negative_number(ext_totals.get("AtCoder", 0)))
+
     return platforms
