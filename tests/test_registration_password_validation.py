@@ -65,3 +65,56 @@ def test_password_validator_reports_missing_requirements():
     assert "Password must include at least one uppercase letter." in errors
     assert "Password must include at least one number." in errors
     assert "Password must include at least one special character." in errors
+
+
+def test_register_rejects_blank_email_before_insert(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+
+    response = flask_app.test_client().post(
+        "/register",
+        data={
+            "name": "Blank Email",
+            "email": "   ",
+            "password": "StrongPass1!",
+            "confirm_password": "StrongPass1!",
+        },
+    )
+
+    assert response.status_code == 302
+    assert "/register" in response.headers["Location"]
+    assert test_db.user.count_documents({}) == 0
+
+
+def test_register_rejects_invalid_email_before_insert(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+
+    response = flask_app.test_client().post(
+        "/register",
+        data={
+            "name": "Bad Email",
+            "email": "not-an-email",
+            "password": "StrongPass1!",
+            "confirm_password": "StrongPass1!",
+        },
+    )
+
+    assert response.status_code == 302
+    assert "/register" in response.headers["Location"]
+    assert test_db.user.count_documents({}) == 0
+
+
+def test_register_rejects_missing_password_before_hashing(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+
+    response = flask_app.test_client().post(
+        "/register",
+        data={
+            "name": "Missing Password",
+            "email": "missing-password@example.com",
+            "confirm_password": "",
+        },
+    )
+
+    assert response.status_code == 302
+    assert "/register" in response.headers["Location"]
+    assert test_db.user.find_one({"email": "missing-password@example.com"}) is None

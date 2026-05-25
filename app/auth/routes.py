@@ -2,6 +2,7 @@ import re
 import secrets
 
 from bson import ObjectId
+from email_validator import EmailNotValidError, validate_email
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
@@ -141,9 +142,9 @@ def register():
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
-        email = request.form.get("email")
-        password = request.form.get("password")
-        confirm_password = request.form.get("confirm_password")
+        email = (request.form.get("email") or "").strip()
+        password = request.form.get("password") or ""
+        confirm_password = request.form.get("confirm_password") or ""
 
         password_errors = validate_registration_password(password, confirm_password)
         if password_errors:
@@ -152,6 +153,16 @@ def register():
 
         if not name:
             flash("Name is required", "danger")
+            return redirect(url_for("auth.register"))
+
+        if not email:
+            flash("Email is required", "danger")
+            return redirect(url_for("auth.register"))
+
+        try:
+            email = validate_email(email, check_deliverability=False).normalized
+        except EmailNotValidError:
+            flash("Enter a valid email address", "danger")
             return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
