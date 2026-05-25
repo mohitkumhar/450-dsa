@@ -1569,3 +1569,132 @@ body {
         border: 2px solid white;
     }
 }
+/* ========== MOBILE RESPONSIVENESS (Issue #47 Fixes) ========== */
+
+/* Mobile Hamburger & Sidebar Overlay */
+.mobile-menu-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 1.8rem;
+    padding: 0;
+    margin-right: 10px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px; /* Accessibility standard */
+    min-height: 44px; /* Accessibility standard */
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    /* Convert bottom sidebar to off-canvas side menu for mobile */
+    .sidebar {
+        bottom: 0;
+        top: var(--topbar-height);
+        width: 250px;
+        height: calc(100vh - var(--topbar-height));
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 20px 10px;
+        border-right: 1px solid var(--border-color);
+        border-top: none;
+        transform: translateX(-100%);
+        background-color: var(--bg-card);
+        box-shadow: 4px 0 15px rgba(0,0,0,0.2);
+    }
+    
+    .sidebar.sidebar-mobile-open {
+        transform: translateX(0);
+    }
+
+    .sidebar-nav {
+        flex-direction: column;
+        justify-content: flex-start;
+        width: 100%;
+        gap: 10px;
+    }
+
+    .sidebar-link {
+        width: 100%;
+        min-height: 48px; /* Accessible touch target */
+        justify-content: flex-start;
+        padding: 0 20px;
+        border-radius: 8px;
+    }
+    
+    .sidebar-link .tooltip-label {
+        display: inline-block;
+        position: static;
+        opacity: 1;
+        pointer-events: auto;
+        transform: none;
+        background: transparent;
+        border: none;
+        font-size: 1rem;
+        padding-left: 15px;
+    }
+
+    .sidebar-bottom {
+        width: 100%;
+        padding-top: 20px;
+        margin-top: auto;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .main-wrapper {
+        margin-left: 0;
+        padding: 16px 12px;
+        padding-bottom: 24px;
+    }
+    
+    .site-footer {
+        padding-bottom: 30px;
+    }
+}
+
+/* Topic Cards Grid Mobile Stack Fix */
+@media (max-width: 480px) {
+    .topics-grid {
+        grid-template-columns: 1fr; /* Force 1 column on mobile */
+    }
+    
+    .overall-progress-bar-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 16px;
+    }
+    
+    .progress-info {
+        width: 100%;
+    }
+    
+    .progress-track {
+        width: 100%;
+    }
+    
+    .topbar {
+        padding: 0 10px;
+    }
+}
+
+/* Fix Touch Targets for forms and buttons */
+input, select, textarea, .pill-btn, .icon-btn, .topic-action-btn, .pagination-btn {
+    min-height: 44px; /* Ensure all interactive elements meet 44px touch target */
+}
+
+.pill-btn {
+    padding: 8px 16px; /* slightly thicker padding */
+}
+
+/* Ensure Charts wrap dynamically on mobile */
+.chart-container, .chart-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}
