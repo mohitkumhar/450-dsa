@@ -32,6 +32,7 @@ from app.utils import (
     question_editorial_links,
     safe_url_filter,
 )
+from app.notifications import notifications_bp
 
 
 ROUTE_TIMING_ENDPOINTS = {
@@ -44,7 +45,6 @@ ROUTE_TIMING_ENDPOINTS = {
     "tracker.export_csv",
     "tracker.export_notes",
 }
-
 
 def _configure_rate_limit_storage(app, config_class):
     storage_uri = app.config["RATELIMIT_STORAGE_URI"]
@@ -163,6 +163,13 @@ def create_app(config_class=None):
         _dedupe_seeded_questions()
         db.question.create_index([("topic", 1), ("problem", 1), ("url", 1)], unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
+        db.notification_preferences.create_index("user_id", unique=True)
+        db.notifications.create_index("user_id")
+        db.notifications.create_index("created_at")
+        db.goals.create_index("user_id")
+        db.goals.create_index("due_date")
+        db.challenges.create_index("user_id")
+        db.challenges.create_index("due_date")
         db.cohort.create_index("join_code", unique=True)
         db.cohort_membership.create_index([("cohort_id", 1), ("user_id", 1)], unique=True)
         db.cohort_membership.create_index("user_id")
@@ -346,6 +353,7 @@ def create_app(config_class=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(cohort_bp)
+    app.register_blueprint(notifications_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):

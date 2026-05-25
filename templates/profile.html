@@ -2,6 +2,7 @@
 {% from "_macros.html" import modal_shell %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 {% endblock %}
 {% block content %}
 <div class="prof-layout">
@@ -137,6 +138,17 @@
       </span>
     </div>
     <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+
+    <div class="sec-title" style="margin-top:14px">Notifications</div>
+    <button id="notifyBtn" onclick="handleNotificationOptIn()" style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:none;color:var(--text-secondary);font-size:.8rem;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;margin-bottom:8px" aria-label="Enable browser notifications for goal reminders">
+      <i class="bi bi-bell" id="notifyIcon" aria-hidden="true"></i>
+      <span id="notifyText">Enable Notifications</span>
+    </button>
+    <div id="notifyStatus" style="font-size:.72rem;color:var(--text-muted);text-align:center;margin-bottom:8px"></div>
+    <button id="notifySettings" onclick="openNotificationSettings()" style="width:100%;padding:6px;border:1px dashed var(--border-color);border-radius:8px;background:none;color:var(--text-muted);font-size:.75rem;cursor:pointer;font-family:inherit;transition:all .2s;display:none" aria-label="Configure notification preferences">
+      <i class="bi bi-sliders" aria-hidden="true"></i> Notification Settings
+    </button>
+
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
@@ -754,10 +766,137 @@ function showCodelioCard(){document.getElementById('cardModal').classList.add('o
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
 
-['syncModal','cardModal','editProfileModal'].forEach(id=>{
-  const el=document.getElementById(id);
-  if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
-});
+window.handleNotificationOptIn = async function(){
+  if(!NotificationManager.isSupported()){
+    showToast('❌ Browser notifications not supported');
+    return;
+  }
+
+  const btn = document.getElementById('notifyBtn');
+  btn.disabled = true;
+
+  try {
+    const granted = await NotificationManager.requestPermission();
+    updateNotificationUI();
+    if(granted) showToast('✅ Notifications enabled!');
+    else showToast('⚠️ Notification permission denied');
+  } catch(e){
+    showToast('❌ Error: '+e.message);
+    btn.disabled = false;
+  }
+};
+
+window.updateNotificationUI = function(){
+  const btn = document.getElementById('notifyBtn');
+  const status = document.getElementById('notifyStatus');
+  const settingsBtn = document.getElementById('notifySettings');
+  const permission = NotificationManager.getPermissionStatus();
+
+  btn.disabled = false;
+
+  if(permission === 'granted'){
+    btn.style.background = 'rgba(34,197,94,.15)';
+    btn.style.borderColor = 'var(--success)';
+    btn.style.color = 'var(--success)';
+    document.getElementById('notifyIcon').className = 'bi bi-bell-fill';
+    document.getElementById('notifyText').textContent = 'Notifications Enabled';
+    status.textContent = 'You\'ll get reminders for due goals';
+    settingsBtn.style.display = 'block';
+  } else if(permission === 'denied'){
+    btn.style.background = 'rgba(239,68,68,.15)';
+    btn.style.borderColor = '#ef4444';
+    btn.style.color = '#ef4444';
+    document.getElementById('notifyIcon').className = 'bi bi-bell-slash';
+    document.getElementById('notifyText').textContent = 'Notifications Blocked';
+    status.textContent = 'Check browser settings to allow';
+    settingsBtn.style.display = 'none';
+  } else {
+    btn.style.background = 'none';
+    btn.style.borderColor = 'var(--border-color)';
+    btn.style.color = 'var(--text-secondary)';
+    document.getElementById('notifyIcon').className = 'bi bi-bell';
+    document.getElementById('notifyText').textContent = 'Enable Notifications';
+    status.textContent = '';
+    settingsBtn.style.display = 'none';
+  }
+};
+
+window.openNotificationSettings = function(){
+  const modal = document.createElement('div');
+  modal.className = 'modal-ov open';
+  modal.id = 'notificationSettingsModal';
+  modal.innerHTML = `
+    <div class="modal-bx" style="max-width:400px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin:0"><i class="bi bi-sliders" style="color:var(--accent)"></i> Notification Settings</h3>
+        <button onclick="document.getElementById('notificationSettingsModal').remove()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:all .2s;margin-bottom:8px" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="notify_due_goals" checked style="cursor:pointer;width:16px;height:16px">
+          <span style="flex:1">
+            <div style="font-size:.85rem;font-weight:600;color:var(--text-primary)">Due Goals Reminders</div>
+            <div style="font-size:.72rem;color:var(--text-secondary)">Get notified when goals are due</div>
+          </span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:all .2s;margin-bottom:8px" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="notify_reminders" checked style="cursor:pointer;width:16px;height:16px">
+          <span style="flex:1">
+            <div style="font-size:.85rem;font-weight:600;color:var(--text-primary)">Review Reminders</div>
+            <div style="font-size:.72rem;color:var(--text-secondary)">Reminders to review problems</div>
+          </span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''">
+          <input type="checkbox" id="notify_challenges" checked style="cursor:pointer;width:16px;height:16px">
+          <span style="flex:1">
+            <div style="font-size:.85rem;font-weight:600;color:var(--text-primary)">Challenge Deadlines</div>
+            <div style="font-size:.72rem;color:var(--text-secondary)">Challenge deadline alerts</div>
+          </span>
+        </label>
+      </div>
+      <div class="m-actions">
+        <button class="m-cancel" onclick="document.getElementById('notificationSettingsModal').remove()">Close</button>
+        <button class="m-save" onclick="saveNotificationPreferences()">Save Preferences</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Load current preferences
+  NotificationManager.getPreferences().then(prefs => {
+    if(prefs){
+      document.getElementById('notify_due_goals').checked = prefs.notification_types?.due_goals ?? true;
+      document.getElementById('notify_reminders').checked = prefs.notification_types?.reminders ?? true;
+      document.getElementById('notify_challenges').checked = prefs.notification_types?.challenges ?? true;
+    }
+  });
+};
+
+window.saveNotificationPreferences = async function(){
+  const types = {
+    due_goals: document.getElementById('notify_due_goals').checked,
+    reminders: document.getElementById('notify_reminders').checked,
+    challenges: document.getElementById('notify_challenges').checked
+  };
+
+  try{
+    for(const [type, enabled] of Object.entries(types)){
+      await NotificationManager.updateNotificationType(type, enabled);
+    }
+    showToast('✅ Preferences saved!');
+    document.getElementById('notificationSettingsModal').remove();
+  } catch(e){
+    showToast('❌ Error saving preferences');
+  }
+};
+
+// Initialize notification UI on page load
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', updateNotificationUI);
+} else {
+  updateNotificationUI();
+}
+
 
 function handlePhotoUpload(e){
   const file=e.target.files[0];

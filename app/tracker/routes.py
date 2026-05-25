@@ -16,6 +16,7 @@ from app.utils import (
     utc_now,
 )
 from calendar_export import build_study_plan_ics
+from app.notifications.service import notify_milestone_reached, notify_question_solved
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
 from progress_import import parse_csv_backup, parse_json_backup, process_dry_run
@@ -274,6 +275,14 @@ def update_question(question_id):
             message = f"✅ Marked '{question.get('problem', 'Question')}' as complete!"
             update_fields[f"progress.{question_id}.skipped"] = False
             update_fields[platform_count_field] = 1
+
+            # Notify about question solved
+            notify_question_solved(user_id, question.get('problem', 'Question'))
+
+            # Count total solved and check for milestones
+            total_solved = sum(1 for _, p in progress.items() if p.get("done")) + 1
+            notify_milestone_reached(user_id, total_solved)
+
         elif not data["done"] and existing.get("done"):
             message = f"📝 Marked '{question.get('problem', 'Question')}' as incomplete"
         if not data["done"] and existing.get("done"):
