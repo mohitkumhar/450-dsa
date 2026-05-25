@@ -28,11 +28,15 @@ def _configure_rate_limit_storage(app, config_class):
 
 
 def _mongo_client_options(app):
+    max_pool_size = max(app.config["MONGO_MAX_POOL_SIZE"], 1)
+    min_pool_size = min(max(app.config["MONGO_MIN_POOL_SIZE"], 0), max_pool_size)
     return {
         "serverSelectionTimeoutMS": app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"],
         "connectTimeoutMS": app.config["MONGO_CONNECT_TIMEOUT_MS"],
-        "maxPoolSize": app.config["MONGO_MAX_POOL_SIZE"],
-        "minPoolSize": app.config["MONGO_MIN_POOL_SIZE"],
+        "socketTimeoutMS": app.config["MONGO_SOCKET_TIMEOUT_MS"],
+        "waitQueueTimeoutMS": app.config["MONGO_WAIT_QUEUE_TIMEOUT_MS"],
+        "maxPoolSize": max_pool_size,
+        "minPoolSize": min_pool_size,
     }
 
 
