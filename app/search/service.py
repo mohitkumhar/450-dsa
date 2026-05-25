@@ -84,6 +84,21 @@ def question_links(question):
     return links
 
 
+def build_question_search_text(question, topic_name=""):
+    parts = [question.get("problem", ""), topic_name]
+    seen_platforms = set()
+
+    for link in question_links(question):
+        platform = link.get("platform")
+        if not platform or platform in seen_platforms or platform not in PLATFORM_SEARCHES:
+            continue
+        parts.append(platform)
+        parts.extend(PLATFORM_SEARCHES[platform]["aliases"])
+        seen_platforms.add(platform)
+
+    return " ".join(part for part in parts if part).strip()
+
+
 def search_dsa_questions(raw_query, limit=40, db_handle=None):
     db_handle = db_handle or db
     query, requested_platforms = parse_search_query(raw_query)

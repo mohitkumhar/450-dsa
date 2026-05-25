@@ -8,10 +8,20 @@ from app.extensions import login_manager
 class FakeCollection:
     def __init__(self):
         self.indexes = []
+        self._index_information = {}
 
     def create_index(self, *args, **kwargs):
         self.indexes.append((args, kwargs))
+        name = kwargs.get("name")
+        if name:
+            self._index_information[name] = {"key": list(args[0])}
         return None
+
+    def index_information(self):
+        return dict(self._index_information)
+
+    def drop_index(self, name):
+        self._index_information.pop(name, None)
 
     def count_documents(self, *args, **kwargs):
         return 1
@@ -23,6 +33,12 @@ class FakeCollection:
         return None
 
     def update_many(self, *args, **kwargs):
+        return None
+
+    def find(self, *args, **kwargs):
+        return []
+
+    def update_one(self, *args, **kwargs):
         return None
 
 
@@ -86,7 +102,7 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     topic_indexes = app_module.db.topic.indexes
     assert (("position",), {}) in topic_indexes
     assert (("topic",), {}) in question_indexes
-    assert (([("problem", "text")],), {"name": "problem_text"}) in question_indexes
+    assert (([("problem", "text"), ("search_text", "text")],), {"name": "problem_text"}) in question_indexes
     assert "/admin" in routes
     assert "/admin/users/<user_id>/delete" in routes
 

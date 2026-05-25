@@ -17,6 +17,7 @@ from app.web.routes import public_bp
 from app.profile import profile_bp
 from app.security import build_content_security_policy
 from app.search import search_bp
+from app.search.service import build_question_search_text
 from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter
 
@@ -25,6 +26,32 @@ def _configure_rate_limit_storage(app, config_class):
     storage_uri = app.config["RATELIMIT_STORAGE_URI"]
     if storage_uri == "memory://" and config_class is ProductionConfig:
         raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
+
+
+def _ensure_question_search_index():
+    desired_keys = [("problem", "text"), ("search_text", "text")]
+    existing = db.question.index_information().get("problem_text")
+    existing_keys = list(existing.get("key", [])) if existing else None
+    if existing_keys and existing_keys != desired_keys:
+        db.question.drop_index("problem_text")
+    db.question.create_index(desired_keys, name="problem_text")
+
+
+def _backfill_question_search_text():
+    if not hasattr(db.question, "find") or not hasattr(db.question, "update_one"):
+        return
+
+    topic_lookup = {
+        topic["_id"]: topic.get("name", "")
+        for topic in db.topic.find({}, {"name": 1})
+    }
+    for question in db.question.find(
+        {"$or": [{"search_text": {"$exists": False}}, {"search_text": ""}]},
+        {"problem": 1, "topic": 1, "url": 1, "url2": 1, "search_text": 1},
+    ):
+        search_text = build_question_search_text(question, topic_lookup.get(question.get("topic"), ""))
+        if search_text and search_text != question.get("search_text"):
+            db.question.update_one({"_id": question["_id"]}, {"$set": {"search_text": search_text}})
 
 
 def create_app(config_class=None):
@@ -98,7 +125,7 @@ def create_app(config_class=None):
         db.topic.create_index("name", unique=True)
         db.topic.create_index("position")
         db.question.create_index("topic")
-        db.question.create_index([("problem", "text")], name="problem_text")
+        _ensure_question_search_index()
     except Exception:
         pass
 
@@ -125,10 +152,19 @@ def create_app(config_class=None):
                             "url": question["URL"],
                             "url2": question.get("URL2", ""),
                             "difficulty": difficulty,
+                            "search_text": build_question_search_text(
+                                {
+                                    "problem": question["Problem"],
+                                    "url": question["URL"],
+                                    "url2": question.get("URL2", ""),
+                                },
+                                topic["topicName"],
+                            ),
                         }
                     )
                 if questions:
                     db.question.insert_many(questions)
+        _backfill_question_search_text()
 
     @app.before_request
     def ensure_db_initialized():
