@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title desc">
+  <title id="title">450 DSA Tracker app icon</title>
+  <desc id="desc">Dark rounded square with orange DSA lettering.</desc>
+  <rect width="192" height="192" rx="44" fill="#111111"/>
+  <rect x="16" y="16" width="160" height="160" rx="36" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="4"/>
+  <circle cx="96" cy="68" r="34" fill="#ff6b00" opacity="0.18"/>
+  <text x="96" y="86" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="800" fill="#ff8c38">450</text>
+  <text x="96" y="122" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="700" fill="#f0f0f0">DSA</text>
+  <rect x="42" y="136" width="108" height="10" rx="5" fill="#ff6b00"/>
+</svg>

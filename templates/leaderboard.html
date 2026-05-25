@@ -286,6 +286,7 @@ let currentPage = 1;
 let totalPages = 1;
 let currentUserRank = null;
 let isLoading = false;
+let leaderboardController = null;
 
 function escapeHTML(str) {
   if (typeof str !== 'string' && typeof str !== 'number') return '';
@@ -335,15 +336,20 @@ function renderLeaderboardError(error) {
 }
 
 async function loadLeaderboard(page = 1) {
-  if (isLoading) return;
+  if (leaderboardController) leaderboardController.abort();
+
+  const controller = new AbortController();
+  leaderboardController = controller;
   isLoading = true;
   
   document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading" aria-label="Loading leaderboard data">Loading...</td><tr>';
   
   try {
     const url = `/api/leaderboard?mode=${activeMode}&page=${page}&per_page=20&current_user_id=${CURRENT_USER_ID || ''}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { signal: controller.signal });
     const data = await response.json();
+
+    if (leaderboardController !== controller) return;
 
     if (!response.ok) {
       throw new Error(data.error || data.message || `Leaderboard request failed (${response.status})`);
@@ -360,11 +366,16 @@ async function loadLeaderboard(page = 1) {
     renderTable(data.entries, activeMode);
     renderPagination();
   } catch (error) {
+    if (error.name === 'AbortError') return;
+    if (leaderboardController !== controller) return;
     console.error('Error loading leaderboard:', error);
     renderLeaderboardError(error);
+  } finally {
+    if (leaderboardController === controller) {
+      leaderboardController = null;
+      isLoading = false;
+    }
   }
-  
-  isLoading = false;
 }
 
 function renderTable(entries, mode) {

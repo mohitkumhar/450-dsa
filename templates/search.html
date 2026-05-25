@@ -74,6 +74,74 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.recent-searches {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+.recent-searches[hidden] {
+  display: none;
+}
+.recent-searches-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.recent-searches-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.recent-searches-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.recent-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.recent-search-chip:hover,
+.recent-search-chip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.recent-search-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-search-clear {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+.recent-search-clear:hover,
+.recent-search-clear:focus-visible {
+  color: var(--accent);
+}
 .search-meta {
   color: var(--text-secondary);
   font-size: 0.82rem;
@@ -198,6 +266,15 @@
       <button class="platform-chip" type="button" data-token="cn" aria-label="Filter to Coding Ninjas only">Coding Ninjas</button>
       <button class="platform-chip" type="button" data-token="hackerrank" aria-label="Filter to HackerRank only">HackerRank</button>
     </div>
+    <div id="recentSearches" class="recent-searches" hidden>
+      <div class="recent-searches-head">
+        <div class="recent-searches-title">Recent searches</div>
+        <button id="clearRecentSearches" class="recent-search-clear" type="button" aria-label="Clear recent searches">
+          Clear
+        </button>
+      </div>
+      <div id="recentSearchesList" class="recent-searches-list" role="list" aria-label="Recent searches"></div>
+    </div>
   </div>
 
   <div id="searchMeta" class="search-meta" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -214,10 +291,15 @@ const input = document.getElementById('searchInput');
 const results = document.getElementById('results');
 const meta = document.getElementById('searchMeta');
 const clearBtn = document.getElementById('clearSearch');
+const recentSearchesPanel = document.getElementById('recentSearches');
+const recentSearchesList = document.getElementById('recentSearchesList');
+const clearRecentSearchesBtn = document.getElementById('clearRecentSearches');
 const chips = document.querySelectorAll('.platform-chip');
 let activeToken = '';
 let debounceTimer = null;
 let controller = null;
+const RECENT_SEARCHES_KEY = 'dsa_recent_searches_v1';
+const MAX_RECENT_SEARCHES = 5;
 const platformLabels = {
   leetcode: 'LeetCode',
   gfg: 'GFG',
@@ -242,6 +324,75 @@ function badgeClass(color) {
 function currentQuery() {
   const text = input.value.trim();
   return [activeToken, text].filter(Boolean).join(' ');
+}
+
+function normalizeRecentSearchText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function loadRecentSearches() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_SEARCHES_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object') : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveRecentSearches(entries) {
+  try {
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(entries));
+  } catch (err) {
+    // Ignore storage quota/privacy mode failures and keep the search UI usable.
+  }
+}
+
+function renderRecentSearches() {
+  const recentSearches = loadRecentSearches();
+  recentSearchesPanel.hidden = recentSearches.length === 0;
+  clearRecentSearchesBtn.hidden = recentSearches.length === 0;
+
+  if (!recentSearches.length) {
+    recentSearchesList.innerHTML = '';
+    return;
+  }
+
+  recentSearchesList.innerHTML = recentSearches.map((entry, index) => {
+    const tokenLabel = platformLabels[entry.token] || '';
+    const label = tokenLabel && entry.text ? `${tokenLabel}: ${entry.text}` : (entry.text || tokenLabel);
+    return `
+      <button class="recent-search-chip" type="button" data-index="${index}" role="listitem" aria-label="Repeat recent search ${escapeHtml(label)}">
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span class="recent-search-chip-text">${escapeHtml(label)}</span>
+      </button>
+    `;
+  }).join('');
+}
+
+function rememberRecentSearch(text, token) {
+  const normalizedText = normalizeRecentSearchText(text);
+  if (!normalizedText) return;
+
+  const recentSearches = loadRecentSearches();
+  const nextEntry = { text: normalizedText, token: token || '' };
+  const filtered = recentSearches.filter(entry =>
+    !(entry && entry.text && entry.token === nextEntry.token && entry.text.toLowerCase() === normalizedText.toLowerCase())
+  );
+
+  filtered.unshift(nextEntry);
+  saveRecentSearches(filtered.slice(0, MAX_RECENT_SEARCHES));
+  renderRecentSearches();
+}
+
+function applyRecentSearch(index) {
+  const recentSearches = loadRecentSearches();
+  const entry = recentSearches[index];
+  if (!entry) return;
+
+  input.value = entry.text || '';
+  setActiveChip(entry.token || '');
+  input.focus();
+  runSearch();
 }
 
 function setActiveChip(token) {
@@ -340,6 +491,7 @@ async function runSearch() {
   try {
     const res = await fetch(`${endpointConfig.searchQuestions}?q=${encodeURIComponent(query)}`, { signal: controller.signal });
     renderResults(await res.json());
+    rememberRecentSearch(input.value, activeToken);
     meta.setAttribute('aria-busy', 'false');
   } catch (err) {
     if (err.name !== 'AbortError') {
@@ -361,6 +513,15 @@ clearBtn.addEventListener('click', () => {
   input.focus();
   scheduleSearch();
 });
+recentSearchesList.addEventListener('click', (event) => {
+  const chip = event.target.closest('.recent-search-chip');
+  if (!chip) return;
+  applyRecentSearch(Number(chip.dataset.index));
+});
+clearRecentSearchesBtn.addEventListener('click', () => {
+  saveRecentSearches([]);
+  renderRecentSearches();
+});
 chips.forEach(chip => {
   chip.addEventListener('click', () => {
     setActiveChip(chip.dataset.token);
@@ -379,6 +540,7 @@ chips.forEach(chip => {
 });
 
 setActiveChip('');
+renderRecentSearches();
 runSearch();
 </script>
 {% endblock %}

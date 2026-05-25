@@ -9,8 +9,8 @@ services:
       - FLASK_APP=app.py
       - FLASK_ENV=production
       - MONGO_URI=mongodb://mongo:27017/dsa_tracker
-      # It's recommended to move these to a separate .env file in production
-      - SECRET_KEY=${SECRET_KEY:-supersecretkey-change-me}
+      # Provide a real SECRET_KEY via your shell or .env file before startup.
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY must be set}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
