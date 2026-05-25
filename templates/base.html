@@ -9,6 +9,26 @@
         content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
     <script>
         document.documentElement.classList.add('page-loading');
+
+        (function registerPageLoadingRelease() {
+            let pageLoadingReleased = false;
+            const releasePageLoading = () => {
+                if (pageLoadingReleased) {
+                    return;
+                }
+                pageLoadingReleased = true;
+                document.documentElement.classList.remove('page-loading');
+            };
+
+            window.releasePageLoading = releasePageLoading;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                window.requestAnimationFrame(releasePageLoading);
+            }, { once: true });
+
+            window.addEventListener('load', releasePageLoading, { once: true });
+            window.setTimeout(releasePageLoading, 2500);
+        })();
     </script>
    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -987,9 +1007,6 @@
             if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
         }, 4000);
 
-        window.addEventListener('load', () => {
-            document.documentElement.classList.remove('page-loading');
-        });
     </script>
     {% block scripts %}{% endblock %}
 </body>
