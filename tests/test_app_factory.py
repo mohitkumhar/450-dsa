@@ -69,6 +69,7 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/topic/<topic_id>/export-notes" in routes
     assert "/update_question/<question_id>" in routes
     assert "/bookmarks" in routes
+    assert "/notes/search" in routes
     assert "/profile" in routes
     assert "/edit_profile" in routes
     assert "/upload_photo" in routes
