@@ -1,5 +1,9 @@
-from app.extensions import db
+from app.extensions import cache, db
 from app.utils import compute_c_score
+
+LEADERBOARD_SNAPSHOT_CACHE_KEY = "leaderboard:snapshots:v1"
+LEADERBOARD_SNAPSHOT_TTL = 300
+LEADERBOARD_MODES = ("cscore", "questions", "rating", "college")
 
 
 def build_leaderboard_data():
@@ -111,3 +115,50 @@ def build_college_leaderboard_data(entries=None):
         key=lambda item: (item["c_score"], item["total_solved"], item["member_count"]),
         reverse=True,
     )
+
+
+def _rank_entries(entries):
+    ranked = []
+    for index, entry in enumerate(entries, start=1):
+        ranked.append({**entry, "rank": index})
+    return ranked
+
+
+def _sort_leaderboard_entries(entries, mode):
+    if mode == "questions":
+        return sorted(entries, key=lambda item: item["total_solved"], reverse=True)
+    if mode == "rating":
+        return sorted(entries, key=lambda item: item["lc_rating"], reverse=True)
+    if mode == "college":
+        return build_college_leaderboard_data(entries)
+    return sorted(entries, key=lambda item: item["c_score"], reverse=True)
+
+
+def build_leaderboard_snapshots():
+    entries = build_leaderboard_data()
+    return {
+        mode: _rank_entries(_sort_leaderboard_entries(entries, mode))
+        for mode in LEADERBOARD_MODES
+    }
+
+
+def get_leaderboard_snapshot(mode, force_refresh=False):
+    mode = mode if mode in LEADERBOARD_MODES else "cscore"
+    snapshots = None if force_refresh else cache.get(LEADERBOARD_SNAPSHOT_CACHE_KEY)
+    if snapshots is None:
+        snapshots = build_leaderboard_snapshots()
+        cache.set(LEADERBOARD_SNAPSHOT_CACHE_KEY, snapshots, timeout=LEADERBOARD_SNAPSHOT_TTL)
+    return [dict(entry) for entry in snapshots[mode]]
+
+
+def refresh_leaderboard_snapshots():
+    snapshots = build_leaderboard_snapshots()
+    cache.set(LEADERBOARD_SNAPSHOT_CACHE_KEY, snapshots, timeout=LEADERBOARD_SNAPSHOT_TTL)
+    return snapshots
+
+
+def clear_leaderboard_snapshots():
+    try:
+        cache.delete(LEADERBOARD_SNAPSHOT_CACHE_KEY)
+    except KeyError:
+        pass
