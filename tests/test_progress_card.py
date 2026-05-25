@@ -72,7 +72,8 @@ def app(mock_db):
     # Patch db globally before importing app
     with patch('app.extensions.db', mock_db), \
          patch('app.db', mock_db), \
-         patch('app.mongo'):
+         patch('app.mongo'), \
+         patch.dict('os.environ', {'SECRET_KEY': 'test-secret-key'}, clear=False):
         from app import create_app
         app = create_app()
         app.config['TESTING'] = True

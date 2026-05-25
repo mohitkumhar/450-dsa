@@ -38,6 +38,7 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     registered_clients = []
     mongo_init_calls = []
 
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("MONGO_URI", "mongodb://localhost:27017/450_dsa")
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(
@@ -125,8 +126,9 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
 def test_create_app_caches_faq_page_render(monkeypatch):
     rendered_templates = []
 
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(app_module, "db", FakeDB())
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
     monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
     monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
@@ -153,6 +155,7 @@ def test_create_app_caches_faq_page_render(monkeypatch):
 
 
 def test_create_app_sets_secure_session_cookie_defaults(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.delenv("APP_ENV", raising=False)
     monkeypatch.delenv("ENV", raising=False)
@@ -175,6 +178,7 @@ def test_create_app_sets_secure_session_cookie_defaults(monkeypatch):
 
 def test_create_app_allows_insecure_session_cookie_in_development(monkeypatch):
     monkeypatch.setenv("FLASK_ENV", "development")
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.delenv("SESSION_COOKIE_SECURE", raising=False)
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
@@ -192,6 +196,7 @@ def test_create_app_allows_insecure_session_cookie_in_development(monkeypatch):
 
 
 def test_create_app_uses_configured_rate_limit_storage(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/0")
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
@@ -209,6 +214,7 @@ def test_create_app_uses_configured_rate_limit_storage(monkeypatch):
 def test_create_app_requires_persistent_rate_limit_storage_in_production(monkeypatch):
     monkeypatch.delenv("RATELIMIT_STORAGE_URI", raising=False)
     monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(app_module, "db", FakeDB())
 
     try:
@@ -221,6 +227,7 @@ def test_create_app_requires_persistent_rate_limit_storage_in_production(monkeyp
 
 def test_create_app_uses_testing_config_class(monkeypatch):
     mongo_init_calls = []
+    monkeypatch.delenv("SECRET_KEY", raising=False)
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(
         app_module.mongo,
@@ -248,6 +255,7 @@ def test_create_app_uses_testing_config_class(monkeypatch):
 
 
 def test_create_app_uses_production_config_class(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("RATELIMIT_STORAGE_URI", "redis://localhost:6379/0")
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
@@ -264,6 +272,7 @@ def test_create_app_uses_production_config_class(monkeypatch):
 
 
 def test_create_app_uses_development_config_class(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(app_module, "db", FakeDB())
     monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
@@ -280,6 +289,7 @@ def test_create_app_uses_development_config_class(monkeypatch):
 def test_create_app_allows_mongo_timeout_and_pool_overrides(monkeypatch):
     mongo_init_calls = []
 
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("MONGO_SERVER_SELECTION_TIMEOUT_MS", "1200")
     monkeypatch.setenv("MONGO_CONNECT_TIMEOUT_MS", "2300")
     monkeypatch.setenv("MONGO_MAX_POOL_SIZE", "17")
@@ -310,3 +320,37 @@ def test_create_app_allows_mongo_timeout_and_pool_overrides(monkeypatch):
             "minPoolSize": 3,
         }
     ]
+
+
+def test_create_app_requires_secret_key_outside_testing(monkeypatch):
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("ENV", raising=False)
+    monkeypatch.delenv("FLASK_DEBUG", raising=False)
+    monkeypatch.setattr(app_module, "load_dotenv", lambda: None)
+    monkeypatch.setattr(app_module, "db", FakeDB())
+
+    try:
+        app_module.create_app()
+    except RuntimeError as exc:
+        assert "SECRET_KEY" in str(exc)
+    else:
+        raise AssertionError("startup should require SECRET_KEY outside testing")
+
+
+def test_create_app_rejects_insecure_secret_key_defaults(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "supersecretkey")
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.delenv("ENV", raising=False)
+    monkeypatch.delenv("FLASK_DEBUG", raising=False)
+    monkeypatch.setattr(app_module, "load_dotenv", lambda: None)
+    monkeypatch.setattr(app_module, "db", FakeDB())
+
+    try:
+        app_module.create_app()
+    except RuntimeError as exc:
+        assert "SECRET_KEY" in str(exc)
+    else:
+        raise AssertionError("startup should reject insecure SECRET_KEY defaults")
