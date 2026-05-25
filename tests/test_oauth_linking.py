@@ -104,12 +104,13 @@ def make_app(monkeypatch, db_override):
     import app.auth.routes as auth_routes
     import app.extensions as ext
 
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(app_module, "db", db_override)
     monkeypatch.setattr(auth_routes, "db", db_override)
     monkeypatch.setattr(ext, "db", db_override)
     monkeypatch.setattr(ext.mongo, "db", db_override, raising=False)
 
-    monkeypatch.setattr(ext.mongo, "init_app", lambda a: None)
+    monkeypatch.setattr(ext.mongo, "init_app", lambda a, **kwargs: None)
     monkeypatch.setattr(ext.oauth, "init_app", lambda a: None)
     monkeypatch.setattr(ext.limiter, "init_app", lambda a: None)
     monkeypatch.setattr(ext.cache, "init_app", lambda a: None)
@@ -144,6 +145,11 @@ def _make_google_mock(user_info=GOOGLE_USER_INFO):
     mock.parse_id_token = MagicMock(return_value=user_info)
     mock.userinfo = MagicMock(return_value=user_info)
     return mock
+
+
+def _get_flashed_messages(client):
+    with client.session_transaction() as session:
+        return list(session.get("_flashes", []))
 
 
 # ── GitHub Tests ──────────────────────────────────────────────────────────────
@@ -192,6 +198,68 @@ def test_github_failed_user_fetch_returns_400(monkeypatch):
             assert resp.status_code == 400
 
 
+def test_github_token_exchange_exception_redirects_to_login(monkeypatch):
+    db = make_fake_db()
+    flask_app = make_app(monkeypatch, db)
+
+    mock = MagicMock()
+    mock.authorize_access_token = MagicMock(side_effect=RuntimeError("secret boom"))
+
+    with flask_app.test_client() as client:
+        with patch("app.auth.routes.github", new=mock):
+            resp = client.get("/login/github/authorize")
+
+        flashes = _get_flashed_messages(client)
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/login"
+    assert ("danger", "GitHub sign-in is temporarily unavailable. Please try again.") in flashes
+    assert all("secret boom" not in message for _, message in flashes)
+
+
+def test_github_user_fetch_exception_redirects_to_login(monkeypatch):
+    db = make_fake_db()
+    flask_app = make_app(monkeypatch, db)
+
+    mock = MagicMock()
+    mock.authorize_access_token = MagicMock(return_value={"access_token": "tok"})
+    mock.get = MagicMock(side_effect=RuntimeError("provider outage"))
+
+    with flask_app.test_client() as client:
+        with patch("app.auth.routes.github", new=mock):
+            resp = client.get("/login/github/authorize")
+
+        flashes = _get_flashed_messages(client)
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/login"
+    assert ("danger", "GitHub sign-in is temporarily unavailable. Please try again.") in flashes
+    assert all("provider outage" not in message for _, message in flashes)
+
+
+def test_github_email_fetch_exception_does_not_fail_login(monkeypatch):
+    inserted = {}
+    db = make_fake_db(inserted=inserted)
+    flask_app = make_app(monkeypatch, db)
+
+    mock = MagicMock()
+    mock.authorize_access_token = MagicMock(return_value={"access_token": "tok"})
+    user_resp = MagicMock()
+    user_resp.ok = True
+    user_resp.json = MagicMock(return_value=GITHUB_USER_INFO)
+    mock.get = MagicMock(
+        side_effect=lambda url: user_resp if url == "user" else (_ for _ in ()).throw(RuntimeError("email fetch down"))
+    )
+
+    with flask_app.test_client() as client:
+        with patch("app.auth.routes.github", new=mock):
+            resp = client.get("/login/github/authorize")
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/"
+    assert inserted.get("github_id") == str(GITHUB_USER_INFO["id"])
+
+
 # ── Google Tests ──────────────────────────────────────────────────────────────
 
 def test_google_links_existing_email_user(monkeypatch):
@@ -237,6 +305,72 @@ def test_google_missing_userinfo_returns_400(monkeypatch):
         with patch("app.auth.routes.google", new=mock):
             resp = client.get("/login/google/authorize")
             assert resp.status_code == 400
+
+
+def test_google_token_exchange_exception_redirects_to_login(monkeypatch):
+    db = make_fake_db()
+    flask_app = make_app(monkeypatch, db)
+
+    mock = MagicMock()
+    mock.authorize_access_token = MagicMock(side_effect=RuntimeError("token failed"))
+
+    with flask_app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["google_oauth_nonce"] = "test-nonce"
+        with patch("app.auth.routes.google", new=mock):
+            resp = client.get("/login/google/authorize")
+
+        flashes = _get_flashed_messages(client)
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/login"
+    assert ("danger", "Google sign-in is temporarily unavailable. Please try again.") in flashes
+    assert all("token failed" not in message for _, message in flashes)
+
+
+def test_google_id_token_parsing_exception_redirects_to_login(monkeypatch):
+    db = make_fake_db()
+    flask_app = make_app(monkeypatch, db)
+
+    mock = MagicMock()
+    mock.authorize_access_token = MagicMock(return_value={"access_token": "tok"})
+    mock.parse_id_token = MagicMock(side_effect=RuntimeError("parse failed"))
+
+    with flask_app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["google_oauth_nonce"] = "test-nonce"
+        with patch("app.auth.routes.google", new=mock):
+            resp = client.get("/login/google/authorize")
+
+        flashes = _get_flashed_messages(client)
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/login"
+    assert ("danger", "Google sign-in is temporarily unavailable. Please try again.") in flashes
+    assert all("parse failed" not in message for _, message in flashes)
+
+
+def test_google_userinfo_exception_redirects_to_login_when_id_token_missing(monkeypatch):
+    db = make_fake_db()
+    flask_app = make_app(monkeypatch, db)
+
+    mock = MagicMock()
+    mock.authorize_access_token = MagicMock(return_value={"access_token": "tok"})
+    mock.parse_id_token = MagicMock(return_value=None)
+    mock.userinfo = MagicMock(side_effect=RuntimeError("userinfo failed"))
+
+    with flask_app.test_client() as client:
+        with client.session_transaction() as sess:
+            sess["google_oauth_nonce"] = "test-nonce"
+        with patch("app.auth.routes.google", new=mock):
+            resp = client.get("/login/google/authorize")
+
+        flashes = _get_flashed_messages(client)
+
+    assert resp.status_code == 302
+    assert resp.headers["Location"] == "/login"
+    assert ("danger", "Google sign-in is temporarily unavailable. Please try again.") in flashes
+    assert all("userinfo failed" not in message for _, message in flashes)
 
 
 def test_resolve_oauth_user_returns_existing_provider_match(monkeypatch):

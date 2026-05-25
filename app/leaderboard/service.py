@@ -158,4 +158,7 @@ def refresh_leaderboard_snapshots():
 
 
 def clear_leaderboard_snapshots():
-    cache.delete(LEADERBOARD_SNAPSHOT_CACHE_KEY)
+    try:
+        cache.delete(LEADERBOARD_SNAPSHOT_CACHE_KEY)
+    except KeyError:
+        pass
