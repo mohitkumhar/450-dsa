@@ -47,6 +47,62 @@ def normalize_coding_ninjas_profile_id(value):
     return value.rstrip("/").split("/")[-1].strip()
 
 
+PLATFORM_USERNAME_PATTERNS = {
+    "leetcode": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"),
+    "github": re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}$"),
+    "gfg": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"),
+    "hackerrank": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"),
+    "codingninjas": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"),
+    "coding ninjas": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"),
+    "atcoder": re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"),
+}
+
+PLATFORM_USERNAME_URL_PATTERNS = {
+    "leetcode": re.compile(r"(?:https?://)?(?:www\.)?leetcode\.com/(?:u/)?([^/?#]+)/?", re.IGNORECASE),
+    "github": re.compile(r"(?:https?://)?(?:www\.)?github\.com/([^/?#]+)/?", re.IGNORECASE),
+    "gfg": re.compile(r"(?:https?://)?(?:www\.)?geeksforgeeks\.org/user/([^/?#]+)/?", re.IGNORECASE),
+    "hackerrank": re.compile(r"(?:https?://)?(?:www\.)?hackerrank\.com/([^/?#]+)/?", re.IGNORECASE),
+    "atcoder": re.compile(r"(?:https?://)?(?:www\.)?atcoder\.jp/users/([^/?#]+)/?", re.IGNORECASE),
+}
+
+PLATFORM_LABELS = {
+    "leetcode": "LeetCode",
+    "github": "GitHub",
+    "gfg": "GeeksforGeeks",
+    "hackerrank": "HackerRank",
+    "codingninjas": "Coding Ninjas",
+    "coding ninjas": "Coding Ninjas",
+    "atcoder": "AtCoder",
+}
+
+
+def normalize_platform_username(platform, value):
+    platform_key = (platform or "").strip().lower()
+    value = (value or "").strip()
+    if not value:
+        return ""
+
+    if any(ord(char) < 32 for char in value):
+        raise ValueError(f"Enter a valid {PLATFORM_LABELS.get(platform_key, 'platform')} username.")
+
+    if platform_key in {"codingninjas", "coding ninjas"}:
+        value = normalize_coding_ninjas_profile_id(value)
+    else:
+        match = PLATFORM_USERNAME_URL_PATTERNS.get(platform_key)
+        if match:
+            url_match = match.search(value)
+            if url_match:
+                value = url_match.group(1).strip()
+            elif "://" in value:
+                raise ValueError(f"Enter a valid {PLATFORM_LABELS.get(platform_key, 'platform')} username.")
+
+    pattern = PLATFORM_USERNAME_PATTERNS.get(platform_key)
+    if not pattern or not pattern.fullmatch(value):
+        raise ValueError(f"Enter a valid {PLATFORM_LABELS.get(platform_key, 'platform')} username.")
+
+    return value
+
+
 def platform_name_filter(url):
     if not url:
         return None
@@ -79,6 +135,12 @@ def platform_profile_url(username, platform):
     if not username:
         return "#"
     platform = platform.lower()
+    try:
+        username = normalize_platform_username(platform, username)
+    except ValueError:
+        return "#"
+    if not username:
+        return "#"
     if platform == "leetcode":
         return f"https://leetcode.com/{username}"
     if platform == "gfg":
