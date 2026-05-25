@@ -21,3 +21,14 @@ def test_leaderboard_error_state_resets_pagination():
     assert "totalPages = 1;" in template
     assert "currentUserRank = null;" in template
     assert "renderPagination();" in template
+
+
+def test_leaderboard_aborts_previous_requests_and_ignores_stale_results():
+    template = LEADERBOARD_TEMPLATE.read_text(encoding="utf-8")
+
+    assert "let leaderboardController = null;" in template
+    assert "if (leaderboardController) leaderboardController.abort();" in template
+    assert "const controller = new AbortController();" in template
+    assert "const response = await fetch(url, { signal: controller.signal });" in template
+    assert "if (leaderboardController !== controller) return;" in template
+    assert "if (error.name === 'AbortError') return;" in template

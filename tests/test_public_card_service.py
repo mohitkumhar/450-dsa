@@ -61,14 +61,17 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
 
     card_cache.clear()
 
-    first = get_public_card_image(str(user_id), user_id)
-    second = get_public_card_image(str(user_id), user_id)
+    first, first_etag, first_last_modified = get_public_card_image(str(user_id), user_id)
+    second, second_etag, second_last_modified = get_public_card_image(str(user_id), user_id)
 
     assert first.read() == b"fake-png"
     second.seek(0)
     assert second.read() == b"fake-png"
     assert len(generated) == 1
     assert generated[0] == ("Card User", 144, 100.0, 4, {"LeetCode": 12})
+    assert first_etag == second_etag
+    assert first_etag.startswith("progress-card-")
+    assert first_last_modified == second_last_modified
 
 
 def test_get_public_card_image_raises_for_missing_user(monkeypatch):
