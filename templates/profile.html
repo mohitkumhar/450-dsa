@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import modal_shell %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
 {% endblock %}
@@ -107,7 +108,7 @@ body.modal-open {
   <div class="card" style="text-align:center">
     <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
       {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
+        <img src="{{ user.profile_photo }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
       {% else %}
         <span aria-hidden="true">{{ user.name[0]|upper }}</span>
         <span class="visually-hidden">{{ user.name }}'s profile initial</span>
@@ -311,7 +312,7 @@ body.modal-open {
       {% for badge in lc_badges %}
       <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
+          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -457,12 +458,7 @@ body.modal-open {
 </div>
 
 <!-- Sync Modal -->
-<div class="modal-ov" id="syncModal">
-  <div class="modal-bx" style="max-width:480px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <h3 style="margin-bottom:0"><i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles</h3>
-      <button onclick="closeSyncModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
+{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
     <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
     <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
@@ -479,16 +475,10 @@ body.modal-open {
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
       <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
     </div>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Codolio Card Modal -->
-<div class="modal-ov" id="cardModal">
-  <div class="modal-bx" style="max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <span style="font-weight:700;font-size:1rem">Your Profile Card</span>
-      <button onclick="document.getElementById('cardModal').classList.remove('open')" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
     <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
       <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
       <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
@@ -501,22 +491,16 @@ body.modal-open {
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
     <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Edit Profile Modal -->
-<div class="modal-ov" id="editProfileModal">
-  <div class="modal-bx" style="max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden">
-    <div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color)">
-      <h3 style="margin:0"><i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile</h3>
-      <button onclick="closeEditProfile()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
+{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
     <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
     <!-- Photo Upload -->
     <div style="text-align:center;margin-bottom:20px">
       <div style="position:relative;display:inline-block">
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
-          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" style="width:100%;height:100%;object-fit:cover">{% else %}{{ user.name[0]|upper }}{% endif %}
+          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
         <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
           <i class="bi bi-camera"></i> Upload Photo
@@ -550,8 +534,7 @@ body.modal-open {
       <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
       <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
     </div>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Toast notification -->
 <div class="toast" id="toast" style=""></div>
