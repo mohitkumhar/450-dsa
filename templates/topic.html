@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros/ui_bits.html" import question_link_badge %}
+{% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
 .back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
@@ -12,6 +13,7 @@
 .filter-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
 .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.status-filter-buttons { margin-top: -8px; margin-bottom: 20px; }
 
 /* Difficulty badges - improved for color contrast */
 .difficulty-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
@@ -49,6 +51,7 @@
 .action-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; font-size: 1.1rem; color: var(--text-muted); transition: all 0.2s; }
 .action-icon:hover { background: var(--bg-secondary); color: var(--accent); }
 .action-icon.bookmarked { color: var(--warning); }
+.action-icon.skipped { color: var(--danger); }
 .action-icon:disabled, .q-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
 .notes-btn-sm { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 0.77rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .notes-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
@@ -58,17 +61,6 @@
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
-/* Modal focus management */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 28px; width: 90%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-.modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
-.modal-textarea { width: 100%; padding: 12px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-size: 0.88rem; font-family: inherit; resize: vertical; min-height: 120px; outline: none; }
-.modal-textarea:focus { border-color: var(--accent); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-.btn-modal-cancel { padding: 9px 18px; border-radius: 8px; border: 1px solid var(--border-color); background: none; color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-.btn-modal-save { padding: 9px 18px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit; }
-.btn-modal-save:hover { background: var(--accent-hover); }
 .topic-status {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -121,10 +113,10 @@
     <div class="topic-header-main">
         <h1 class="topic-title">{{ topic.name }}</h1>
         <div class="topic-subtitle">
-            {% if difficulty_filter == 'all' %}
+            {% if not active_filters %}
                 {{ total_count }} questions in this topic
             {% else %}
-                Showing {{ questions|length }} of {{ total_count }} questions ({{ difficulty_filter }} difficulty)
+                Showing {{ questions|length }} of {{ total_count }} questions ({{ active_filters }})
             {% endif %}
         </div>
     </div>
@@ -137,23 +129,38 @@
 
 <!-- Filter Buttons with ARIA labels -->
 <div class="filter-buttons" role="group" aria-label="Filter questions by difficulty level">
-    <button class="filter-btn {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'all' %}active{% endif %}" data-difficulty="all" aria-pressed="{% if difficulty_filter == 'all' %}true{% else %}false{% endif %}">
         📋 All ({{ total_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Easy' %}active{% endif %}" data-difficulty="Easy" aria-pressed="{% if difficulty_filter == 'Easy' %}true{% else %}false{% endif %}">
         🟢 Easy ({{ easy_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Medium' %}active{% endif %}" data-difficulty="Medium" aria-pressed="{% if difficulty_filter == 'Medium' %}true{% else %}false{% endif %}">
         🟡 Medium ({{ medium_count }})
     </button>
-    <button class="filter-btn {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if difficulty_filter == 'Hard' %}active{% endif %}" data-difficulty="Hard" aria-pressed="{% if difficulty_filter == 'Hard' %}true{% else %}false{% endif %}">
         🔴 Hard ({{ hard_count }})
     </button>
 </div>
 <!-- Practice Random Button -->
 <div style="margin-bottom: 16px;">
-    <button id="practiceRandomBtn" type="button" class="filter-btn" style="background: var(--accent); color: white; border-color: var(--accent);">
+    <button id="practiceRandomBtn" type="button" class="filter-btn ui-btn ui-btn-primary ui-btn-pill">
         🎲 Practice Random
+    </button>
+</div>
+
+<div class="filter-buttons status-filter-buttons" role="group" aria-label="Filter questions by progress status">
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'all' %}active{% endif %}" data-status="all" aria-pressed="{% if status_filter == 'all' %}true{% else %}false{% endif %}">
+        All Statuses ({{ total_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'todo' %}active{% endif %}" data-status="todo" aria-pressed="{% if status_filter == 'todo' %}true{% else %}false{% endif %}">
+        To Do ({{ todo_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'done' %}active{% endif %}" data-status="done" aria-pressed="{% if status_filter == 'done' %}true{% else %}false{% endif %}">
+        Done ({{ done_count }})
+    </button>
+    <button class="filter-btn ui-btn ui-btn-secondary ui-btn-pill {% if status_filter == 'skipped' %}active{% endif %}" data-status="skipped" aria-pressed="{% if status_filter == 'skipped' %}true{% else %}false{% endif %}">
+        Skipped ({{ skipped_count }})
     </button>
 </div>
 
@@ -213,6 +220,13 @@
                         aria-pressed="{{ 'true' if p and p.bookmark else 'false' }}">
                         <i class="bi {% if p and p.bookmark %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}" aria-hidden="true"></i>
                     </button>
+                    <button class="action-icon skip-btn {% if p and p.skipped %}skipped{% endif %}"
+                        data-id="{{ q_id_str }}"
+                        data-skipped="{{ 'true' if p and p.skipped else 'false' }}"
+                        aria-label="{% if p and p.skipped %}Remove skipped status for '{{ q.problem }}'{% else %}Mark '{{ q.problem }}' as skipped{% endif %}"
+                        aria-pressed="{{ 'true' if p and p.skipped else 'false' }}">
+                        <i class="bi {% if p and p.skipped %}bi-skip-forward-fill{% else %}bi-skip-forward{% endif %}" aria-hidden="true"></i>
+                    </button>
                 </td>
                 <td>
                     <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn"
@@ -241,21 +255,14 @@
 </div>
 
 <!-- Notes Modal -->
-<div class="modal-overlay" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesModalTitle">
-    <div class="modal-box">
-        <h3 id="notesModalTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes</h3>
-        <textarea class="modal-textarea" id="notesTextarea" placeholder="Write your notes here..." aria-label="Notes for this question"></textarea>
-        <input type="hidden" id="currentQuestionId">
-        <div class="modal-actions">
-            <button class="btn-modal-cancel" id="modalCancel" aria-label="Cancel editing notes">Cancel</button>
-            <button class="btn-modal-save" id="saveNotesBtn" aria-label="Save notes">Save Notes</button>
-        </div>
-    </div>
-</div>
+{{ notes_modal(textarea_label='Notes for this question') }}
 {% endblock %}
 
 {% block scripts %}
 <script>
+const endpointConfig = {{ {
+  "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+}|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -276,7 +283,7 @@ function setBookmarkState(btn, isBookmarked) {
 }
 
 function updateQuestion(id, data, callback) {
-    return fetch('/update_question/' + id, {
+    return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
@@ -322,6 +329,14 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
     });
 });
 
+function setSkippedState(btn, isSkipped) {
+    const icon = btn.querySelector('i');
+    btn.dataset.skipped = isSkipped ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', isSkipped ? 'true' : 'false');
+    btn.classList.toggle('skipped', isSkipped);
+    icon.className = isSkipped ? 'bi bi-skip-forward-fill' : 'bi bi-skip-forward';
+}
+
 document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         if (!isAuthenticated) { 
@@ -345,12 +360,58 @@ document.querySelectorAll('.bookmark-btn').forEach(btn => {
     });
 });
 
+document.querySelectorAll('.skip-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+        const isSkipped = this.dataset.skipped === 'true';
+        const nextSkipped = !isSkipped;
+        const row = document.getElementById('row-' + this.dataset.id);
+        const checkbox = row.querySelector('.status-checkbox');
+        const previousChecked = checkbox.checked;
+        this.disabled = true;
+        checkbox.disabled = true;
+        row.classList.add('row-updating');
+        setSkippedState(this, nextSkipped);
+        if (nextSkipped) {
+            checkbox.checked = false;
+            row.classList.remove('row-done');
+        }
+        updateQuestion(this.dataset.id, {skipped: nextSkipped})
+            .catch(() => {
+                setSkippedState(this, isSkipped);
+                checkbox.checked = previousChecked;
+                row.classList.toggle('row-done', previousChecked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+                checkbox.disabled = false;
+                row.classList.remove('row-updating');
+            });
+    });
+});
+
 // Difficulty Filtering
 document.querySelectorAll('.filter-btn[data-difficulty]').forEach(btn => {
     btn.addEventListener('click', function() {
         const difficulty = this.dataset.difficulty;
         const currentUrl = new URL(window.location.href);
         currentUrl.searchParams.set('difficulty', difficulty);
+        currentUrl.searchParams.set('status', '{{ status_filter }}');
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
+        window.location.href = currentUrl.toString();
+    });
+});
+document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const status = this.dataset.status;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('difficulty', '{{ difficulty_filter }}');
+        currentUrl.searchParams.set('status', status);
         this.classList.add('btn-busy');
         this.setAttribute('aria-busy', 'true');
         window.location.href = currentUrl.toString();

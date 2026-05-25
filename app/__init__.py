@@ -18,7 +18,7 @@ from app.profile import profile_bp
 from app.security import build_content_security_policy
 from app.search import search_bp
 from app.tracker import tracker_bp
-from app.utils import platform_color_filter, platform_name_filter
+from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
 
 
 def _configure_rate_limit_storage(app, config_class):
@@ -27,12 +27,22 @@ def _configure_rate_limit_storage(app, config_class):
         raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
 
 
+def _mongo_client_options(app):
+    return {
+        "serverSelectionTimeoutMS": app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"],
+        "connectTimeoutMS": app.config["MONGO_CONNECT_TIMEOUT_MS"],
+        "maxPoolSize": app.config["MONGO_MAX_POOL_SIZE"],
+        "minPoolSize": app.config["MONGO_MIN_POOL_SIZE"],
+    }
+
+
 def create_app(config_class=None):
     load_dotenv()
 
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     config_class = config_class or resolve_config_class()
     app.config.from_object(config_class)
+    # Non-test environments must provide a real SECRET_KEY before the app boots.
     config_class.apply_environment_overrides(app)
     _configure_rate_limit_storage(app, config_class)
     app.config["SESSION_COOKIE_SECURE"] = env_flag(
@@ -62,7 +72,7 @@ def create_app(config_class=None):
         },
     )
 
-    mongo.init_app(app)
+    mongo.init_app(app, **_mongo_client_options(app))
     bcrypt.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
@@ -138,6 +148,7 @@ def create_app(config_class=None):
 
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
+    app.add_template_filter(platform_profile_url, "platform_url")
 
     @app.context_processor
     def inject_csrf_token():
@@ -149,6 +160,12 @@ def create_app(config_class=None):
             return token
 
         return {"csrf_token": csrf_token}
+
+    @app.route("/service-worker.js")
+    def service_worker():
+        response = app.send_static_file("js/service-worker.js")
+        response.mimetype = "application/javascript"
+        return response
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(faq_bp)  
