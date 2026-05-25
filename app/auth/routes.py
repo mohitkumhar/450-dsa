@@ -326,7 +326,7 @@ def authorize_google():
         return "Failed to fetch Google user info", 400
 
     google_id = user_info["sub"]
-    email = user_info.get("email")
+    email = user_info.get("email") if user_info.get("email_verified") else None
 
     user_doc, action = resolve_oauth_user(
         "google_id",

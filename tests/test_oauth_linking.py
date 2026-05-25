@@ -19,6 +19,7 @@ GOOGLE_USER_INFO = {
     "sub": "google-999",
     "name": "Google User",
     "email": "test@example.com",
+    "email_verified": True,
 }
 
 
@@ -274,6 +275,31 @@ def test_google_links_existing_email_user(monkeypatch):
             resp = client.get("/login/google/authorize")
             assert resp.status_code == 302
             assert "google_id" in existing
+
+
+def test_google_does_not_link_existing_user_when_email_is_unverified(monkeypatch):
+    existing = {"_id": EXISTING_USER_ID, "email": "test@example.com", "progress": {}}
+    inserted = {}
+    db = make_fake_db(existing=existing, inserted=inserted)
+    flask_app = make_app(monkeypatch, db)
+
+    unverified_user = {
+        "sub": "google-999",
+        "name": "Google User",
+        "email": "test@example.com",
+        "email_verified": False,
+    }
+
+    with flask_app.test_client() as client:
+        with patch("app.auth.routes.google", new=_make_google_mock(user_info=unverified_user)):
+            with client.session_transaction() as sess:
+                sess["google_oauth_nonce"] = "test-nonce"
+            resp = client.get("/login/google/authorize")
+
+    assert resp.status_code == 302
+    assert "google_id" not in existing
+    assert inserted.get("google_id") == "google-999"
+    assert inserted.get("email") is None
 
 
 def test_google_creates_new_user_when_no_match(monkeypatch):
