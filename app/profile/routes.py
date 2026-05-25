@@ -4,8 +4,7 @@ import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
 
-from app.extensions import db
-from app.extensions import limiter, cache
+from app.extensions import cache, db, limiter
 from app.leaderboard.service import clear_leaderboard_snapshots
 from app.platforms.fetchers import (
     fetch_atcoder,
@@ -17,13 +16,14 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
-from app.profile.card_service import CACHE_TTL, card_cache, get_public_card_image
+from app.profile.card_service import CACHE_TTL, get_public_card_image
 from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
+from platform_fetcher import run_fetch_jobs
 from profile_validation import build_profile_updates
 
 profile_bp = Blueprint("profile", __name__)
 
-__all__ = ["CACHE_TTL", "card_cache", "get_public_card_image"]
+__all__ = ["CACHE_TTL", "get_public_card_image"]
 
 
 def build_sync_platforms_response(platform_status: dict):
@@ -38,6 +38,58 @@ def build_sync_platforms_response(platform_status: dict):
         return {"success": False, "error": "Sync failed for all platforms.", "platforms": platform_status}
 
     return {"success": True, "partial_success": partial_success, "platforms": platform_status}
+
+
+def build_platform_sync_jobs(
+    leetcode_username="",
+    github_username="",
+    gfg_username="",
+    codingninjas_username="",
+    hackerrank_username="",
+    atcoder_username="",
+):
+    jobs = {}
+
+    if leetcode_username:
+        def fetch_leetcode_bundle():
+            result = {"stats": fetch_leetcode(leetcode_username)}
+            try:
+                rating_history = fetch_leetcode_rating_history(leetcode_username)
+                if rating_history:
+                    result["rating_history"] = rating_history
+            except Exception:
+                pass
+            try:
+                result["badges"] = fetch_lc_badges(leetcode_username)
+            except Exception:
+                pass
+            return result
+
+        jobs["leetcode"] = fetch_leetcode_bundle
+
+    if github_username:
+        jobs["github"] = lambda: fetch_github(github_username)
+
+    if gfg_username:
+        jobs["gfg"] = lambda: fetch_gfg(gfg_username)
+
+    if codingninjas_username:
+        jobs["codingninjas"] = lambda: fetch_coding_ninjas(codingninjas_username)
+
+    if hackerrank_username:
+        jobs["hackerrank"] = lambda: fetch_hr_badges(hackerrank_username)
+
+    if atcoder_username:
+        jobs["atcoder"] = lambda: fetch_atcoder(atcoder_username)
+
+    return jobs
+
+
+def clear_profile_caches(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except KeyError:
+        pass
 
 
 @profile_bp.route("/sync_platforms", methods=["POST"])
@@ -159,113 +211,113 @@ def sync_platforms():
             payload["error"] = error
         platform_status[platform_key] = payload
 
+    platform_jobs = build_platform_sync_jobs(
+        leetcode_username=leetcode_username,
+        github_username=github_username,
+        gfg_username=gfg_username,
+        codingninjas_username=codingninjas_username,
+        hackerrank_username=hackerrank_username,
+        atcoder_username=atcoder_username,
+    )
+    platform_results, platform_errors = run_fetch_jobs(platform_jobs, max_workers=4)
+
     if leetcode_username:
-        try:
-            leetcode_data = fetch_leetcode(leetcode_username)
-            if not leetcode_data:
-                _mark("leetcode", "failed", "No data returned (username may be invalid or rate-limited).")
-            else:
-                _mark("leetcode", "synced")
-                for key, value in leetcode_data.get("calendar", {}).items():
-                    combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
-                if leetcode_data.get("total") is not None:
-                    platform_totals["LeetCode"] = leetcode_data.get("total")
-                if leetcode_data.get("difficulty"):
-                    platform_totals["LeetCode_Easy"] = leetcode_data["difficulty"].get("Easy", 0)
-                    platform_totals["LeetCode_Medium"] = leetcode_data["difficulty"].get("Medium", 0)
-                    platform_totals["LeetCode_Hard"] = leetcode_data["difficulty"].get("Hard", 0)
-                if leetcode_data.get("contest"):
-                    platform_totals["LeetCode_Contests"] = leetcode_data["contest"].get("attendedContestsCount", 0)
-                    platform_totals["LeetCode_Rating"] = int(leetcode_data["contest"].get("rating", 0))
-                    platform_totals["LeetCode_GlobalRank"] = leetcode_data["contest"].get("globalRanking", 0)
-
-                try:
-                    rating_history = fetch_leetcode_rating_history(leetcode_username)
-                    if rating_history:
-                        update_fields["rating_history"] = rating_history
-                except Exception:
-                    pass
-
-                try:
-                    lc_badges = fetch_lc_badges(leetcode_username)
-                    update_fields["lc_badges_json"] = json.dumps(lc_badges)
-                except Exception:
-                    pass
-        except Exception:
+        leetcode_bundle = platform_results.get("leetcode") or {}
+        leetcode_data = leetcode_bundle.get("stats") if isinstance(leetcode_bundle, dict) else None
+        if platform_errors.get("leetcode"):
             _mark("leetcode", "failed", "Failed to fetch LeetCode stats.")
+        elif not leetcode_data:
+            _mark("leetcode", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            _mark("leetcode", "synced")
+            for key, value in leetcode_data.get("calendar", {}).items():
+                combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+            if leetcode_data.get("total") is not None:
+                platform_totals["LeetCode"] = leetcode_data.get("total")
+            if leetcode_data.get("difficulty"):
+                platform_totals["LeetCode_Easy"] = leetcode_data["difficulty"].get("Easy", 0)
+                platform_totals["LeetCode_Medium"] = leetcode_data["difficulty"].get("Medium", 0)
+                platform_totals["LeetCode_Hard"] = leetcode_data["difficulty"].get("Hard", 0)
+            if leetcode_data.get("contest"):
+                platform_totals["LeetCode_Contests"] = leetcode_data["contest"].get("attendedContestsCount", 0)
+                platform_totals["LeetCode_Rating"] = int(leetcode_data["contest"].get("rating", 0))
+                platform_totals["LeetCode_GlobalRank"] = leetcode_data["contest"].get("globalRanking", 0)
+            if leetcode_bundle.get("rating_history"):
+                update_fields["rating_history"] = leetcode_bundle["rating_history"]
+            if "badges" in leetcode_bundle:
+                update_fields["lc_badges_json"] = json.dumps(leetcode_bundle.get("badges") or [])
     else:
         _mark("leetcode", "skipped")
 
     if github_username:
-        try:
-            github_data = fetch_github(github_username)
-            if not github_data:
-                _mark("github", "failed", "No data returned (username may be invalid or rate-limited).")
-            else:
-                _mark("github", "synced")
-                for key, value in github_data.get("calendar", {}).items():
-                    combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
-                if github_data.get("stats"):
-                    platform_totals["GitHub_Issues"] = github_data["stats"]["issues"]
-                    platform_totals["GitHub_PRs"] = github_data["stats"]["prs"]
-                    platform_totals["GitHub_Merged_PRs"] = github_data["stats"]["merged_prs"]
-                    platform_totals["GitHub_Commits"] = github_data["stats"]["commits"]
-        except Exception:
+        github_data = platform_results.get("github")
+        if platform_errors.get("github"):
             _mark("github", "failed", "Failed to fetch GitHub stats.")
+        elif not github_data:
+            _mark("github", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            _mark("github", "synced")
+            for key, value in github_data.get("calendar", {}).items():
+                combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+            if github_data.get("stats"):
+                platform_totals["GitHub_Issues"] = github_data["stats"]["issues"]
+                platform_totals["GitHub_PRs"] = github_data["stats"]["prs"]
+                platform_totals["GitHub_Merged_PRs"] = github_data["stats"]["merged_prs"]
+                platform_totals["GitHub_Commits"] = github_data["stats"]["commits"]
     else:
         _mark("github", "skipped")
 
     if gfg_username:
-        try:
-            gfg_data = fetch_gfg(gfg_username)
-            if not gfg_data:
-                _mark("gfg", "failed", "No data returned (username may be invalid or rate-limited).")
-            else:
-                _mark("gfg", "synced")
-                if gfg_data.get("total") is not None:
-                    platform_totals["GFG"] = int(gfg_data.get("total", 0))
-        except Exception:
+        gfg_data = platform_results.get("gfg")
+        if platform_errors.get("gfg"):
             _mark("gfg", "failed", "Failed to fetch GFG stats.")
+        elif not gfg_data:
+            _mark("gfg", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            _mark("gfg", "synced")
+            if gfg_data.get("total") is not None:
+                platform_totals["GFG"] = int(gfg_data.get("total", 0))
     else:
         _mark("gfg", "skipped")
 
     if codingninjas_username:
-        try:
-            codingninjas_data = fetch_coding_ninjas(codingninjas_username)
-            if not codingninjas_data:
-                _mark("codingninjas", "failed", "No data returned (username may be invalid or rate-limited).")
-            else:
-                _mark("codingninjas", "synced")
-                if codingninjas_data.get("total") is not None:
-                    platform_totals["Coding Ninjas"] = int(codingninjas_data.get("total", 0))
-        except Exception:
+        codingninjas_data = platform_results.get("codingninjas")
+        if platform_errors.get("codingninjas"):
             _mark("codingninjas", "failed", "Failed to fetch Coding Ninjas stats.")
+        elif not codingninjas_data:
+            _mark("codingninjas", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            _mark("codingninjas", "synced")
+            if codingninjas_data.get("total") is not None:
+                platform_totals["Coding Ninjas"] = int(codingninjas_data.get("total", 0))
     else:
         _mark("codingninjas", "skipped")
 
     if hackerrank_username:
-        try:
-            hr_badges, hr_solved = fetch_hr_badges(hackerrank_username)
+        hackerrank_data = platform_results.get("hackerrank")
+        if platform_errors.get("hackerrank"):
+            _mark("hackerrank", "failed", "Failed to fetch HackerRank stats.")
+        elif not hackerrank_data:
+            _mark("hackerrank", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            hr_badges, hr_solved = hackerrank_data
             update_fields["hr_badges_json"] = json.dumps(hr_badges)
             if hr_solved > 0:
                 platform_totals["HackerRank"] = hr_solved
             _mark("hackerrank", "synced")
-        except Exception:
-            _mark("hackerrank", "failed", "Failed to fetch HackerRank stats.")
     else:
         _mark("hackerrank", "skipped")
 
     if atcoder_username:
-        try:
-            atcoder_data = fetch_atcoder(atcoder_username)
-            if not atcoder_data:
-                _mark("atcoder", "failed", "No data returned (handle may be invalid or rate-limited).")
-            else:
-                _mark("atcoder", "synced")
-                if atcoder_data.get("total") is not None:
-                    platform_totals["AtCoder"] = int(atcoder_data.get("total", 0))
-        except Exception:
+        atcoder_data = platform_results.get("atcoder")
+        if platform_errors.get("atcoder"):
             _mark("atcoder", "failed", "Failed to fetch AtCoder stats.")
+        elif not atcoder_data:
+            _mark("atcoder", "failed", "No data returned (handle may be invalid or rate-limited).")
+        else:
+            _mark("atcoder", "synced")
+            if atcoder_data.get("total") is not None:
+                platform_totals["AtCoder"] = int(atcoder_data.get("total", 0))
     else:
         _mark("atcoder", "skipped")
 
@@ -275,7 +327,7 @@ def sync_platforms():
     current_user.reload()
 
     clear_leaderboard_snapshots()
-    cache.clear()
+    clear_profile_caches(current_user.id)
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -354,6 +406,7 @@ def edit_profile():
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
         clear_leaderboard_snapshots()
+        clear_profile_caches(current_user.id)
     return json_success()
 
 
@@ -366,7 +419,7 @@ def public_card(user_id):
         return "Invalid User ID", 400
 
     try:
-        img_io = get_public_card_image(user_id, object_id, db_handle=db)
+        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
     except LookupError:
         return "User not found", 404
     except Exception:
@@ -375,7 +428,13 @@ def public_card(user_id):
 
     try:
         img_io.seek(0)
-        return send_file(img_io, mimetype="image/png")
+        response = send_file(img_io, mimetype="image/png")
+        response.headers["Cache-Control"] = f"public, max-age={CACHE_TTL}"
+        response.set_etag(etag)
+        if last_modified is not None:
+            response.last_modified = last_modified
+        response.make_conditional(request)
+        return response
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500

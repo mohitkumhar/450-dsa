@@ -3,15 +3,26 @@ from unittest.mock import call
 from unittest.mock import MagicMock, patch
 
 from platform_fetcher import run_fetch_jobs
-from app.platforms.fetchers import build_github_stats_payload, fetch_atcoder, fetch_github
+from app.platforms.fetchers import (
+    build_github_stats_payload,
+    clear_platform_http_session,
+    fetch_atcoder,
+    fetch_github,
+)
+
+
+def setup_function():
+    clear_platform_http_session()
 
 
 def test_fetch_atcoder_returns_total_on_success():
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {'count': 42}
+    fake_session = MagicMock()
+    fake_session.get.return_value = mock_response
 
-    with patch('app.platforms.fetchers.requests.get', return_value=mock_response):
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
         result = fetch_atcoder('tourist')
 
     assert result == {'total': 42}
@@ -20,15 +31,20 @@ def test_fetch_atcoder_returns_total_on_success():
 def test_fetch_atcoder_returns_empty_on_non_200():
     mock_response = MagicMock()
     mock_response.status_code = 404
+    fake_session = MagicMock()
+    fake_session.get.return_value = mock_response
 
-    with patch('app.platforms.fetchers.requests.get', return_value=mock_response):
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
         result = fetch_atcoder('unknown_user')
 
     assert result == {}
 
 
 def test_fetch_atcoder_returns_empty_on_exception():
-    with patch('app.platforms.fetchers.requests.get', side_effect=Exception('timeout')):
+    fake_session = MagicMock()
+    fake_session.get.side_effect = Exception('timeout')
+
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
         result = fetch_atcoder('tourist')
 
     assert result == {}
@@ -69,10 +85,13 @@ def test_fetch_github_uses_graphql_when_token_present(monkeypatch):
 
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
 
+    fake_session = MagicMock()
+    fake_session.get.return_value = commits_response
+
     with patch("app.platforms.fetchers.requests.post", return_value=graphql_response) as mock_post, patch(
-        "app.platforms.fetchers.requests.get",
-        return_value=commits_response,
-    ) as mock_get:
+        "app.platforms.fetchers._get_http_session",
+        return_value=fake_session,
+    ):
         result = fetch_github("octocat")
 
     assert result == {
@@ -81,7 +100,7 @@ def test_fetch_github_uses_graphql_when_token_present(monkeypatch):
     }
     mock_post.assert_called_once()
     assert mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer test-token"
-    mock_get.assert_called_once_with(
+    fake_session.get.assert_called_once_with(
         "https://api.github.com/search/commits?q=author:octocat",
         headers={
             "Accept": "application/vnd.github.cloak-preview+json",
@@ -103,17 +122,19 @@ def test_fetch_github_falls_back_without_graphql_token(monkeypatch):
     commits_response = MagicMock()
     commits_response.json.return_value = {"total_count": 8}
 
-    with patch(
-        "app.platforms.fetchers.requests.get",
-        side_effect=[contribution_response, issues_response, prs_response, merged_response, commits_response],
-    ) as mock_get:
+    fake_session = MagicMock()
+    fake_session.get.side_effect = [
+        contribution_response, issues_response, prs_response, merged_response, commits_response
+    ]
+
+    with patch("app.platforms.fetchers._get_http_session", return_value=fake_session):
         result = fetch_github("octocat")
 
     assert result == {
         "calendar": {"2026-05-24": 3, "2026-05-23": 0},
         "stats": {"issues": 2, "prs": 5, "merged_prs": 1, "commits": 8},
     }
-    assert mock_get.call_args_list == [
+    assert fake_session.get.call_args_list == [
         call("https://github.com/users/octocat/contributions", timeout=5),
         call("https://api.github.com/search/issues?q=type:issue+author:octocat", timeout=5),
         call("https://api.github.com/search/issues?q=type:pr+author:octocat", timeout=5),
@@ -124,6 +145,18 @@ def test_fetch_github_falls_back_without_graphql_token(monkeypatch):
             timeout=5,
         ),
     ]
+
+
+def test_fetchers_reuse_thread_local_http_session():
+    fake_session = MagicMock()
+    fake_session.get.return_value = MagicMock(status_code=404)
+
+    with patch('app.platforms.fetchers.requests.Session', return_value=fake_session) as mock_session:
+        fetch_atcoder('tourist')
+        fetch_atcoder('tourist')
+
+    mock_session.assert_called_once()
+    assert fake_session.get.call_count == 2
 
 
 def test_run_fetch_jobs_executes_jobs_concurrently():
