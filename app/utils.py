@@ -110,11 +110,36 @@ def question_links(question):
     return search_service.question_links(question)
 
 
+def question_editorial_links(question):
+    return search_service.question_editorial_links(question)
+
+
 def search_dsa_questions(raw_query, limit=40):
     return search_service.search_dsa_questions(raw_query, limit=limit, db_handle=db)
 
 
 EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder")
+PLATFORM_COUNT_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Other")
+
+
+def empty_platform_counts():
+    return {platform: 0 for platform in PLATFORM_COUNT_KEYS}
+
+
+def platform_from_question_url(url):
+    """Return the tracked platform bucket for a question URL."""
+    url = (url or "").lower()
+    if "leetcode.com" in url:
+        return "LeetCode"
+    if "geeksforgeeks.org" in url:
+        return "GFG"
+    if "codingninjas.com" in url or "naukri.com/code360" in url:
+        return "Coding Ninjas"
+    if "hackerrank.com" in url:
+        return "HackerRank"
+    if "atcoder.jp" in url:
+        return "AtCoder"
+    return "Other"
 
 
 def compute_total_solved(progress, external_totals, all_questions=None):
@@ -188,28 +213,31 @@ def compute_c_score(user_doc, all_questions=None):
 
 def compute_user_platforms(solved_items, external_totals, all_questions):
     """Compute platform counts combining solved DSA questions with external totals."""
-    platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "AtCoder": 0, "Other": 0}
+    platforms = compute_in_sheet_platform_counts(solved_items, all_questions)
+    return merge_platform_counts(platforms, external_totals)
+
+
+def compute_in_sheet_platform_counts(solved_items, all_questions):
+    platforms = empty_platform_counts()
     
     for question in all_questions:
         question_id = str(question.get("_id", ""))
         if question_id in solved_items:
-            url = (question.get("url") or "").lower()
-            if "leetcode.com" in url:
-                platforms["LeetCode"] += 1
-            elif "geeksforgeeks.org" in url:
-                platforms["GFG"] += 1
-            elif "codingninjas.com" in url or "naukri.com/code360" in url:
-                platforms["Coding Ninjas"] += 1
-            elif "hackerrank.com" in url:
-                platforms["HackerRank"] += 1
-            else:
-                platforms["Other"] += 1
+            platforms[platform_from_question_url(question.get("url"))] += 1
+
+    return platforms
+
+
+def merge_platform_counts(in_sheet_counts, external_totals):
+    platforms = empty_platform_counts()
+    for platform, count in (in_sheet_counts or {}).items():
+        if platform in platforms:
+            platforms[platform] = max(int(count or 0), 0)
 
     ext_totals = external_totals or {}
     platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0), 0)
     platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0), 0)
     platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0), 0)
     platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0), 0)
-    platforms["AtCoder"] = max(ext_totals.get("AtCoder", 0), 0)
-
+    platforms["AtCoder"] = max(platforms["AtCoder"], ext_totals.get("AtCoder", 0), 0)
     return platforms

@@ -231,7 +231,9 @@ def test_topic_page_ignores_unknown_difficulty_filter(monkeypatch):
 
 def test_update_question_accepts_valid_boolean_update(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
-    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+    question_id = test_db.question.insert_one(
+        {"problem": "Two Sum", "url": "https://leetcode.com/problems/two-sum/"}
+    ).inserted_id
 
     with flask_app.test_client() as client:
         user_id = login_test_user(client, test_db)
@@ -243,15 +245,19 @@ def test_update_question_accepts_valid_boolean_update(monkeypatch):
     progress = user["progress"][str(question_id)]
     assert progress["done"] is True
     assert "timestamp" in progress
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 1
 
 
 def test_update_question_sets_skipped_and_clears_done(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
-    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+    question_id = test_db.question.insert_one(
+        {"problem": "Two Sum", "url": "https://leetcode.com/problems/two-sum/"}
+    ).inserted_id
     user_id = test_db.user.insert_one(
         {
             "email": "user@example.com",
             "progress": {str(question_id): {"done": True, "skipped": False}},
+            "in_sheet_platform_counts": {"LeetCode": 1},
             "is_admin": False,
         }
     ).inserted_id
@@ -265,3 +271,4 @@ def test_update_question_sets_skipped_and_clears_done(monkeypatch):
     progress = user["progress"][str(question_id)]
     assert progress["skipped"] is True
     assert progress["done"] is False
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 0

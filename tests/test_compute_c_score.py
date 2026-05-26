@@ -1,4 +1,9 @@
-from app.utils import compute_c_score, compute_total_solved
+from app.utils import (
+    compute_c_score,
+    compute_in_sheet_platform_counts,
+    compute_total_solved,
+    merge_platform_counts,
+)
 
 
 def make_user(progress=None, external_totals=None, external_daily_counts=None):
@@ -147,6 +152,28 @@ def test_active_days_full_year_maxes_consistency():
     assert result["active_days"] == 365
     # consistency component should be fully maxed (100 pts)
     assert result["c_score"] >= 100
+
+
+def test_in_sheet_platform_counts_bucket_solved_questions():
+    counts = compute_in_sheet_platform_counts(
+        {"q1": {"done": True}, "q3": {"done": True}},
+        [
+            {"_id": "q1", "url": "https://leetcode.com/problems/two-sum/"},
+            {"_id": "q2", "url": "https://www.geeksforgeeks.org/problems/x"},
+            {"_id": "q3", "url": "https://www.naukri.com/code360/problems/y"},
+        ],
+    )
+
+    assert counts["LeetCode"] == 1
+    assert counts["Coding Ninjas"] == 1
+    assert counts["GFG"] == 0
+
+
+def test_merge_platform_counts_keeps_external_totals_as_floor():
+    counts = merge_platform_counts({"LeetCode": 2, "GFG": 4}, {"LeetCode": 10, "GFG": 1})
+
+    assert counts["LeetCode"] == 10
+    assert counts["GFG"] == 4
 
 
 # --- Return structure ---

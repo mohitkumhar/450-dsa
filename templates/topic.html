@@ -174,6 +174,13 @@
                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
                             </a>
                         {% endif %}
+                        {% for editorial in q.editorial_links %}
+                            <a href="{{ editorial.url }}" target="_blank" rel="noopener noreferrer"
+                               class="q-badge badge-link"
+                               aria-label="Read {{ editorial.label }} (opens in new tab)">
+                               <i class="bi bi-journal-text" aria-hidden="true"></i> {{ editorial.label }}
+                            </a>
+                        {% endfor %}
                     </div>
                 </td>
                 <td>

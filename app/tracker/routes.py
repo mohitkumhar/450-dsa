@@ -4,7 +4,15 @@ from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.leaderboard.cache import invalidate_leaderboard_cache
-from app.utils import json_error, json_success, utc_now
+from app.profile.card_service import warm_public_card_cache
+from app.utils import (
+    json_error,
+    json_success,
+    platform_from_question_url,
+    question_editorial_links,
+    utc_now,
+)
+from calendar_export import build_study_plan_ics
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
 
@@ -29,14 +37,16 @@ TOPIC_PAGE_QUESTION_PROJECTION = {
     "difficulty": 1,
     "url": 1,
     "url2": 1,
+    "editorial_links": 1,
 }
 TOPIC_NOTES_EXPORT_PROJECTION = {"problem": 1}
-QUESTION_STATUS_PROJECTION = {"problem": 1}
+QUESTION_STATUS_PROJECTION = {"problem": 1, "url": 1}
 BOOKMARKS_QUESTION_PROJECTION = {
     "topic": 1,
     "problem": 1,
     "url": 1,
     "url2": 1,
+    "editorial_links": 1,
 }
 CSV_EXPORT_QUESTION_PROJECTION = {
     "topic": 1,
@@ -95,6 +105,8 @@ def topic(topic_id):
         return "Topic not found", 404
 
     questions = list(db.question.find({"topic": topic_doc["_id"]}, TOPIC_PAGE_QUESTION_PROJECTION))
+    for question in questions:
+        question["editorial_links"] = question_editorial_links(question)
     progress_dict = current_user.progress if current_user.is_authenticated else {}
     
     # Calculate counts based on the unfiltered list of questions
@@ -243,20 +255,26 @@ def update_question(question_id):
     progress = current_user.progress
     existing = progress.get(question_id, {})
     message = ""
+    platform_count_field = f"in_sheet_platform_counts.{platform_from_question_url(question.get('url'))}"
 
     if "done" in data:
         if data["done"] and not existing.get("done"):
             update_fields[f"progress.{question_id}.timestamp"] = utc_now()
             message = f"✅ Marked '{question.get('problem', 'Question')}' as complete!"
             update_fields[f"progress.{question_id}.skipped"] = False
+            update_fields[platform_count_field] = 1
         elif not data["done"] and existing.get("done"):
             message = f"📝 Marked '{question.get('problem', 'Question')}' as incomplete"
+        if not data["done"] and existing.get("done"):
+            update_fields[platform_count_field] = -1
         update_fields[f"progress.{question_id}.done"] = data["done"]
 
     if "skipped" in data:
         if data["skipped"] and not existing.get("skipped"):
             message = f"⏭️ Marked '{question.get('problem', 'Question')}' as skipped for now"
             update_fields[f"progress.{question_id}.done"] = False
+            if existing.get("done"):
+                update_fields[platform_count_field] = -1
         elif not data["skipped"] and existing.get("skipped"):
             message = f"↩️ Removed skipped status for '{question.get('problem', 'Question')}'"
         update_fields[f"progress.{question_id}.skipped"] = data["skipped"]
@@ -273,9 +291,20 @@ def update_question(question_id):
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
 
     if update_fields:
-        db.user.update_one({"_id": user_id}, {"$set": update_fields})
+        inc_fields = {
+            field: update_fields.pop(field)
+            for field in list(update_fields)
+            if field.startswith("in_sheet_platform_counts.")
+        }
+        update_doc = {}
+        if update_fields:
+            update_doc["$set"] = update_fields
+        if inc_fields:
+            update_doc["$inc"] = inc_fields
+        db.user.update_one({"_id": user_id}, update_doc)
         current_user.reload()
         invalidate_leaderboard_cache()
+        warm_public_card_cache(user_id, db_handle=db)
         return json_success(message=message)
 
     return json_success(message="No changes made")
@@ -315,6 +344,26 @@ def export_csv():
     csv_content = build_progress_csv(questions, topic_lookup, current_user.progress)
     response = Response(csv_content, mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=progress.csv'
+    return response
+
+
+@tracker_bp.route("/export/study-plan.ics")
+@login_required
+def export_study_plan_ics():
+    topics = list(db.topic.find({}, {"name": 1, "position": 1}).sort("position", 1))
+    topic_ids = [topic["_id"] for topic in topics]
+    questions = list(db.question.find({"topic": {"$in": topic_ids}}, {"topic": 1}))
+
+    questions_by_topic = {}
+    for question in questions:
+        questions_by_topic.setdefault(question["topic"], []).append(question)
+
+    for topic in topics:
+        topic["questions"] = questions_by_topic.get(topic["_id"], [])
+
+    calendar_text = build_study_plan_ics(topics, current_user.progress)
+    response = Response(calendar_text, mimetype="text/calendar")
+    response.headers["Content-Disposition"] = "attachment; filename=study-plan.ics"
     return response
 
 

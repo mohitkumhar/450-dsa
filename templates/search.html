@@ -546,6 +546,11 @@ function renderResults(payload) {
         <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
       </a>`
     ).join('');
+    const editorialLinks = (item.editorial_links || []).map(link =>
+      `<a class="q-badge badge-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Read ${escapeHtml(link.label)} (opens new tab)">
+        <i class="bi bi-journal-text" aria-hidden="true"></i>${escapeHtml(link.label)}
+      </a>`
+    ).join('');
     const platformSearches = (item.external_searches || []).map(link =>
       `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for this problem (opens new tab)">
         <i class="bi bi-search" aria-hidden="true"></i>${escapeHtml(link.platform)}
@@ -558,7 +563,7 @@ function renderResults(payload) {
         <div>
           <a href="${topicUrl}" class="result-topic" aria-label="Go to ${escapeHtml(item.topic)} topic page">${escapeHtml(item.topic)}</a>
           <div class="result-name">${escapeHtml(item.problem)}</div>
-          <div class="link-row">${directLinks}${platformSearches}</div>
+          <div class="link-row">${directLinks}${editorialLinks}${platformSearches}</div>
         </div>
         <div class="result-actions">
           <a class="topic-open" href="${topicUrl}" title="Open topic" aria-label="Go to ${escapeHtml(item.topic)} topic">

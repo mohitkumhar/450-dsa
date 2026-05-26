@@ -24,7 +24,12 @@ from app.security import (
 )
 from app.search import search_bp
 from app.tracker import tracker_bp
-from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
+from app.utils import (
+    platform_color_filter,
+    platform_name_filter,
+    platform_profile_url,
+    question_editorial_links,
+)
 
 
 ROUTE_TIMING_ENDPOINTS = {
@@ -152,6 +157,7 @@ def create_app(config_class=None):
                             "problem": question["Problem"],
                             "url": question["URL"],
                             "url2": question.get("URL2", ""),
+                            "editorial_links": question_editorial_links(question),
                             "difficulty": difficulty,
                         }
                     )

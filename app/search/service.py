@@ -1,5 +1,5 @@
 import re
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 from bson import ObjectId
 
@@ -69,6 +69,31 @@ def build_external_searches(query, requested_platforms=None):
     ]
 
 
+def normalize_editorial_links(raw_links):
+    """Return safe, labeled editorial links for a question document."""
+    if not raw_links:
+        return []
+    if isinstance(raw_links, str):
+        raw_links = [{"label": "Editorial", "url": raw_links}]
+
+    links = []
+    for index, item in enumerate(raw_links, start=1):
+        if isinstance(item, str):
+            label = f"Editorial {index}"
+            url = item
+        elif isinstance(item, dict):
+            label = str(item.get("label") or item.get("title") or f"Editorial {index}").strip()
+            url = str(item.get("url") or "").strip()
+        else:
+            continue
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            continue
+        links.append({"label": label or f"Editorial {index}", "url": url})
+    return links
+
+
 def question_links(question):
     links = []
     for field in ("url", "url2"):
@@ -84,6 +109,10 @@ def question_links(question):
             }
         )
     return links
+
+
+def question_editorial_links(question):
+    return normalize_editorial_links(question.get("editorial_links") or question.get("editorials"))
 
 
 PLATFORM_FILTER_MAP = {
@@ -159,7 +188,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
         except Exception:
             return empty_payload()
 
-    projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1}
+    projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1, "editorial_links": 1}
     post_fetch_filters = bool(
         requested_platforms
         or difficulty_filter in DIFFICULTY_FILTERS
@@ -217,6 +246,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
                 "topic_id": str(question.get("topic")),
                 "topic_position": topic_doc.get("position", 999),
                 "links": links,
+                "editorial_links": question_editorial_links(question),
                 "external_searches": build_external_searches(problem, requested_platforms),
                 "score": question.get("score", 0),
                 "done": progress_item.get("done", False),

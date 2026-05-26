@@ -8,7 +8,7 @@ from bson.objectid import ObjectId
 import card_generator
 
 from app.extensions import cache, db
-from app.utils import compute_c_score, compute_user_platforms, ensure_utc_datetime
+from app.utils import compute_c_score, compute_user_platforms, ensure_utc_datetime, merge_platform_counts
 from streaks import compute_streak
 
 
@@ -70,9 +70,12 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     progress_data = user.get("progress", {})
     current_streak, _ = compute_streak(progress_data)
 
-    all_questions = list(db_handle.question.find())
-    solved_items = {qid: progress for qid, progress in progress_data.items() if progress.get("done")}
-    platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
+    if user.get("in_sheet_platform_counts"):
+        platforms = merge_platform_counts(user.get("in_sheet_platform_counts"), user.get("external_totals", {}))
+    else:
+        all_questions = list(db_handle.question.find())
+        solved_items = {qid: progress for qid, progress in progress_data.items() if progress.get("done")}
+        platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
     etag = _build_card_etag(name, c_score, dsa_progress, current_streak, platforms)
     last_modified = _card_last_modified(user, progress_data)
 
@@ -90,3 +93,12 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
 
     cache.set(f"card_{user_id}", (etag, img_io.getvalue()), timeout=CACHE_TTL)
     return img_io, etag, last_modified
+
+
+def warm_public_card_cache(user_id, db_handle=None):
+    """Generate and cache a user's public progress card after stats change."""
+    try:
+        get_public_card_image(str(user_id), db_handle=db_handle)
+        return True
+    except Exception:
+        return False

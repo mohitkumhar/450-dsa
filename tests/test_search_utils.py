@@ -74,6 +74,7 @@ def test_search_uses_mongodb_text_search_and_score_sort(monkeypatch):
                 "topic": 1,
                 "url": 1,
                 "url2": 1,
+                "editorial_links": 1,
                 "score": {"$meta": "textScore"},
             },
         )
@@ -115,6 +116,36 @@ def test_search_preserves_topic_names_and_platform_links(monkeypatch):
             "url": "https://practice.geeksforgeeks.org/problems/overlapping-intervals/",
             "color": "gfg",
         },
+    ]
+
+
+def test_search_includes_valid_editorial_links(monkeypatch):
+    fake_db = FakeDB(
+        questions=[
+            {
+                "_id": "q1",
+                "problem": "Merge Intervals",
+                "topic": "intervals",
+                "url": "https://leetcode.com/problems/merge-intervals/",
+                "url2": "",
+                "editorial_links": [
+                    {"label": "Official Editorial", "url": "https://leetcode.com/problems/merge-intervals/editorial/"},
+                    {"label": "Bad", "url": "javascript:alert(1)"},
+                ],
+                "score": 2.25,
+            }
+        ],
+        topics=[{"_id": "intervals", "name": "Intervals", "position": 7}],
+    )
+    monkeypatch.setattr(utils, "db", fake_db)
+
+    result = utils.search_dsa_questions("merge intervals")["results"][0]
+
+    assert result["editorial_links"] == [
+        {
+            "label": "Official Editorial",
+            "url": "https://leetcode.com/problems/merge-intervals/editorial/",
+        }
     ]
 
 

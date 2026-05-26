@@ -1,22 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import modal_shell %}
 {% block head %}
-<script>
-window._chartJsReady = new Promise(function(resolve, reject) {
-  var s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-  s.addEventListener('load', function() { resolve(); }, { once: true });
-  s.addEventListener('error', function() {
-    s.remove();
-    var fb = document.createElement('script');
-    fb.src = 'https://unpkg.com/chart.js@4/dist/chart.umd.js';
-    fb.addEventListener('load', function() { resolve(); }, { once: true });
-    fb.addEventListener('error', function() { reject(new Error('Chart.js CDN unavailable')); }, { once: true });
-    document.head.appendChild(fb);
-  }, { once: true });
-  document.head.appendChild(s);
-}).catch(function(err) { console.warn('Chart.js could not be loaded:', err); });
-</script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
 {% block content %}
 <style>
@@ -180,6 +165,9 @@ body.modal-open {
     </script>
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_csv') }}" aria-label="Export progress as CSV file">
       <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
+    </a>
+    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
+      <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
     </a>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
@@ -769,46 +757,13 @@ for(let i=0;i<days;i++){
   heatmap.appendChild(el);
 }
 
-function initCharts(){
-  const ratingHistory = {{ rating_history | tojson }};
-  const cumData = {{ cumulative_data | tojson }};
-  const chartCanvas = document.getElementById('progressChart');
-  const chartData = ratingHistory.length > 0 ? ratingHistory : cumData;
-  if(chartData.length > 0 && chartCanvas){
-    new Chart(chartCanvas,{
-      type:'line',
-      data:{labels:chartData.map(d=>d.x),datasets:[{data:chartData.map(d=>d.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length>0?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0].label,label:ctx=>ratingHistory.length>0?'Rating: '+ctx.raw:'Solved: '+ctx.raw}}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}
-    });
-    markChartReady('progressChartShell');
-  } else if(chartCanvas) {
-    const ctx = chartCanvas.getContext('2d');
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(0,0,chartCanvas.width,chartCanvas.height);
-    ctx.fillStyle = '#555';
-    ctx.font = '13px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Sync LeetCode to see rating chart', chartCanvas.width/2, chartCanvas.height/2 - 8);
-    markChartReady('progressChartShell');
-  }
-
-  const pData = {{ platforms | tojson }};
-  try{new Chart(document.getElementById('platformsChart'),{
-    type:'doughnut',
-    data:{labels:['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['Coding Ninjas'],pData['HackerRank'],pData['Other']],backgroundColor:['#ffb800','#22c55e','#8b5cf6','#00bd6c','#6c757d'],borderWidth:0,cutout:'78%'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-  }); markChartReady('platformsChartShell');}catch(e){console.warn('Platforms chart error:',e); markChartReady('platformsChartShell');}
-
-  try{new Chart(document.getElementById('difficultyChart'),{
-    type:'doughnut',
-    data:{labels:['Easy','Medium','Hard'],datasets:[{data:[{{lc_easy}},{{lc_medium}},{{lc_hard}}],backgroundColor:['#00b8a3','#ffc01e','#ff375f'],borderWidth:0,cutout:'78%'}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-  }); markChartReady('difficultyChartShell');}catch(e){console.warn('Difficulty chart error:',e); markChartReady('difficultyChartShell');}
-}
-
-window._chartJsReady.then(initCharts).catch(function(){
-  ['progressChartShell','platformsChartShell','difficultyChartShell'].forEach(markChartReady);
-});
+const ratingHistory = {{ rating_history | tojson }};
+const cumData = {{ cumulative_data | tojson }};
+const pData = {{ platforms | tojson }};
+const chartShells=['progressChartShell','platformsChartShell','difficultyChartShell'].map(i=>document.getElementById(i)).filter(Boolean);let chartJsPromise;
+function loadChartJs(){return window.Chart?Promise.resolve(window.Chart):chartJsPromise||(chartJsPromise=new Promise((ok,bad)=>{let add=(src,err)=>{let s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>ok(window.Chart);s.onerror=err||bad;document.head.appendChild(s)};add('https://cdn.jsdelivr.net/npm/chart.js',()=>add('https://unpkg.com/chart.js@4/dist/chart.umd.js'))}))}
+function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['#ffb800','#22c55e','#8b5cf6','#00bd6c','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
+if('IntersectionObserver'in window&&chartShells.length){const io=new IntersectionObserver((e,o)=>{if(e.some(x=>x.isIntersecting)){o.disconnect();renderProfileCharts()}},{rootMargin:'160px'});chartShells.forEach(s=>io.observe(s))}else renderProfileCharts();
 
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
