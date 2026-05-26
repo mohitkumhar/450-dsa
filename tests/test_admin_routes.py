@@ -155,7 +155,47 @@ def test_admin_logs_endpoint_returns_recent_entries(monkeypatch):
         response = client.get("/admin/logs")
 
     assert response.status_code == 200
-    assert response.get_json() == {"logs": [{"source": "logs/error.log", "line": "boom"}]}
+    assert response.get_json() == {
+        "logs": [{"source": "logs/error.log", "line": "boom"}],
+        "has_more": False,
+        "page": 1,
+        "page_size": 25,
+    }
+
+
+def test_admin_logs_endpoint_supports_load_more_paging(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+
+    seen_limits = []
+
+    def fake_recent_error_logs(max_entries=120):
+        seen_limits.append(max_entries)
+        return (
+            [{"source": "logs/app.log", "line": f"line {index}"} for index in range(max_entries)],
+            True,
+        )
+
+    monkeypatch.setattr(admin_routes, "_recent_error_logs", fake_recent_error_logs)
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.get("/admin/logs?page=2")
+
+    assert response.status_code == 200
+    assert seen_limits == [50]
+    payload = response.get_json()
+    assert payload["page"] == 2
+    assert payload["page_size"] == 25
+    assert payload["has_more"] is True
+    assert len(payload["logs"]) == 50
 
 
 def test_admin_cannot_delete_self(monkeypatch):
@@ -240,7 +280,7 @@ def test_admin_delete_rejects_missing_csrf(monkeypatch):
         set_csrf_token(client)
         response = client.post(f"/admin/users/{victim_id}/delete", data={"q": "", "page": 1})
 
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
 
 
@@ -265,7 +305,11 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     with flask_app.test_client() as client:
         login_as(client, user_id)
-        response = client.post(f"/admin/users/{victim_id}/delete", data={"q": "", "page": 1})
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{victim_id}/delete",
+            data={"q": "", "page": 1, "csrf_token": csrf_token},
+        )
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None

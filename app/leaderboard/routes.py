@@ -2,9 +2,12 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 
 from app.extensions import limiter, cache
+from app.leaderboard.cache import LEADERBOARD_CACHE_TIMEOUT, api_leaderboard_cache_key, leaderboard_page_cache_key
 from app.leaderboard.service import (
     build_college_leaderboard_data,
     build_leaderboard_data,
+    get_user_rank_by_c_score,
+    sort_leaderboard_entries_by_c_score,
 )
 
 
@@ -16,7 +19,7 @@ leaderboard_bp = Blueprint("leaderboard", __name__)
 def get_cached_leaderboard_data():
     entries = build_leaderboard_data()
 
-    by_cscore = sorted(entries, key=lambda item: item["c_score"], reverse=True)
+    by_cscore = sort_leaderboard_entries_by_c_score(entries)
     by_questions = sorted(entries, key=lambda item: item["total_solved"], reverse=True)
     by_rating = sorted(entries, key=lambda item: item["lc_rating"], reverse=True)
     by_college = build_college_leaderboard_data(entries)
@@ -43,6 +46,7 @@ def leaderboard():
 
     # Dynamic session data context (never cached)
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
+<<<<<<< HEAD
     
     # Find current user's rank in each category dynamically
     current_user_rank = None
@@ -51,6 +55,9 @@ def leaderboard():
             if entry.get("user_id") == current_user_id:
                 current_user_rank = i + 1
                 break
+=======
+    current_user_rank = get_user_rank_by_c_score(current_user_id, by_cscore)
+>>>>>>> 7e8defc7b0fe46fa2565f37344cd135276ffb2e7
     
     return render_template(
         "leaderboard.html",
@@ -64,7 +71,7 @@ def leaderboard():
 
 
 @leaderboard_bp.route("/api/leaderboard")
-@cache.cached(timeout=300, query_string=True)
+@cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=api_leaderboard_cache_key)
 def api_leaderboard():
     """
     Return paginated leaderboard rankings for the selected mode.

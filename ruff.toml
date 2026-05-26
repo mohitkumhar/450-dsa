@@ -1,0 +1,5 @@
+target-version = "py311"
+
+[lint.isort]
+known-first-party = ["app"]
+combine-as-imports = true

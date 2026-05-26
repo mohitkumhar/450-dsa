@@ -17,6 +17,8 @@ def public_profile(user_id):
 
     if not user_doc:
         return "User not found", 404
+    if user_doc.get("is_deactivated"):
+        return "User not found", 404
 
     public_user_data = {
         "username": user_doc.get("name") or user_doc.get("username", "Unknown User"),

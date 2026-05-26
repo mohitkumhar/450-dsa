@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from tests.conftest import build_test_app
+from conftest import build_test_app
 
 
 def test_manifest_contains_expected_pwa_metadata(monkeypatch):
