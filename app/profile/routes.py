@@ -25,6 +25,13 @@ profile_bp = Blueprint("profile", __name__)
 __all__ = ["CACHE_TTL", "get_public_card_image"]
 
 
+def clear_profile_caches(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except KeyError:
+        pass
+
+
 def build_sync_platforms_response(platform_status: dict):
     attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
     synced = sum(1 for value in platform_status.values() if value.get("status") == "synced")
