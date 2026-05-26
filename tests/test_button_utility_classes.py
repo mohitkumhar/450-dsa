@@ -8,6 +8,8 @@ STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 def test_base_template_defines_shared_button_utility_classes():
     stylesheet = (STATIC_DIR / "css" / "main.css").read_text(encoding="utf-8")
 
+    assert "background-color: var(--bg-primary) !important;" in stylesheet
+    assert "--text-muted: #8a8a8a;" in stylesheet
     assert ".ui-btn {" in stylesheet
     assert ".ui-btn-primary {" in stylesheet
     assert ".ui-btn-secondary {" in stylesheet
@@ -34,3 +36,9 @@ def test_profile_and_topic_templates_use_button_utilities():
     assert "class=\"pill-btn ui-btn ui-btn-secondary ui-btn-pill\"" in base_template
     assert "class=\"pill-btn accent ui-btn ui-btn-primary ui-btn-pill\"" in base_template
     assert "class=\"icon-btn ui-btn ui-btn-secondary ui-btn-icon\"" in base_template
+
+
+def test_app_styles_load_after_bootstrap_for_theme_overrides():
+    base_template = (TEMPLATE_DIR / "base.html").read_text(encoding="utf-8")
+
+    assert base_template.index("bootstrap.min.css") < base_template.index("css/main.css")

@@ -10,7 +10,7 @@
     --accent-dim: rgba(255, 107, 0, 0.15);
     --text-primary: #f0f0f0;
     --text-secondary: #a0a0a0;
-    --text-muted: #666666;
+    --text-muted: #8a8a8a;
     --success: #22c55e;
     --warning: #f59e0b;
     --danger: #ef4444;
@@ -32,9 +32,14 @@
     padding: 0;
 }
 
+html {
+    background-color: var(--bg-primary);
+    color-scheme: dark;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: var(--bg-primary);
+    background-color: var(--bg-primary) !important;
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
@@ -286,6 +291,7 @@ body {
     margin-left: var(--sidebar-width);
     margin-top: var(--topbar-height);
     min-height: calc(100vh - var(--topbar-height) - 13px);
+    background-color: var(--bg-primary);
 }
 
 /* ── Index Page ── */
@@ -430,7 +436,7 @@ body {
             --accent-dim: rgba(255, 107, 0, 0.15);
             --text-primary: #f0f0f0;
             --text-secondary: #a0a0a0;
-            --text-muted: #666666;
+            --text-muted: #8a8a8a;
             --success: #22c55e;
             --warning: #f59e0b;
             --danger: #ef4444;
@@ -452,9 +458,14 @@ body {
             padding: 0;
         }
 
+        html {
+            background-color: var(--bg-primary);
+            color-scheme: dark;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-primary);
+            background-color: var(--bg-primary) !important;
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
@@ -968,6 +979,7 @@ body {
             margin-top: var(--topbar-height);
             min-height: calc(100vh - var(--topbar-height) - 130px);
             padding: 24px;
+            background-color: var(--bg-primary);
         }
 
         /* ─── Cards ─── */
