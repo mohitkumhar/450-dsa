@@ -123,6 +123,25 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert "/upload_photo" in spec["paths"]
 
 
+def test_create_app_serves_static_assets_with_cache_headers(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+
+    flask_app = app_module.create_app()
+
+    response = flask_app.test_client().get("/static/css/main.css")
+
+    assert response.status_code == 200
+    assert response.cache_control.public is True
+    assert response.cache_control.max_age == 86400
+
+
 def test_create_app_caches_faq_page_render(monkeypatch):
     rendered_templates = []
 

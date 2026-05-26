@@ -89,8 +89,6 @@
 .m-save:hover:not(:disabled){background:var(--accent-hover)}
 .m-save:disabled{opacity:0.7;cursor:not-allowed}
 .m-note{font-size:0.72rem;color:var(--text-muted);margin-top:-8px;margin-bottom:10px}
-@keyframes btn-spin{to{transform:rotate(360deg)}}
-.btn-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:btn-spin .7s linear infinite;flex-shrink:0}
 /* responsive */
 @media(max-width:1100px){.prof-layout{grid-template-columns:200px 1fr 220px}}
 @media(max-width:860px){.prof-layout{grid-template-columns:1fr}.prof-right{order:-1}.stat-row{grid-template-columns:1fr 1fr 1fr}}
@@ -536,9 +534,6 @@ body.modal-open {
     </div>
 {% endcall %}
 
-<!-- Toast notification -->
-<div class="toast" id="toast" style=""></div>
-
 <!-- Sync Loading Overlay -->
 <div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
   <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
@@ -581,8 +576,7 @@ window.handleSaveProfile = function(btn){
     website_url: document.getElementById('ep_website').value,
     resume_url: document.getElementById('ep_resume').value,
   };
-  btn.disabled=true;
-  contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
+  window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
   fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
@@ -592,13 +586,11 @@ window.handleSaveProfile = function(btn){
         setTimeout(()=>window.location.reload(),900);
       } else {
         showToast('❌ Error: '+(res.error||'unknown'));
-        btn.disabled=false;
-        contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+        window.setButtonBusyState(btn, contentEl, { busy: false });
       }
     }).catch(e=>{
       showToast('❌ Network error');
-      btn.disabled=false;
-      contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+      window.setButtonBusyState(btn, contentEl, { busy: false });
     });
 };
 
@@ -618,8 +610,7 @@ window.handleQuickSync = function(btn) {
   }
 
   btn.disabled = true;
-  icon.classList.add('btn-spinner');
-  icon.className = 'bi bi-arrow-clockwise btn-spinner';
+  window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
   showToast('⏳ Syncing profiles...');
   
   fetch(endpointConfig.syncPlatforms, {
@@ -630,7 +621,7 @@ window.handleQuickSync = function(btn) {
   .then(r => r.json())
   .then(res => {
     btn.disabled = false;
-    icon.className = 'bi bi-arrow-clockwise';
+    window.setIconBusyState(icon, { busy: false });
     if(res.success){
       showToast('✅ Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(), 1200);
@@ -640,7 +631,7 @@ window.handleQuickSync = function(btn) {
   })
   .catch(err => {
     btn.disabled = false;
-    icon.className = 'bi bi-arrow-clockwise';
+    window.setIconBusyState(icon, { busy: false });
     showToast('❌ Network error. Check connection.');
   });
 };
@@ -655,8 +646,7 @@ window.handleSyncProfile = function(btn){
   if(!lc && !gh && !gfg && !hr && !cn){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
-  btn.disabled=true;
-  syncContent.innerHTML='<span class="btn-spinner"></span> Syncing...';
+  window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
 
   // Show loading overlay
   const overlay=document.getElementById('syncOverlay');
@@ -695,16 +685,14 @@ window.handleSyncProfile = function(btn){
       showToast('\u2705 Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(),1200);
     }else{
-      btn.disabled=false;
-      syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+      window.setButtonBusyState(btn, syncContent, { busy: false });
       showToast('\u274c Sync failed: '+(res.error||'unknown'));
     }
   })
   .catch(err=>{
     clearInterval(stepTimer);
     overlay.style.display='none';
-    btn.disabled=false;
-    syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+    window.setButtonBusyState(btn, syncContent, { busy: false });
     if(err.name==='AbortError'){
       showToast('\u23f0 Sync timed out. Try again.');
     }else{
@@ -773,12 +761,6 @@ try{new Chart(document.getElementById('difficultyChart'),{
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
 function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
-function showToast(msg){
-  const t=document.getElementById('toast');
-  if(!t)return;
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
-}
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
 
