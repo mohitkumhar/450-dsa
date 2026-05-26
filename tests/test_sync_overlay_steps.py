@@ -5,7 +5,7 @@ PROFILE_TEMPLATE = Path(__file__).resolve().parents[1] / "templates" / "profile.
 
 
 def test_sync_overlay_includes_all_submitted_platforms():
-    template = PROFILE_TEMPLATE.read_text()
+    template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
 
     assert "{id:'ss_lc', label:'LeetCode', value:lc}" in template
     assert "{id:'ss_gh', label:'GitHub', value:gh}" in template
@@ -16,7 +16,7 @@ def test_sync_overlay_includes_all_submitted_platforms():
 
 
 def test_sync_overlay_steps_are_built_from_active_values():
-    template = PROFILE_TEMPLATE.read_text()
+    template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
 
     assert "const activeSyncPlatforms=syncPlatforms.filter(platform=>platform.value);" in template
     assert "stepsContainer.innerHTML=activeSyncPlatforms.map" in template
@@ -26,7 +26,7 @@ def test_sync_overlay_steps_are_built_from_active_values():
 
 
 def test_sync_profile_template_wires_atcoder_into_sync_requests():
-    template = PROFILE_TEMPLATE.read_text()
+    template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
 
     assert 'id="ac_username"' in template
     assert "const ac = '{{ user.atcoder_username or \"\" }}';" in template

@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, render_template, request
 from flask_login import current_user
 
 from app.extensions import limiter, cache
+from app.leaderboard.cache import LEADERBOARD_CACHE_TIMEOUT, api_leaderboard_cache_key, leaderboard_page_cache_key
 from app.leaderboard.service import (
     build_college_leaderboard_data,
     build_leaderboard_data,
@@ -13,7 +14,7 @@ leaderboard_bp = Blueprint("leaderboard", __name__)
 
 @leaderboard_bp.route("/leaderboard")
 @limiter.limit("20 per minute")
-@cache.cached(timeout=300)
+@cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=leaderboard_page_cache_key)
 def leaderboard():
     entries = build_leaderboard_data()
 
@@ -54,7 +55,7 @@ def leaderboard():
 
 
 @leaderboard_bp.route("/api/leaderboard")
-@cache.cached(timeout=300, query_string=True)
+@cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=api_leaderboard_cache_key)
 def api_leaderboard():
     """Return paginated leaderboard rankings for the selected mode.
     ---

@@ -240,7 +240,7 @@ def test_admin_delete_rejects_missing_csrf(monkeypatch):
         set_csrf_token(client)
         response = client.post(f"/admin/users/{victim_id}/delete", data={"q": "", "page": 1})
 
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
 
 
@@ -265,7 +265,11 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     with flask_app.test_client() as client:
         login_as(client, user_id)
-        response = client.post(f"/admin/users/{victim_id}/delete", data={"q": "", "page": 1})
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{victim_id}/delete",
+            data={"q": "", "page": 1, "csrf_token": csrf_token},
+        )
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None

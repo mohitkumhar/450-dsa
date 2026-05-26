@@ -26,7 +26,7 @@ jobs:
 
       - name: Run Ruff Linting
         run: |
-          ruff check . --fix
+          ruff check .
 
       # - name: Run Flake-8 Linting
       #   run: |
