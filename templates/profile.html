@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/external_link_badges.html" import profile_platform_link %}
 {% from "_macros.html" import modal_shell %}
 {% block head %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="this.remove();var s=document.createElement('script');s.src='https://unpkg.com/chart.js@4/dist/chart.umd.js';document.head.appendChild(s);"></script>
@@ -25,6 +26,13 @@
 .check-ok{color:var(--success);font-size:0.9rem}
 .link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
 .link-out:hover{color:var(--accent)}
+.platform-link-lc{color:#ffb800}
+.platform-link-gfg{color:var(--success)}
+.platform-link-cn{color:#8b5cf6}
+.platform-link-hr{color:#00bd6c}
+.platform-link-atcoder{color:#f97316}
+.platform-link-github{color:var(--text-primary)}
+.platform-link-default{color:var(--text-muted)}
 .add-btn{margin-top:4px}
 .rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
 .rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
@@ -189,31 +197,31 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link(user.leetcode_username | platform_url('leetcode'), "LeetCode", aria_label="LeetCode profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="LeetCode", aria_label="Connect LeetCode account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link(user.gfg_username | platform_url('gfg'), "GFG", aria_label="GFG profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="GFG", aria_label="Connect GFG account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link(user.codingninjas_username | platform_url('codingninjas'), "Coding Ninjas", aria_label="Coding Ninjas profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="Coding Ninjas", aria_label="Connect Coding Ninjas account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link(user.hackerrank_username | platform_url('hackerrank'), "HackerRank", aria_label="HackerRank profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="HackerRank", aria_label="Connect HackerRank account") }}{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link(user.atcoder_username | platform_url('atcoder'), "AtCoder", aria_label="AtCoder profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="AtCoder", aria_label="Connect AtCoder account") }}{% endif %}
       </span>
     </div>
     <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
@@ -221,7 +229,7 @@ body.modal-open {
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i>{{ profile_platform_link(user.github_username | platform_url('github'), "GitHub", aria_label="GitHub profile (opens in new tab)") }}{% else %}{{ profile_platform_link(platform_name="GitHub", aria_label="Connect GitHub account") }}{% endif %}
       </span>
     </div>
   </div>

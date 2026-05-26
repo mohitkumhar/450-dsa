@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/external_link_badges.html" import external_link_badge %}
 {% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
@@ -183,6 +184,24 @@
     border: 1px solid rgba(34, 197, 94, .25)
   }
 
+  .badge-hr {
+    background: rgba(0, 189, 108, .15);
+    color: #00bd6c;
+    border: 1px solid rgba(0, 189, 108, .25)
+  }
+
+  .badge-cn {
+    background: rgba(239, 68, 68, .15);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, .25)
+  }
+
+  .badge-yt {
+    background: rgba(255, 0, 0, .15);
+    color: #ff0000;
+    border: 1px solid rgba(255, 0, 0, .25)
+  }
+
   .badge-link {
     background: rgba(99, 102, 241, .15);
     color: #818cf8;
@@ -272,12 +291,8 @@
         <td>
           <div class="q-name">{{ q.problem }}</div>
           <div class="q-links">
-            {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-              class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i
-                class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
-            {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-              class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{
-              q.url2|platform_name }}</a>{% endif %}
+            {% if q.url %}{{ external_link_badge(q.url, q.url|platform_name, aria_label="View on " ~ (q.url|platform_name) ~ " (opens in new tab)") }}{% endif %}
+            {% if q.url2 %}{{ external_link_badge(q.url2, q.url2|platform_name, aria_label="View on " ~ (q.url2|platform_name) ~ " (opens in new tab)") }}{% endif %}
           </div>
         </td>
         <td>
