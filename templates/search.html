@@ -74,22 +74,26 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.recent-searches {
+.recent-searches,
+.saved-searches {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
-.recent-searches[hidden] {
+.recent-searches[hidden],
+.saved-searches[hidden] {
   display: none;
 }
-.recent-searches-head {
+.recent-searches-head,
+.saved-searches-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
 }
-.recent-searches-title {
+.recent-searches-title,
+.saved-searches-title {
   font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -140,6 +144,70 @@
 }
 .recent-search-clear:hover,
 .recent-search-clear:focus-visible {
+  color: var(--accent);
+}
+.saved-searches-list {
+  display: grid;
+  gap: 8px;
+}
+.saved-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.saved-search-main {
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.saved-search-main:hover,
+.saved-search-main:focus-visible {
+  color: var(--accent);
+}
+.saved-search-name {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.saved-search-query {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.saved-search-icon {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.saved-search-icon:hover,
+.saved-search-icon:focus-visible {
+  background: rgba(255,107,0,0.08);
   color: var(--accent);
 }
 .search-meta {
@@ -251,8 +319,8 @@
       <label for="searchInput" class="visually-hidden">Search questions</label>
       <input id="searchInput" class="search-input" value="{{ initial_query }}" autocomplete="off" autofocus
         placeholder="Search arrays, kadane, lc two sum, gfg graph, cn dp..."
-        aria-label="Search DSA questions by problem name, topic, or platform" 
-        aria-controls="results" 
+        aria-label="Search DSA questions by problem name, topic, or platform"
+        aria-controls="results"
         aria-describedby="searchMeta"
         aria-autocomplete="list">
       <button id="clearSearch" class="clear-btn" type="button" aria-label="Clear search input">
@@ -275,6 +343,17 @@
       </div>
       <div id="recentSearchesList" class="recent-searches-list" role="list" aria-label="Recent searches"></div>
     </div>
+    {% if current_user.is_authenticated %}
+    <div id="savedSearches" class="saved-searches" {% if not saved_searches %}hidden{% endif %}>
+      <div class="saved-searches-head">
+        <div class="saved-searches-title">Saved searches</div>
+        <button id="saveCurrentSearch" class="ui-btn ui-btn-secondary" type="button" aria-label="Save current search">
+          <i class="bi bi-bookmark-plus" aria-hidden="true"></i> Save current
+        </button>
+      </div>
+      <div id="savedSearchesList" class="saved-searches-list" role="list" aria-label="Saved searches"></div>
+    </div>
+    {% endif %}
   </div>
 
   <div id="searchMeta" class="search-meta" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -295,9 +374,14 @@ const recentSearchesPanel = document.getElementById('recentSearches');
 const recentSearchesList = document.getElementById('recentSearchesList');
 const clearRecentSearchesBtn = document.getElementById('clearRecentSearches');
 const chips = document.querySelectorAll('.platform-chip');
+const savedSearchesPanel = document.getElementById('savedSearches');
+const savedSearchesList = document.getElementById('savedSearchesList');
+const saveCurrentSearchBtn = document.getElementById('saveCurrentSearch');
 let activeToken = '';
 let debounceTimer = null;
 let controller = null;
+const canManageSavedSearches = {{ 'true' if current_user.is_authenticated else 'false' }} === 'true';
+let savedSearches = {{ saved_searches|tojson }};
 const RECENT_SEARCHES_KEY = 'dsa_recent_searches_v1';
 const MAX_RECENT_SEARCHES = 5;
 const platformLabels = {
@@ -393,6 +477,106 @@ function applyRecentSearch(index) {
   setActiveChip(entry.token || '');
   input.focus();
   runSearch();
+}
+
+function renderSavedSearches() {
+  if (!canManageSavedSearches || !savedSearchesPanel || !savedSearchesList) return;
+
+  savedSearchesPanel.hidden = savedSearches.length === 0;
+  savedSearchesList.innerHTML = savedSearches.map((entry, index) => `
+    <div class="saved-search-item" role="listitem">
+      <button class="saved-search-main" type="button" data-index="${index}" aria-label="Run saved search ${escapeHtml(entry.name)}">
+        <span class="saved-search-name">${escapeHtml(entry.name)}</span>
+        <span class="saved-search-query">${escapeHtml(entry.query)}</span>
+      </button>
+      <div class="saved-search-actions">
+        <button class="saved-search-icon" type="button" data-action="rename" data-id="${escapeHtml(entry.id)}" aria-label="Rename ${escapeHtml(entry.name)}">
+          <i class="bi bi-pencil" aria-hidden="true"></i>
+        </button>
+        <button class="saved-search-icon" type="button" data-action="delete" data-id="${escapeHtml(entry.id)}" aria-label="Delete ${escapeHtml(entry.name)}">
+          <i class="bi bi-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function requestSavedSearch(url, method, payload, errorFallback) {
+  const options = {
+    method,
+    headers: {'Content-Type': 'application/json'}
+  };
+  if (payload) options.body = JSON.stringify(payload);
+
+  const res = await fetch(url, options);
+  const body = await res.json();
+  if (!res.ok || !body.success) {
+    throw new Error(body.error || errorFallback);
+  }
+  savedSearches = body.saved_searches || [];
+  renderSavedSearches();
+}
+
+async function saveCurrentSearch() {
+  const query = currentQuery();
+  if (!query) {
+    meta.textContent = 'Type a search before saving it.';
+    return;
+  }
+
+  const suggestedName = input.value.trim() || query;
+  const name = window.prompt('Name this saved search:', suggestedName);
+  if (name === null) return;
+
+  try {
+    await requestSavedSearch('/api/saved_searches', 'POST', {query, name}, 'Unable to save search.');
+    meta.textContent = 'Saved search added.';
+  } catch (err) {
+    meta.textContent = err.message;
+  }
+}
+
+function applySavedSearch(index) {
+  const entry = savedSearches[index];
+  if (!entry) return;
+  const parts = String(entry.query || '').trim().split(/\s+/);
+  const first = parts[0] || '';
+  if (platformLabels[first]) {
+    setActiveChip(first);
+    input.value = parts.slice(1).join(' ');
+  } else {
+    setActiveChip('');
+    input.value = entry.query || '';
+  }
+  rememberRecentSearch(input.value, activeToken);
+  input.focus();
+  runSearch();
+}
+
+async function renameSavedSearch(searchId) {
+  const entry = savedSearches.find(item => item.id === searchId);
+  if (!entry) return;
+  const nextName = window.prompt('Rename this saved search:', entry.name);
+  if (nextName === null) return;
+
+  try {
+    await requestSavedSearch(`/api/saved_searches/${encodeURIComponent(searchId)}`, 'PATCH', {name: nextName}, 'Unable to rename saved search.');
+    meta.textContent = 'Saved search renamed.';
+  } catch (err) {
+    meta.textContent = err.message;
+  }
+}
+
+async function deleteSavedSearch(searchId) {
+  const entry = savedSearches.find(item => item.id === searchId);
+  if (!entry || !window.confirm(`Delete saved search "${entry.name}"?`)) return;
+
+  try {
+    await requestSavedSearch(`/api/saved_searches/${encodeURIComponent(searchId)}`, 'DELETE', null, 'Unable to delete saved search.');
+    meta.textContent = 'Saved search deleted.';
+  } catch (err) {
+    meta.textContent = err.message;
+  }
 }
 
 function setActiveChip(token) {
@@ -527,7 +711,6 @@ chips.forEach(chip => {
     setActiveChip(chip.dataset.token);
     runSearch();
   });
-  // Allow keyboard Enter/Space to activate chip
   chip.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -539,8 +722,33 @@ chips.forEach(chip => {
   chip.setAttribute('aria-pressed', 'false');
 });
 
+if (saveCurrentSearchBtn) {
+  saveCurrentSearchBtn.addEventListener('click', saveCurrentSearch);
+}
+if (savedSearchesList) {
+  savedSearchesList.addEventListener('click', (event) => {
+    const renameButton = event.target.closest('[data-action="rename"]');
+    if (renameButton) {
+      renameSavedSearch(renameButton.dataset.id);
+      return;
+    }
+
+    const deleteButton = event.target.closest('[data-action="delete"]');
+    if (deleteButton) {
+      deleteSavedSearch(deleteButton.dataset.id);
+      return;
+    }
+
+    const savedSearchButton = event.target.closest('.saved-search-main');
+    if (savedSearchButton) {
+      applySavedSearch(Number(savedSearchButton.dataset.index));
+    }
+  });
+}
+
 setActiveChip('');
 renderRecentSearches();
+renderSavedSearches();
 runSearch();
 </script>
 {% endblock %}
