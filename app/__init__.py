@@ -1,35 +1,71 @@
 import json
 import os
-import secrets
+from pathlib import Path
+from time import perf_counter
 
+from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
-from flask import Flask, session
+from flask import Flask, abort, g, jsonify, request
 
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.faq import faq_bp
-from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth, cache
+from app.extensions import bcrypt, cache, db, limiter, login_manager, mongo, oauth
 from app.leaderboard import leaderboard_bp
-from app.public.routes import public_bp
+from app.web.routes import public_bp
 from app.profile import profile_bp
+from app.security import (
+    CSRF_PROTECTED_METHODS,
+    build_content_security_policy,
+    csrf_token,
+    validate_csrf_request,
+)
 from app.search import search_bp
 from app.tracker import tracker_bp
-from app.utils import platform_color_filter, platform_name_filter
+from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
 
 
-def create_app():
+ROUTE_TIMING_ENDPOINTS = {
+    "profile.profile",
+    "profile.sync_platforms",
+    "leaderboard.leaderboard",
+    "leaderboard.api_leaderboard",
+    "search.search",
+    "search.api_search_questions",
+    "tracker.export_csv",
+    "tracker.export_notes",
+}
+
+
+def _configure_rate_limit_storage(app, config_class):
+    storage_uri = app.config["RATELIMIT_STORAGE_URI"]
+    if storage_uri == "memory://" and config_class is ProductionConfig:
+        raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
+
+
+def _mongo_client_options(app):
+    return {
+        "serverSelectionTimeoutMS": app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"],
+        "connectTimeoutMS": app.config["MONGO_CONNECT_TIMEOUT_MS"],
+        "maxPoolSize": app.config["MONGO_MAX_POOL_SIZE"],
+        "minPoolSize": app.config["MONGO_MIN_POOL_SIZE"],
+    }
+
+
+def create_app(config_class=None):
     load_dotenv()
 
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
-    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "supersecretkey")
-    app.config["MONGO_URI"] = os.environ.get("MONGO_URI", "mongodb://localhost:27017/450_dsa")
-    app.config["CACHE_TYPE"] = "SimpleCache"
-    app.config["CACHE_DEFAULT_TIMEOUT"] = 300
-    app.config["SWAGGER"] = {
-        "title": "450 DSA Tracker API",
-        "uiversion": 3,
-    }
+    config_class = config_class or resolve_config_class()
+    app.config.from_object(config_class)
+    # Non-test environments must provide a real SECRET_KEY before the app boots.
+    config_class.apply_environment_overrides(app)
+    _configure_rate_limit_storage(app, config_class)
+    app.config["SESSION_COOKIE_SECURE"] = env_flag(
+        "SESSION_COOKIE_SECURE",
+        default=app.config["SESSION_COOKIE_SECURE"],
+    )
     
     cache.init_app(app)
     Swagger(
@@ -53,8 +89,7 @@ def create_app():
         },
     )
 
-    # Initialize extensions
-    mongo.init_app(app)
+    mongo.init_app(app, **_mongo_client_options(app))
     bcrypt.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
@@ -82,33 +117,33 @@ def create_app():
         client_kwargs={"scope": "openid email profile"},
     )
 
-    # Create indexes (skip if using mock)
     try:
         db.user.create_index("email", unique=True, sparse=True)
         db.user.create_index("github_id", unique=True, sparse=True)
         db.user.create_index("google_id", unique=True, sparse=True)
         db.user.create_index("is_admin")
         db.topic.create_index("name", unique=True)
+        db.topic.create_index("position")
+        db.question.create_index("topic")
         db.question.create_index([("problem", "text")], name="problem_text")
     except Exception:
-        pass  # Skip indexes if using mock DB
+        pass
 
     # Lightweight schema backfill for legacy user documents.
     db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
 
-    data_path = os.path.abspath(os.path.join(app.root_path, os.pardir, "data.json"))
+    data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
 
     def init_db():
         if db.topic.count_documents({}) == 0:
-            with open(data_path, "r", encoding="utf-8") as file_obj:
+            with data_path.open("r", encoding="utf-8") as file_obj:
                 data = json.load(file_obj)
             for topic in data:
                 result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})
                 topic_id = result.inserted_id
                 questions = []
                 for question in topic["questions"]:
-                    # ADDED: difficulty field
                     difficulty = question.get("difficulty", "Medium")
                     questions.append(
                         {
@@ -116,7 +151,7 @@ def create_app():
                             "problem": question["Problem"],
                             "url": question["URL"],
                             "url2": question.get("URL2", ""),
-                            "difficulty": difficulty,  # <-- NEW FIELD
+                            "difficulty": difficulty,
                         }
                     )
                 if questions:
@@ -128,19 +163,37 @@ def create_app():
             init_db()
             app._db_initialized = True
 
+    @app.before_request
+    def start_route_timer():
+        if request.endpoint in ROUTE_TIMING_ENDPOINTS:
+            g.route_timer_start = perf_counter()
+
+    @app.before_request
+    def protect_unsafe_requests():
+        if request.method not in CSRF_PROTECTED_METHODS:
+            return None
+
+        if validate_csrf_request():
+            return None
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Invalid CSRF token."}), 403
+
+        abort(403)
+
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
+    app.add_template_filter(platform_profile_url, "platform_url")
 
     @app.context_processor
     def inject_csrf_token():
-        def csrf_token():
-            token = session.get("csrf_token")
-            if not token:
-                token = secrets.token_urlsafe(32)
-                session["csrf_token"] = token
-            return token
-
         return {"csrf_token": csrf_token}
+
+    @app.route("/service-worker.js")
+    def service_worker():
+        response = app.send_static_file("js/service-worker.js")
+        response.mimetype = "application/javascript"
+        return response
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(faq_bp)  
@@ -154,7 +207,6 @@ def create_app():
     @app.errorhandler(429)
     def ratelimit_handler(e):
         retry_after = getattr(e, 'retry_after', 60)
-        from flask import jsonify
         response = jsonify({
             'error': 'Too many requests',
             'message': str(e.description),
@@ -166,13 +218,22 @@ def create_app():
 
     @app.after_request
     def add_security_headers(response):
-        response.headers['Content-Security-Policy'] = (
-            "default-src 'self'; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
-            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
-            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
-            "img-src 'self' data: https:;"
-        )
+        started_at = getattr(g, "route_timer_start", None)
+        if started_at is not None and request.endpoint in ROUTE_TIMING_ENDPOINTS:
+            app.logger.info(
+                "route_timing %s",
+                json.dumps(
+                    {
+                        "endpoint": request.endpoint,
+                        "method": request.method,
+                        "route": request.url_rule.rule if request.url_rule else request.path,
+                        "status_code": response.status_code,
+                        "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+                    },
+                    sort_keys=True,
+                ),
+            )
+        response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
 
 

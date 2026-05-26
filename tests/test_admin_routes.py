@@ -10,12 +10,13 @@ import app.auth.routes as auth_routes
 
 def create_test_app(monkeypatch):
     test_db = mongomock.MongoClient().db
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     monkeypatch.setattr(app_module, "db", test_db)
     monkeypatch.setattr(admin_routes, "db", test_db)
     monkeypatch.setattr(auth_routes, "db", test_db)
 
-    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
 
     flask_app = app_module.create_app()
@@ -106,6 +107,57 @@ def test_admin_dashboard_supports_search_and_pagination(monkeypatch):
     assert "Page 1 of 1" in body
 
 
+def test_admin_dashboard_shell_loads_logs_asynchronously(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    monkeypatch.setattr(
+        admin_routes,
+        "_recent_error_logs",
+        lambda max_entries=80: [{"source": "logs/error.log", "line": "should not render inline"}],
+    )
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.get("/admin")
+
+    body = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert "Loading recent logs..." in body
+    assert "should not render inline" not in body
+    assert 'data-logs-url="/admin/logs"' in body
+
+
+def test_admin_logs_endpoint_returns_recent_entries(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    monkeypatch.setattr(
+        admin_routes,
+        "_recent_error_logs",
+        lambda max_entries=80: [{"source": "logs/error.log", "line": "boom"}],
+    )
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.get("/admin/logs")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"logs": [{"source": "logs/error.log", "line": "boom"}]}
+
+
 def test_admin_cannot_delete_self(monkeypatch):
     flask_app, test_db = create_test_app(monkeypatch)
     admin_id = test_db.user.insert_one(
@@ -188,7 +240,7 @@ def test_admin_delete_rejects_missing_csrf(monkeypatch):
         set_csrf_token(client)
         response = client.post(f"/admin/users/{victim_id}/delete", data={"q": "", "page": 1})
 
-    assert response.status_code == 400
+    assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
 
 
@@ -213,7 +265,11 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     with flask_app.test_client() as client:
         login_as(client, user_id)
-        response = client.post(f"/admin/users/{victim_id}/delete", data={"q": "", "page": 1})
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{victim_id}/delete",
+            data={"q": "", "page": 1, "csrf_token": csrf_token},
+        )
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None

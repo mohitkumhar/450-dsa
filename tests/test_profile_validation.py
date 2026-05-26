@@ -16,6 +16,13 @@ def test_profile_updates_trim_text_and_accept_https_urls():
     }
 
 
+def test_profile_updates_reject_blank_name():
+    updates, error = build_profile_updates({'name': '   '})
+
+    assert updates is None
+    assert error == 'name is required'
+
+
 def test_profile_updates_reject_overlong_text():
     updates, error = build_profile_updates({'bio': 'x' * 501})
 

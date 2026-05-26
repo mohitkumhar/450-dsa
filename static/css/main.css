@@ -40,6 +40,28 @@ body {
     overflow-x: hidden;
 }
 
+.card,
+.card-dark,
+.stat-card {
+    color: var(--text-primary);
+}
+
+.stat-num,
+.big-num,
+.metric-value,
+.rating-num,
+.rank-num,
+.donut-inner {
+    color: var(--text-primary);
+}
+
+.stat-lbl,
+.metric-label,
+.sub-label,
+.rating-sub {
+    color: var(--text-secondary);
+}
+
 /* ─── Left Sidebar ─── */
 .sidebar {
     position: fixed;
