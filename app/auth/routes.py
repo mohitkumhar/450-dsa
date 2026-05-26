@@ -29,6 +29,8 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
     Returns a tuple of `(user_doc, action)` where action is one of
     `existing`, `linked`, or `created`.
     """
+    if email is not None:
+        email = normalize_email(email)
     user_doc = db.user.find_one({provider_field: provider_id})
     if user_doc:
         return user_doc, "existing"
@@ -79,6 +81,12 @@ def validate_registration_password(password, confirm_password):
     return errors
 
 
+def normalize_email(email):
+    if not email:
+        return ""
+    return email.strip().lower()
+
+
 class UserWrapper(UserMixin):
     """Wrap a pymongo user dict for flask-login compatibility."""
 
@@ -124,7 +132,7 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
-        email = request.form.get("email")
+        email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
         user_doc = db.user.find_one({"email": email})
         if user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
@@ -141,7 +149,7 @@ def register():
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
-        email = request.form.get("email")
+        email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
@@ -178,8 +186,14 @@ def register():
     return render_template("register.html")
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
+@login_required
 def logout():
+    token = request.form.get("csrf_token", "")
+    expected = session.get("csrf_token", "")
+    if not token or not expected or token != expected:
+        abort(403)
+
     logout_user()
     return redirect(url_for("auth.login"))
 
@@ -266,7 +280,7 @@ def authorize_github():
         if response_emails.status_code == 200:
             for email_item in response_emails.json():
                 if email_item["primary"] and email_item["verified"]:
-                    email = email_item["email"]
+                    email = normalize_email(email_item["email"])
                     break
     except Exception:
         current_app.logger.exception("GitHub OAuth email lookup failed")
@@ -326,7 +340,7 @@ def authorize_google():
         return "Failed to fetch Google user info", 400
 
     google_id = user_info["sub"]
-    email = user_info.get("email")
+    email = normalize_email(user_info.get("email"))
 
     user_doc, action = resolve_oauth_user(
         "google_id",

@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
+from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.platforms.fetchers import (
     fetch_atcoder,
     fetch_coding_ninjas,
@@ -325,6 +326,7 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
+    invalidate_leaderboard_cache()
     clear_profile_caches(user_id)
     return jsonify(build_sync_platforms_response(platform_status))
 
@@ -403,6 +405,7 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
+        invalidate_leaderboard_cache()
         clear_profile_caches(current_user.id)
     return json_success()
 

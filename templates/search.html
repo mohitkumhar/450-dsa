@@ -527,15 +527,6 @@ chips.forEach(chip => {
     setActiveChip(chip.dataset.token);
     runSearch();
   });
-  // Allow keyboard Enter/Space to activate chip
-  chip.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setActiveChip(chip.dataset.token);
-      runSearch();
-    }
-  });
-  chip.setAttribute('role', 'button');
   chip.setAttribute('aria-pressed', 'false');
 });
 
