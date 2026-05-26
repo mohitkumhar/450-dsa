@@ -10,6 +10,7 @@ from progress_export import build_progress_csv
 
 
 tracker_bp = Blueprint("tracker", __name__)
+QUESTION_SORT = [("position", 1), ("_id", 1)]
 
 
 @tracker_bp.route("/")
@@ -58,7 +59,7 @@ def topic(topic_id):
     if not topic_doc:
         return "Topic not found", 404
 
-    questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    questions = list(db.question.find({"topic": topic_doc["_id"]}).sort(QUESTION_SORT))
     
     # Calculate counts based on the unfiltered list of questions
     total_count = len(questions)
@@ -97,7 +98,7 @@ def export_topic_notes(topic_id):
     if not topic_doc:
         return "Topic not found", 404
 
-    questions = list(db.question.find({"topic": topic_doc["_id"]}))
+    questions = list(db.question.find({"topic": topic_doc["_id"]}).sort(QUESTION_SORT))
     markdown = build_topic_notes_markdown(topic_doc["name"], questions, current_user.progress)
     response = Response(markdown, mimetype="text/markdown")
     response.headers["Content-Disposition"] = f'attachment; filename={topic_notes_filename(topic_doc["name"])}'
@@ -220,7 +221,7 @@ def bookmarks():
             object_ids.append(ObjectId(question_id))
         except Exception:
             pass
-    questions = list(db.question.find({"_id": {"$in": object_ids}}))
+    questions = list(db.question.find({"_id": {"$in": object_ids}}).sort(QUESTION_SORT))
 
     topic_ids = list(set(question["topic"] for question in questions))
     topic_docs = {topic["_id"]: topic["name"] for topic in db.topic.find({"_id": {"$in": topic_ids}})}
@@ -233,7 +234,7 @@ def bookmarks():
 @tracker_bp.route("/export/csv")
 @login_required
 def export_csv():
-    questions = list(db.question.find())
+    questions = list(db.question.find().sort(QUESTION_SORT))
     topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
     topic_lookup = {
         topic['_id']: topic.get('name', 'Unknown')

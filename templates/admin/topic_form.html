@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.form-shell { max-width: 720px; display:grid; gap:16px; }
+.back-btn { display:inline-flex; align-items:center; gap:8px; color:var(--text-secondary); text-decoration:none; font-size:0.85rem; font-weight:600; padding:7px 14px; border:1px solid var(--border-color); border-radius:8px; transition:all 0.2s; width:max-content; }
+.back-btn:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.panel { background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:18px; }
+.form-title { font-size:1.5rem; font-weight:800; margin-bottom:6px; }
+.form-subtitle { color:var(--text-secondary); font-size:0.9rem; margin-bottom:16px; }
+.field { display:grid; gap:6px; margin-bottom:14px; }
+.label { font-size:0.8rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.06em; }
+.input { width:100%; background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:10px 12px; font:inherit; }
+.input:focus { outline:none; border-color:var(--accent); }
+.actions { display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:18px; }
+.btn { display:inline-flex; align-items:center; gap:6px; border-radius:9px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); font-weight:700; font-size:0.84rem; padding:9px 14px; text-decoration:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+</style>
+
+<section class="form-shell">
+  <a class="back-btn" href="{{ url_for('admin.question_manager') }}"><i class="bi bi-arrow-left"></i> Back to Question Manager</a>
+  <article class="panel">
+    <h1 class="form-title">{% if mode == 'edit' %}Edit Topic{% else %}Add Topic{% endif %}</h1>
+    <p class="form-subtitle">Manage topic names and ordering before curating linked questions.</p>
+
+    <form method="POST" action="{% if mode == 'edit' %}{{ url_for('admin.edit_topic', topic_id=topic_id) }}{% else %}{{ url_for('admin.create_topic') }}{% endif %}">
+      <div class="field">
+        <label class="label" for="name">Topic Name</label>
+        <input class="input" id="name" name="name" value="{{ form_values.name }}" required>
+      </div>
+      <div class="field">
+        <label class="label" for="position">Position</label>
+        <input class="input" id="position" name="position" value="{{ form_values.position }}" inputmode="numeric" required>
+      </div>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('admin.question_manager') }}">Cancel</a>
+        <button class="btn primary" type="submit">{% if mode == 'edit' %}Save Changes{% else %}Create Topic{% endif %}</button>
+      </div>
+    </form>
+  </article>
+</section>
+{% endblock %}

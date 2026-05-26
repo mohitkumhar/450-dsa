@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.admin-shell { display:grid; gap:16px; }
+.admin-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.admin-title { font-size:1.7rem; font-weight:800; }
+.admin-subtitle { color:var(--text-secondary); font-size:0.92rem; }
+.action-row { display:flex; gap:10px; flex-wrap:wrap; }
+.action-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:9px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); font-weight:600; font-size:0.8rem; padding:8px 12px; text-decoration:none; }
+.action-btn:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.action-btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+.panel-grid { display:grid; grid-template-columns: 1.4fr 1fr; gap:16px; align-items:start; }
+.panel-stack { display:grid; gap:16px; }
+.panel { background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; }
+.panel-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.panel-title { font-size:1.05rem; font-weight:700; }
+.panel-subtitle { color:var(--text-secondary); font-size:0.82rem; }
+.search-form { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+.search-input,.search-select { background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:9px; padding:9px 12px; min-width:180px; }
+.table-wrap { overflow-x:auto; }
+.data-table { width:100%; border-collapse:collapse; min-width:740px; }
+.data-table th,.data-table td { padding:11px 8px; border-bottom:1px solid var(--border-subtle); text-align:left; vertical-align:top; }
+.data-table th { font-size:0.78rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; }
+.data-table td { font-size:0.9rem; }
+.question-name { font-weight:700; color:var(--text-primary); }
+.question-url { display:block; color:var(--text-secondary); font-size:0.8rem; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.topic-chip,.difficulty-chip { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:0.74rem; font-weight:700; border:1px solid var(--border-color); }
+.difficulty-chip.easy { color:#22c55e; border-color:rgba(34,197,94,0.35); }
+.difficulty-chip.medium { color:#f59e0b; border-color:rgba(245,158,11,0.35); }
+.difficulty-chip.hard { color:#ef4444; border-color:rgba(239,68,68,0.35); }
+.actions-cell { display:flex; gap:8px; flex-wrap:wrap; }
+.small-btn { display:inline-flex; align-items:center; gap:6px; border-radius:8px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); padding:6px 10px; font-size:0.76rem; font-weight:700; text-decoration:none; }
+.small-btn:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.small-btn.danger { color:#f87171; border-color:rgba(239,68,68,0.35); }
+.topic-list,.history-list { display:grid; gap:10px; }
+.topic-item,.history-item { background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:12px; padding:12px; }
+.topic-top,.history-top { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+.topic-name,.history-title { font-weight:700; }
+.topic-meta,.history-meta { color:var(--text-secondary); font-size:0.8rem; margin-top:6px; }
+.topic-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.empty-state { color:var(--text-secondary); font-size:0.88rem; }
+@media (max-width: 980px) { .panel-grid { grid-template-columns:1fr; } }
+</style>
+
+<section class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <h1 class="admin-title">Question Management</h1>
+      <p class="admin-subtitle">Edit seeded content safely, adjust order, and keep an audit trail for admin content changes.</p>
+    </div>
+    <div class="action-row">
+      <a class="action-btn" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-arrow-left"></i> Admin Dashboard</a>
+      <a class="action-btn" href="{{ url_for('admin.create_topic') }}"><i class="bi bi-folder-plus"></i> Add Topic</a>
+      <a class="action-btn primary" href="{{ url_for('admin.create_question') }}"><i class="bi bi-plus-circle"></i> Add Question</a>
+    </div>
+  </div>
+
+  <div class="panel-grid">
+    <article class="panel">
+      <div class="panel-title-row">
+        <div>
+          <h2 class="panel-title">Questions</h2>
+          <p class="panel-subtitle">{{ questions|length }} question{% if questions|length != 1 %}s{% endif %} shown</p>
+        </div>
+      </div>
+
+      <form class="search-form" method="GET" action="{{ url_for('admin.question_manager') }}">
+        <input class="search-input" type="text" name="q" value="{{ search_term }}" placeholder="Search by problem title" aria-label="Search questions">
+        <select class="search-select" name="topic" aria-label="Filter by topic">
+          <option value="">All topics</option>
+          {% for topic in topics %}
+          <option value="{{ topic._id }}" {% if topic_filter == topic._id|string %}selected{% endif %}>{{ topic.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="action-btn" type="submit"><i class="bi bi-search"></i> Filter</button>
+        {% if search_term or topic_filter %}
+        <a class="action-btn" href="{{ url_for('admin.question_manager') }}">Clear</a>
+        {% endif %}
+      </form>
+
+      <div class="table-wrap">
+        <table class="data-table" aria-label="Question management table">
+          <thead>
+            <tr>
+              <th>Problem</th>
+              <th>Topic</th>
+              <th>Difficulty</th>
+              <th>Position</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if questions %}
+              {% for question in questions %}
+              <tr>
+                <td>
+                  <div class="question-name">{{ question.problem }}</div>
+                  <span class="question-url">{{ question.url }}</span>
+                  {% if question.url2 %}<span class="question-url">{{ question.url2 }}</span>{% endif %}
+                </td>
+                <td><span class="topic-chip">{{ question.topic_name }}</span></td>
+                <td><span class="difficulty-chip {{ question.difficulty|lower }}">{{ question.difficulty }}</span></td>
+                <td>{{ question.position or 0 }}</td>
+                <td>
+                  <div class="actions-cell">
+                    <a class="small-btn" href="{{ url_for('admin.edit_question', question_id=question._id|string) }}"><i class="bi bi-pencil-square"></i> Edit</a>
+                    <form method="POST" action="{{ url_for('admin.delete_question', question_id=question._id|string) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="small-btn danger" type="submit"><i class="bi bi-trash3-fill"></i> Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="5" class="empty-state">No questions matched the current filters.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+
+    <div class="panel-stack">
+      <article class="panel">
+        <div class="panel-title-row">
+          <div>
+            <h2 class="panel-title">Topics</h2>
+            <p class="panel-subtitle">Manage names and sort order before editing linked questions.</p>
+          </div>
+        </div>
+        <div class="topic-list">
+          {% for topic in topics %}
+          <article class="topic-item">
+            <div class="topic-top">
+              <span class="topic-name">{{ topic.name }}</span>
+              <span class="topic-chip">Position {{ topic.position }}</span>
+            </div>
+            <div class="topic-actions">
+              <a class="small-btn" href="{{ url_for('admin.edit_topic', topic_id=topic._id|string) }}"><i class="bi bi-pencil-square"></i> Edit</a>
+              <form method="POST" action="{{ url_for('admin.delete_topic', topic_id=topic._id|string) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="small-btn danger" type="submit"><i class="bi bi-trash3-fill"></i> Delete</button>
+              </form>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title-row">
+          <div>
+            <h2 class="panel-title">Recent Edit History</h2>
+            <p class="panel-subtitle">Safe edit trail for question and topic changes.</p>
+          </div>
+        </div>
+        <div class="history-list">
+          {% if history_entries %}
+            {% for entry in history_entries %}
+            <article class="history-item">
+              <div class="history-top">
+                <span class="history-title">{{ entry.entity_type|title }} {{ entry.action|title }}</span>
+                <span class="topic-chip">{{ entry.created_at_display }}</span>
+              </div>
+              <div class="history-meta">
+                {{ entry.actor_label }} · {{ entry.after.problem or entry.after.name or entry.entity_id }}
+              </div>
+            </article>
+            {% endfor %}
+          {% else %}
+            <p class="empty-state">No admin content changes recorded yet.</p>
+          {% endif %}
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}

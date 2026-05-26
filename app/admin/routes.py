@@ -14,6 +14,8 @@ from app.extensions import db
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+QUESTION_DIFFICULTIES = ("Easy", "Medium", "Hard")
+QUESTION_SORT = [("position", 1), ("_id", 1)]
 
 
 def _safe_int(value, default):
@@ -26,6 +28,31 @@ def _safe_int(value, default):
 def _tail_file(file_path, max_lines=80):
     with file_path.open("r", encoding="utf-8", errors="replace") as file_obj:
         return list(deque(file_obj, maxlen=max_lines))
+
+
+def _actor_label():
+    return current_user.name or current_user.email or str(current_user.id)
+
+
+def _write_admin_content_history(entity_type, entity_id, action, before=None, after=None):
+    db.admin_content_history.insert_one(
+        {
+            "entity_type": entity_type,
+            "entity_id": str(entity_id) if entity_id is not None else None,
+            "action": action,
+            "before": before or {},
+            "after": after or {},
+            "actor_user_id": str(current_user.id),
+            "actor_label": _actor_label(),
+            "created_at": datetime.now(timezone.utc),
+        }
+    )
+
+
+def _format_datetime(value):
+    if hasattr(value, "astimezone"):
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return "-"
 
 
 def _recent_error_logs(max_entries=120):
@@ -106,6 +133,80 @@ def _build_user_query(search_term):
     return {"$or": [{"name": pattern}, {"email": pattern}]}
 
 
+def _question_payload_from_form(form_data):
+    problem = (form_data.get("problem") or "").strip()
+    url = (form_data.get("url") or "").strip()
+    url2 = (form_data.get("url2") or "").strip()
+    difficulty = (form_data.get("difficulty") or "Medium").strip()
+    topic_id = (form_data.get("topic_id") or "").strip()
+    position_raw = (form_data.get("position") or "").strip()
+
+    errors = []
+    if not problem:
+        errors.append("Problem title is required.")
+    if not url:
+        errors.append("Primary URL is required.")
+    if difficulty not in QUESTION_DIFFICULTIES:
+        errors.append("Difficulty must be Easy, Medium, or Hard.")
+    if not ObjectId.is_valid(topic_id):
+        errors.append("A valid topic is required.")
+    try:
+        position = int(position_raw)
+        if position < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        errors.append("Position must be a non-negative integer.")
+        position = 0
+
+    payload = {
+        "problem": problem,
+        "url": url,
+        "url2": url2,
+        "difficulty": difficulty,
+        "topic": ObjectId(topic_id) if ObjectId.is_valid(topic_id) else None,
+        "position": position,
+    }
+    return payload, errors
+
+
+def _topic_payload_from_form(form_data):
+    name = (form_data.get("name") or "").strip()
+    position_raw = (form_data.get("position") or "").strip()
+    errors = []
+    if not name:
+        errors.append("Topic name is required.")
+    try:
+        position = int(position_raw)
+        if position < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        errors.append("Topic position must be a non-negative integer.")
+        position = 0
+    return {"name": name, "position": position}, errors
+
+
+def _topic_choices():
+    return list(db.topic.find({}, {"name": 1, "position": 1}).sort("position", 1))
+
+
+def _question_projection():
+    return {"problem": 1, "url": 1, "url2": 1, "difficulty": 1, "topic": 1, "position": 1}
+
+
+def _recent_content_history(limit=12):
+    history = list(
+        db.admin_content_history.find(
+            {},
+            {"entity_type": 1, "entity_id": 1, "action": 1, "actor_label": 1, "created_at": 1, "after": 1},
+        )
+        .sort("created_at", -1)
+        .limit(limit)
+    )
+    for entry in history:
+        entry["created_at_display"] = _format_datetime(entry.get("created_at"))
+    return history
+
+
 @admin_bp.route("", methods=["GET"])
 @login_required
 @admin_required
@@ -143,6 +244,200 @@ def dashboard():
         stats=stats,
         logs=logs,
     )
+
+
+@admin_bp.route("/questions", methods=["GET"])
+@login_required
+@admin_required
+def question_manager():
+    search_term = request.args.get("q", "").strip()
+    topic_filter = request.args.get("topic", "").strip()
+
+    query = {}
+    if search_term:
+        query["problem"] = {"$regex": re.escape(search_term), "$options": "i"}
+    if topic_filter and ObjectId.is_valid(topic_filter):
+        query["topic"] = ObjectId(topic_filter)
+
+    questions = list(db.question.find(query, _question_projection()).sort(QUESTION_SORT))
+    topics = _topic_choices()
+    topic_lookup = {topic["_id"]: topic.get("name", "Unknown Topic") for topic in topics}
+    for question in questions:
+        question["topic_name"] = topic_lookup.get(question.get("topic"), "Unknown Topic")
+
+    return render_template(
+        "admin/questions.html",
+        questions=questions,
+        topics=topics,
+        topic_filter=topic_filter,
+        search_term=search_term,
+        history_entries=_recent_content_history(),
+    )
+
+
+@admin_bp.route("/questions/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def create_question():
+    topics = _topic_choices()
+    form_values = {"problem": "", "url": "", "url2": "", "difficulty": "Medium", "topic_id": "", "position": "0"}
+
+    if request.method == "POST":
+        form_values.update(request.form)
+        payload, errors = _question_payload_from_form(request.form)
+        if not errors:
+            result = db.question.insert_one(payload)
+            _write_admin_content_history("question", result.inserted_id, "created", after={**payload, "topic": str(payload["topic"])})
+            flash("Question created.", "success")
+            return redirect(url_for("admin.question_manager"))
+        for error in errors:
+            flash(error, "danger")
+
+    return render_template("admin/question_form.html", form_values=form_values, topics=topics, mode="create")
+
+
+@admin_bp.route("/questions/<question_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_question(question_id):
+    if not ObjectId.is_valid(question_id):
+        flash("Invalid question id.", "danger")
+        return redirect(url_for("admin.question_manager"))
+
+    question = db.question.find_one({"_id": ObjectId(question_id)}, _question_projection())
+    if not question:
+        flash("Question not found.", "danger")
+        return redirect(url_for("admin.question_manager"))
+
+    topics = _topic_choices()
+    form_values = {
+        "problem": question.get("problem", ""),
+        "url": question.get("url", ""),
+        "url2": question.get("url2", ""),
+        "difficulty": question.get("difficulty", "Medium"),
+        "topic_id": str(question.get("topic") or ""),
+        "position": str(question.get("position", 0)),
+    }
+
+    if request.method == "POST":
+        form_values.update(request.form)
+        payload, errors = _question_payload_from_form(request.form)
+        if not errors:
+            before = {
+                "problem": question.get("problem", ""),
+                "url": question.get("url", ""),
+                "url2": question.get("url2", ""),
+                "difficulty": question.get("difficulty", "Medium"),
+                "topic": str(question.get("topic") or ""),
+                "position": question.get("position", 0),
+            }
+            db.question.update_one({"_id": question["_id"]}, {"$set": payload})
+            _write_admin_content_history("question", question["_id"], "updated", before=before, after={**payload, "topic": str(payload["topic"])})
+            flash("Question updated.", "success")
+            return redirect(url_for("admin.question_manager"))
+        for error in errors:
+            flash(error, "danger")
+
+    return render_template("admin/question_form.html", form_values=form_values, topics=topics, mode="edit", question_id=question_id)
+
+
+@admin_bp.route("/questions/<question_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_question(question_id):
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+    if not ObjectId.is_valid(question_id):
+        flash("Invalid question id.", "danger")
+        return redirect(url_for("admin.question_manager"))
+    question = db.question.find_one({"_id": ObjectId(question_id)}, _question_projection())
+    if not question:
+        flash("Question not found.", "danger")
+        return redirect(url_for("admin.question_manager"))
+    db.question.delete_one({"_id": question["_id"]})
+    _write_admin_content_history(
+        "question",
+        question["_id"],
+        "deleted",
+        before={
+            "problem": question.get("problem", ""),
+            "difficulty": question.get("difficulty", "Medium"),
+            "topic": str(question.get("topic") or ""),
+            "position": question.get("position", 0),
+        },
+    )
+    flash("Question deleted.", "success")
+    return redirect(url_for("admin.question_manager"))
+
+
+@admin_bp.route("/topics/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def create_topic():
+    form_values = {"name": "", "position": "0"}
+    if request.method == "POST":
+        form_values.update(request.form)
+        payload, errors = _topic_payload_from_form(request.form)
+        if not errors:
+            result = db.topic.insert_one(payload)
+            _write_admin_content_history("topic", result.inserted_id, "created", after=payload)
+            flash("Topic created.", "success")
+            return redirect(url_for("admin.question_manager"))
+        for error in errors:
+            flash(error, "danger")
+    return render_template("admin/topic_form.html", form_values=form_values, mode="create")
+
+
+@admin_bp.route("/topics/<topic_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_topic(topic_id):
+    if not ObjectId.is_valid(topic_id):
+        flash("Invalid topic id.", "danger")
+        return redirect(url_for("admin.question_manager"))
+    topic = db.topic.find_one({"_id": ObjectId(topic_id)}, {"name": 1, "position": 1})
+    if not topic:
+        flash("Topic not found.", "danger")
+        return redirect(url_for("admin.question_manager"))
+    form_values = {"name": topic.get("name", ""), "position": str(topic.get("position", 0))}
+    if request.method == "POST":
+        form_values.update(request.form)
+        payload, errors = _topic_payload_from_form(request.form)
+        if not errors:
+            before = {"name": topic.get("name", ""), "position": topic.get("position", 0)}
+            db.topic.update_one({"_id": topic["_id"]}, {"$set": payload})
+            _write_admin_content_history("topic", topic["_id"], "updated", before=before, after=payload)
+            flash("Topic updated.", "success")
+            return redirect(url_for("admin.question_manager"))
+        for error in errors:
+            flash(error, "danger")
+    return render_template("admin/topic_form.html", form_values=form_values, mode="edit", topic_id=topic_id)
+
+
+@admin_bp.route("/topics/<topic_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_topic(topic_id):
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+    if not ObjectId.is_valid(topic_id):
+        flash("Invalid topic id.", "danger")
+        return redirect(url_for("admin.question_manager"))
+    topic = db.topic.find_one({"_id": ObjectId(topic_id)}, {"name": 1, "position": 1})
+    if not topic:
+        flash("Topic not found.", "danger")
+        return redirect(url_for("admin.question_manager"))
+    if db.question.count_documents({"topic": topic["_id"]}) > 0:
+        flash("Delete or move the topic's questions before deleting the topic.", "warning")
+        return redirect(url_for("admin.question_manager"))
+    db.topic.delete_one({"_id": topic["_id"]})
+    _write_admin_content_history("topic", topic["_id"], "deleted", before={"name": topic.get("name", ""), "position": topic.get("position", 0)})
+    flash("Topic deleted.", "success")
+    return redirect(url_for("admin.question_manager"))
 
 
 @admin_bp.route("/users/<user_id>/delete", methods=["POST"])

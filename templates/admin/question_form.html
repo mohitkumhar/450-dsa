@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.form-shell { max-width: 860px; display:grid; gap:16px; }
+.back-btn { display:inline-flex; align-items:center; gap:8px; color:var(--text-secondary); text-decoration:none; font-size:0.85rem; font-weight:600; padding:7px 14px; border:1px solid var(--border-color); border-radius:8px; transition:all 0.2s; width:max-content; }
+.back-btn:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.panel { background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:18px; }
+.form-title { font-size:1.5rem; font-weight:800; margin-bottom:6px; }
+.form-subtitle { color:var(--text-secondary); font-size:0.9rem; margin-bottom:16px; }
+.form-grid { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+.field { display:grid; gap:6px; }
+.field.full { grid-column:1 / -1; }
+.label { font-size:0.8rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.06em; }
+.input,.select { width:100%; background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:10px 12px; font:inherit; }
+.input:focus,.select:focus { outline:none; border-color:var(--accent); }
+.actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; flex-wrap:wrap; }
+.btn { display:inline-flex; align-items:center; gap:6px; border-radius:9px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); font-weight:700; font-size:0.84rem; padding:9px 14px; text-decoration:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+@media (max-width: 700px) { .form-grid { grid-template-columns:1fr; } }
+</style>
+
+<section class="form-shell">
+  <a class="back-btn" href="{{ url_for('admin.question_manager') }}"><i class="bi bi-arrow-left"></i> Back to Question Manager</a>
+  <article class="panel">
+    <h1 class="form-title">{% if mode == 'edit' %}Edit Question{% else %}Add Question{% endif %}</h1>
+    <p class="form-subtitle">Manage problem title, links, difficulty, topic, and display position.</p>
+
+    <form method="POST" action="{% if mode == 'edit' %}{{ url_for('admin.edit_question', question_id=question_id) }}{% else %}{{ url_for('admin.create_question') }}{% endif %}">
+      <div class="form-grid">
+        <div class="field full">
+          <label class="label" for="problem">Problem Title</label>
+          <input class="input" id="problem" name="problem" value="{{ form_values.problem }}" required>
+        </div>
+        <div class="field full">
+          <label class="label" for="url">Primary URL</label>
+          <input class="input" id="url" name="url" value="{{ form_values.url }}" required>
+        </div>
+        <div class="field full">
+          <label class="label" for="url2">Secondary URL</label>
+          <input class="input" id="url2" name="url2" value="{{ form_values.url2 }}">
+        </div>
+        <div class="field">
+          <label class="label" for="difficulty">Difficulty</label>
+          <select class="select" id="difficulty" name="difficulty">
+            {% for difficulty in ['Easy', 'Medium', 'Hard'] %}
+            <option value="{{ difficulty }}" {% if form_values.difficulty == difficulty %}selected{% endif %}>{{ difficulty }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="position">Position</label>
+          <input class="input" id="position" name="position" value="{{ form_values.position }}" inputmode="numeric" required>
+        </div>
+        <div class="field full">
+          <label class="label" for="topic_id">Topic</label>
+          <select class="select" id="topic_id" name="topic_id" required>
+            <option value="">Select topic</option>
+            {% for topic in topics %}
+            <option value="{{ topic._id }}" {% if form_values.topic_id == topic._id|string %}selected{% endif %}>{{ topic.name }} ({{ topic.position }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('admin.question_manager') }}">Cancel</a>
+        <button class="btn primary" type="submit">{% if mode == 'edit' %}Save Changes{% else %}Create Question{% endif %}</button>
+      </div>
+    </form>
+  </article>
+</section>
+{% endblock %}
