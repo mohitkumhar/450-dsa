@@ -1,7 +1,8 @@
+import re
 import secrets
 
 from bson import ObjectId
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
 from app.extensions import bcrypt, db, github, google, login_manager
@@ -10,6 +11,72 @@ from app.utils import utc_now
 
 auth_bp = Blueprint("auth", __name__)
 GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
+COMMON_WEAK_PASSWORDS = {
+    "12345678",
+    "123456789",
+    "password",
+    "password1",
+    "qwerty123",
+    "admin123",
+    "letmein",
+    "welcome1",
+}
+
+
+def resolve_oauth_user(provider_field, provider_id, name, email=None):
+    """Find, link, or create an OAuth-backed user record.
+
+    Returns a tuple of `(user_doc, action)` where action is one of
+    `existing`, `linked`, or `created`.
+    """
+    user_doc = db.user.find_one({provider_field: provider_id})
+    if user_doc:
+        return user_doc, "existing"
+
+    if email:
+        user_doc = db.user.find_one({"email": email})
+
+    if user_doc:
+        db.user.update_one({"_id": user_doc["_id"]}, {"$set": {provider_field: provider_id}})
+        user_doc[provider_field] = provider_id
+        return user_doc, "linked"
+
+    result = db.user.insert_one(
+        {
+            "name": name,
+            "email": email,
+            provider_field: provider_id,
+            "progress": {},
+            "is_admin": False,
+            "created_at": utc_now(),
+        }
+    )
+    user_doc = db.user.find_one({"_id": result.inserted_id})
+    return user_doc, "created"
+
+
+def validate_registration_password(password, confirm_password):
+    """Return user-facing validation errors for local password registration."""
+    password = password or ""
+    confirm_password = confirm_password or ""
+    errors = []
+
+    if password != confirm_password:
+        errors.append("Password and confirm password must match.")
+    if len(password) < 8:
+        errors.append("Password must be at least 8 characters long.")
+    if not re.search(r"[A-Z]", password):
+        errors.append("Password must include at least one uppercase letter.")
+    if not re.search(r"[a-z]", password):
+        errors.append("Password must include at least one lowercase letter.")
+    if not re.search(r"\d", password):
+        errors.append("Password must include at least one number.")
+    if not re.search(r"[^A-Za-z0-9]", password):
+        errors.append("Password must include at least one special character.")
+    if password.lower() in COMMON_WEAK_PASSWORDS:
+        errors.append("Password is too common. Please choose a stronger password.")
+
+    return errors
 
 
 class UserWrapper(UserMixin):
@@ -73,9 +140,19 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
-        name = request.form.get("name")
+        name = (request.form.get("name") or "").strip()
         email = request.form.get("email")
         password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+
+        password_errors = validate_registration_password(password, confirm_password)
+        if password_errors:
+            flash(" ".join(password_errors), "danger")
+            return redirect(url_for("auth.register"))
+
+        if not name:
+            flash("Name is required", "danger")
+            return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
         if existing_user:
@@ -101,8 +178,14 @@ def register():
     return render_template("register.html")
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
+@login_required
 def logout():
+    token = request.form.get("csrf_token", "")
+    expected = session.get("csrf_token", "")
+    if not token or not expected or token != expected:
+        abort(403)
+
     logout_user()
     return redirect(url_for("auth.login"))
 
@@ -154,46 +237,56 @@ def login_github():
 
 @auth_bp.route("/login/github/authorize")
 def authorize_github():
-    token = github.authorize_access_token()
+    try:
+        token = github.authorize_access_token()
+    except Exception:
+        current_app.logger.exception("GitHub OAuth token exchange failed")
+        flash("GitHub sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     if not token:
         return "GitHub authorization failed", 400
 
-    response = github.get("user")
+    try:
+        response = github.get("user")
+    except Exception:
+        current_app.logger.exception("GitHub OAuth user fetch failed")
+        flash("GitHub sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     if not response.ok:
         return "Failed to fetch GitHub user", 400
 
-    user_info = response.json()
+    try:
+        user_info = response.json()
+    except Exception:
+        current_app.logger.exception("GitHub OAuth user payload parsing failed")
+        flash("GitHub sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     github_id = str(user_info["id"])
 
-    response_emails = github.get("user/emails")
     email = None
-    if response_emails.status_code == 200:
-        for email_item in response_emails.json():
-            if email_item["primary"] and email_item["verified"]:
-                email = email_item["email"]
-                break
+    try:
+        response_emails = github.get("user/emails")
+        if response_emails.status_code == 200:
+            for email_item in response_emails.json():
+                if email_item["primary"] and email_item["verified"]:
+                    email = email_item["email"]
+                    break
+    except Exception:
+        current_app.logger.exception("GitHub OAuth email lookup failed")
 
-    user_doc = db.user.find_one({"github_id": github_id})
-    if not user_doc:
-        if email:
-            user_doc = db.user.find_one({"email": email})
-        if user_doc:
-            db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"github_id": github_id}})
-            user_doc["github_id"] = github_id
-            flash(f"Linked GitHub to your account! Welcome back!", "success")
-        else:
-            result = db.user.insert_one(
-                {
-                    "name": user_info.get("name", user_info.get("login", "GitHub User")),
-                    "email": email,
-                    "github_id": github_id,
-                    "progress": {},
-                    "is_admin": False,
-                    "created_at": utc_now(),
-                }
-            )
-            user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your GitHub account has been connected. 🎉", "success")
+    user_doc, action = resolve_oauth_user(
+        "github_id",
+        github_id,
+        user_info.get("name", user_info.get("login", "GitHub User")),
+        email=email,
+    )
+    if action == "linked":
+        flash("Linked GitHub to your account! Welcome back!", "success")
+    elif action == "created":
+        flash("Welcome! Your GitHub account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
@@ -213,10 +306,27 @@ def authorize_google():
     if not nonce:
         return "Google OAuth nonce missing", 400
 
-    token = google.authorize_access_token()
-    user_info = google.parse_id_token(token, nonce=nonce)
+    try:
+        token = google.authorize_access_token()
+    except Exception:
+        current_app.logger.exception("Google OAuth token exchange failed")
+        flash("Google sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
+    try:
+        user_info = google.parse_id_token(token, nonce=nonce)
+    except Exception:
+        current_app.logger.exception("Google OAuth ID token parsing failed")
+        flash("Google sign-in is temporarily unavailable. Please try again.", "danger")
+        return redirect(url_for("auth.login"))
+
     if not user_info:
-        user_info = google.userinfo()
+        try:
+            user_info = google.userinfo()
+        except Exception:
+            current_app.logger.exception("Google OAuth userinfo fetch failed")
+            flash("Google sign-in is temporarily unavailable. Please try again.", "danger")
+            return redirect(url_for("auth.login"))
 
     if not user_info:
         return "Failed to fetch Google user info", 400
@@ -224,27 +334,16 @@ def authorize_google():
     google_id = user_info["sub"]
     email = user_info.get("email")
 
-    user_doc = db.user.find_one({"google_id": google_id})
-    if not user_doc:
-        if email:
-            user_doc = db.user.find_one({"email": email})
-        if user_doc:
-            db.user.update_one({"_id": user_doc["_id"]}, {"$set": {"google_id": google_id}})
-            user_doc["google_id"] = google_id
-            flash(f"Linked Google to your account! Welcome back!", "success")
-        else:
-            result = db.user.insert_one(
-                {
-                    "name": user_info.get("name", "Google User"),
-                    "email": email,
-                    "google_id": google_id,
-                    "progress": {},
-                    "is_admin": False,
-                    "created_at": utc_now(),
-                }
-            )
-            user_doc = db.user.find_one({"_id": result.inserted_id})
-            flash(f"Welcome! Your Google account has been connected. 🎉", "success")
+    user_doc, action = resolve_oauth_user(
+        "google_id",
+        google_id,
+        user_info.get("name", "Google User"),
+        email=email,
+    )
+    if action == "linked":
+        flash("Linked Google to your account! Welcome back!", "success")
+    elif action == "created":
+        flash("Welcome! Your Google account has been connected. 🎉", "success")
 
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))

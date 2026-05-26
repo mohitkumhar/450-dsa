@@ -1,0 +1,11 @@
+{% macro modal_shell(modal_id, title, title_id, close_action, box_style='', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:20px') -%}
+<div class="modal-ov" id="{{ modal_id }}" role="dialog" aria-modal="true" aria-labelledby="{{ title_id }}">
+  <div class="modal-bx" style="{{ box_style }}">
+    <div style="{{ header_style }}">
+      <h3 id="{{ title_id }}" style="margin-bottom:0">{{ title|safe }}</h3>
+      <button type="button" onclick="{{ close_action }}" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close dialog">✕</button>
+    </div>
+    {{ caller() }}
+  </div>
+</div>
+{%- endmacro %}

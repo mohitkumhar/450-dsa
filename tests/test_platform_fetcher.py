@@ -2,15 +2,21 @@ import time
 from unittest.mock import MagicMock, patch
 
 from platform_fetcher import run_fetch_jobs
-from app.platforms.fetchers import fetch_atcoder
+from app.platforms.fetchers import clear_platform_http_session, fetch_atcoder
+
+
+def setup_function():
+    clear_platform_http_session()
 
 
 def test_fetch_atcoder_returns_total_on_success():
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {'count': 42}
+    fake_session = MagicMock()
+    fake_session.get.return_value = mock_response
 
-    with patch('app.platforms.fetchers.requests.get', return_value=mock_response):
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
         result = fetch_atcoder('tourist')
 
     assert result == {'total': 42}
@@ -19,18 +25,35 @@ def test_fetch_atcoder_returns_total_on_success():
 def test_fetch_atcoder_returns_empty_on_non_200():
     mock_response = MagicMock()
     mock_response.status_code = 404
+    fake_session = MagicMock()
+    fake_session.get.return_value = mock_response
 
-    with patch('app.platforms.fetchers.requests.get', return_value=mock_response):
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
         result = fetch_atcoder('unknown_user')
 
     assert result == {}
 
 
 def test_fetch_atcoder_returns_empty_on_exception():
-    with patch('app.platforms.fetchers.requests.get', side_effect=Exception('timeout')):
+    fake_session = MagicMock()
+    fake_session.get.side_effect = Exception('timeout')
+
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
         result = fetch_atcoder('tourist')
 
     assert result == {}
+
+
+def test_fetchers_reuse_thread_local_http_session():
+    fake_session = MagicMock()
+    fake_session.get.return_value = MagicMock(status_code=404)
+
+    with patch('app.platforms.fetchers.requests.Session', return_value=fake_session) as mock_session:
+        fetch_atcoder('tourist')
+        fetch_atcoder('tourist')
+
+    mock_session.assert_called_once()
+    assert fake_session.get.call_count == 2
 
 
 def test_run_fetch_jobs_executes_jobs_concurrently():

@@ -8,11 +8,17 @@ LEADERBOARD_CACHE_VERSION_KEY = "leaderboard:cache-version"
 
 
 def _leaderboard_cache_version():
-    return cache.get(LEADERBOARD_CACHE_VERSION_KEY) or 0
+    try:
+        return cache.get(LEADERBOARD_CACHE_VERSION_KEY) or 0
+    except KeyError:
+        return 0
 
 
 def invalidate_leaderboard_cache():
-    cache.set(LEADERBOARD_CACHE_VERSION_KEY, _leaderboard_cache_version() + 1)
+    try:
+        cache.set(LEADERBOARD_CACHE_VERSION_KEY, _leaderboard_cache_version() + 1)
+    except KeyError:
+        pass
 
 
 def leaderboard_page_cache_key():

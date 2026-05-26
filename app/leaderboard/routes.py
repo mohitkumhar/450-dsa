@@ -3,7 +3,10 @@ from flask_login import current_user
 
 from app.extensions import limiter, cache
 from app.leaderboard.cache import LEADERBOARD_CACHE_TIMEOUT, api_leaderboard_cache_key, leaderboard_page_cache_key
-from app.utils import build_college_leaderboard_data, build_leaderboard_data
+from app.leaderboard.service import (
+    build_college_leaderboard_data,
+    build_leaderboard_data,
+)
 
 
 leaderboard_bp = Blueprint("leaderboard", __name__)
@@ -54,7 +57,7 @@ def leaderboard():
 @leaderboard_bp.route("/api/leaderboard")
 @cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=api_leaderboard_cache_key)
 def api_leaderboard():
-    """Get leaderboard rankings.
+    """Return paginated leaderboard rankings for the selected mode.
     ---
     tags:
       - Leaderboard

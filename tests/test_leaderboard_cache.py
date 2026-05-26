@@ -10,7 +10,7 @@ from app.leaderboard.cache import (
     invalidate_leaderboard_cache,
     leaderboard_page_cache_key,
 )
-from tests.test_tracker_routes import create_test_app
+from conftest import build_test_app, csrf_headers
 
 
 def login_as(client, user_id):
@@ -20,7 +20,7 @@ def login_as(client, user_id):
 
 
 def test_leaderboard_cache_keys_change_after_invalidation(monkeypatch):
-    flask_app, _ = create_test_app(monkeypatch)
+    flask_app, _ = build_test_app(monkeypatch)
 
     with flask_app.test_request_context("/api/leaderboard?mode=questions&page=1"):
         initial_api_key = api_leaderboard_cache_key()
@@ -35,7 +35,7 @@ def test_leaderboard_cache_keys_change_after_invalidation(monkeypatch):
 
 
 def test_update_question_invalidates_leaderboard_cache(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     monkeypatch.setattr(auth_routes, "db", test_db)
 
     calls = []
@@ -46,14 +46,18 @@ def test_update_question_invalidates_leaderboard_cache(monkeypatch):
 
     with flask_app.test_client() as client:
         login_as(client, user_id)
-        response = client.post(f"/update_question/{question_id}", json={"done": True})
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"done": True},
+            headers=csrf_headers(client),
+        )
 
     assert response.status_code == 200
     assert calls == ["invalidated"]
 
 
 def test_edit_profile_invalidates_leaderboard_cache(monkeypatch):
-    flask_app, test_db = create_test_app(monkeypatch)
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(profile_routes,))
     monkeypatch.setattr(auth_routes, "db", test_db)
     monkeypatch.setattr(profile_routes, "db", test_db)
 
@@ -64,7 +68,11 @@ def test_edit_profile_invalidates_leaderboard_cache(monkeypatch):
 
     with flask_app.test_client() as client:
         login_as(client, user_id)
-        response = client.post("/edit_profile", json={"name": "Saurabh Kumar Bajpai"})
+        response = client.post(
+            "/edit_profile",
+            json={"name": "Saurabh Kumar Bajpai"},
+            headers=csrf_headers(client),
+        )
 
     assert response.status_code == 200
     assert calls == ["invalidated"]

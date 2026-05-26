@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
 
 from app.extensions import limiter
-from app.utils import search_dsa_questions
+from app.search.service import search_dsa_questions
 
 
 search_bp = Blueprint("search", __name__)
@@ -16,7 +16,7 @@ def search():
 @search_bp.route("/api/search_questions")
 @limiter.limit("30 per minute")
 def api_search_questions():
-    """Search DSA questions.
+    """Return question search results and external search suggestions.
     ---
     tags:
       - Search

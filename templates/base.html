@@ -1,15 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>450 DSA Tracker</title>
     <meta name="description"
         content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
+    <meta name="theme-color" content="#111111">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}" sizes="192x192" type="image/svg+xml">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon-512.svg') }}" sizes="512x512" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}">
+    <script>
+        document.documentElement.classList.add('page-loading');
+
+        (function registerPageLoadingRelease() {
+            let pageLoadingReleased = false;
+            const releasePageLoading = () => {
+                if (pageLoadingReleased) {
+                    return;
+                }
+                pageLoadingReleased = true;
+                document.documentElement.classList.remove('page-loading');
+            };
+
+            window.releasePageLoading = releasePageLoading;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                window.requestAnimationFrame(releasePageLoading);
+            }, { once: true });
+
+            window.addEventListener('load', releasePageLoading, { once: true });
+            window.setTimeout(releasePageLoading, 2500);
+        })();
+    </script>
    
-    <link rel="stylesheet" href="{{ url_for('static', filename='js/css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,6 +47,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
     <style>
         :root {
             --bg-primary: #111111;
@@ -61,6 +89,128 @@
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
+        }
+
+        .page-load-target {
+            transition: opacity 0.18s ease;
+        }
+
+        .page-load-skeleton {
+            display: none;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .page-loading .page-load-target {
+            opacity: 0;
+        }
+
+        .page-loading .page-load-skeleton {
+            display: grid;
+        }
+
+        .skeleton-block,
+        .skeleton-line,
+        .skeleton-chip {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .skeleton-block::after,
+        .skeleton-line::after,
+        .skeleton-chip::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.12),
+                transparent
+            );
+            animation: skeleton-shimmer 1.15s linear infinite;
+        }
+
+        .skeleton-block {
+            border-radius: var(--radius-lg);
+            min-height: 120px;
+        }
+
+        .skeleton-line {
+            border-radius: 999px;
+            height: 12px;
+        }
+
+        .skeleton-chip {
+            border-radius: 8px;
+            height: 32px;
+        }
+
+        @keyframes skeleton-shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
+        
+        /* Skip to main content link - for keyboard users */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--accent);
+            color: white;
+            padding: 8px 16px;
+            z-index: 10000;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 0 0 8px 0;
+            transition: top 0.2s ease;
+        }
+        
+        .skip-link:focus {
+            top: 0;
+            outline: 2px solid white;
+            outline-offset: 2px;
+        }
+        
+        /* Focus indicators for keyboard navigation */
+        :focus {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        /* Remove outline for mouse users but keep for keyboard */
+        :focus:not(:focus-visible) {
+            outline: none;
+        }
+        
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        /* Better focus for interactive elements */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        textarea:focus-visible,
+        select:focus-visible,
+        [tabindex]:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            :focus-visible {
+                outline: 3px solid var(--accent);
+                outline-offset: 3px;
+            }
         }
 
         /* ─── Left Sidebar ─── */
@@ -163,6 +313,18 @@
             padding-bottom: 8px;
         }
 
+        .sidebar-logout-form {
+            display: flex;
+        }
+
+        .sidebar-logout-form .sidebar-link {
+            border: none;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+            font: inherit;
+        }
+
         /* ─── Top Bar ─── */
         .topbar {
             position: fixed;
@@ -202,6 +364,155 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+        .app-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-modal.open {
+            display: flex;
+        }
+
+        .app-modal__dialog {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            width: 90%;
+            max-width: 480px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .app-modal__title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .app-modal__textarea {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            outline: none;
+        }
+
+        .app-modal__textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .app-modal__actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .ui-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 9px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .ui-btn:hover {
+            text-decoration: none;
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .ui-btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .ui-btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+            color: white;
+        }
+
+        .ui-btn-secondary {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .ui-btn-secondary:hover {
+            color: var(--accent);
+        }
+
+        .ui-btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .ui-btn-success:hover {
+            background: #2dd46a;
+            border-color: #2dd46a;
+            color: white;
+        }
+
+        .ui-btn-danger {
+            background: transparent;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .ui-btn-danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .ui-btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ui-btn-pill {
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .ui-btn-block {
+            display: flex;
+            width: 100%;
         }
 
         .pill-btn {
@@ -296,11 +607,33 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             padding: 18px;
+            color: var(--text-primary);
             transition: var(--transition);
         }
 
         .card-dark:hover {
             border-color: #333;
+        }
+
+        .card,
+        .stat-card {
+            color: var(--text-primary);
+        }
+
+        .stat-num,
+        .big-num,
+        .metric-value,
+        .rating-num,
+        .rank-num,
+        .donut-inner {
+            color: var(--text-primary);
+        }
+
+        .stat-lbl,
+        .metric-label,
+        .sub-label,
+        .rating-sub {
+            color: var(--text-secondary);
         }
 
         /* ─── Toast Notifications - TOP RIGHT ─── */
@@ -392,6 +725,23 @@
 
         .toast-close:hover {
             color: var(--text-primary);
+        }
+
+        @keyframes btnSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-spinner {
+            display: inline-block;
+            width: 13px;
+            height: 13px;
+            border: 2px solid rgba(255,255,255,.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: btnSpin .7s linear infinite;
+            flex-shrink: 0;
         }
 
         @keyframes toastSlideIn {
@@ -608,53 +958,59 @@
 
 <body>
 
+    <!-- Skip to main content link - Accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- ─── Left Sidebar ─── -->
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
-        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA">D</a>
+        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
         <nav class="sidebar-nav">
-            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home">
-                <i class="bi bi-house-fill"></i>
+            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
+                <i class="bi bi-house-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Home</span>
             </a>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile">
-                <i class="bi bi-person-circle"></i>
+            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
+                <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="tooltip-label">Profile</span>
             </a>
-            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks">
-                <i class="bi bi-bookmark-fill"></i>
+            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
+                <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Bookmarks</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search">
-                <i class="bi bi-search"></i>
+            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
+                <i class="bi bi-search" aria-hidden="true"></i>
                 <span class="tooltip-label">Search</span>
             </a>
-            <a href="#" class="sidebar-link" id="nav-stats">
-                <i class="bi bi-bar-chart-fill"></i>
+            <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
+                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Stats</span>
             </a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard">
-                <i class="bi bi-trophy-fill"></i>
+            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
+                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Leaderboard</span>
             </a>
             {% if current_user.is_authenticated and current_user.is_admin %}
             <a href="{{ url_for('admin.dashboard') }}"
-                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin">
-                <i class="bi bi-shield-lock-fill"></i>
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Admin</span>
             </a>
             {% endif %}
         </nav>
         <div class="sidebar-bottom">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link" title="Logout" id="nav-logout">
-                <i class="bi bi-box-arrow-right"></i>
-                <span class="tooltip-label">Logout</span>
-            </a>
+            <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                    <span class="tooltip-label">Logout</span>
+                </button>
+            </form>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login">
-                <i class="bi bi-box-arrow-in-right"></i>
+            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login" aria-label="Login">
+                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                 <span class="tooltip-label">Login</span>
             </a>
             {% endif %}
@@ -662,29 +1018,29 @@
     </aside>
 
     <!-- ─── Top Bar ─── -->
-    <header class="topbar">
+    <header class="topbar" role="banner">
         <div class="topbar-left">
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="#" class="pill-btn" id="monthly-rewind-btn">
-                <i class="bi bi-rewind-fill" style="color: var(--accent);"></i>
+            <a href="#" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+                <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent" id="company-kit-btn" target="_blank">
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
-                <i class="bi bi-moon-fill" id="theme-icon"></i>
+            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle" aria-label="Toggle dark/light theme">
+                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}">
+            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn">
-                <i class="bi bi-person"></i>
+            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" aria-label="Login">
+                <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
             {% endif %}
@@ -697,10 +1053,10 @@
     <!-- ─── Flash Messages (legacy) ─── -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-messages" id="flash-container">
+    <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
         {% for category, message in messages %}
-        <div class="flash-alert {{ category }}" onclick="this.remove()">
-            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+        <div class="flash-alert {{ category }}" onclick="this.remove()" role="alert">
+            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -709,12 +1065,12 @@
     {% endwith %}
 
     <!-- ─── Main Content ─── -->
-    <main class="main-wrapper">
+    <main class="main-wrapper" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
     <!-- ─── Footer ─── -->
-    <footer class="site-footer">
+    <footer class="site-footer" role="contentinfo">
         <div class="footer-links">
             <a href="/faq">FAQ</a>
             <a href="#">Contact Us</a>
@@ -724,15 +1080,14 @@
             <a href="#">Refund Policy</a>
         </div>
         <div class="footer-socials">
-            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>
+            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>
+            <a href="#" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>
         </div>
         <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
     </footer>
 
     <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         
@@ -796,6 +1151,42 @@
             setTimeout(removeToast, timeout);
         };
 
+        window.setButtonBusyState = function(button, contentEl, options = {}) {
+            if (!button || !contentEl) return;
+
+            const {
+                busy = false,
+                busyLabel = 'Working...',
+                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
+            } = options;
+
+            if (!contentEl.dataset.idleHtml) {
+                contentEl.dataset.idleHtml = idleHTML;
+            }
+
+            if (busy) {
+                button.disabled = true;
+                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+                return;
+            }
+
+            button.disabled = false;
+            contentEl.innerHTML = contentEl.dataset.idleHtml;
+        };
+
+        window.setIconBusyState = function(icon, options = {}) {
+            if (!icon) return;
+
+            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
+            if (!icon.dataset.idleClassName) {
+                icon.dataset.idleClassName = idleClassName;
+            }
+
+            icon.className = options.busy
+                ? `${icon.dataset.idleClassName} btn-spinner`
+                : icon.dataset.idleClassName;
+        };
+
         function applyTheme(theme) {
             if (theme === 'light') {
                 root.style.setProperty('--bg-primary', '#f0f2f5');
@@ -838,6 +1229,7 @@
             const fc = document.getElementById('flash-container');
             if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
         }, 4000);
+
     </script>
     {% block scripts %}{% endblock %}
 </body>
