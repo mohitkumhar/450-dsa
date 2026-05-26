@@ -106,6 +106,55 @@ def test_admin_dashboard_supports_search_and_pagination(monkeypatch):
     assert "Page 1 of 1" in body
 
 
+def test_admin_can_view_user_detail_page(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    target_topic_id = test_db.topic.insert_one({"name": "Arrays"}).inserted_id
+    target_question_id = test_db.question.insert_one({"name": "Two Sum", "topic": target_topic_id}).inserted_id
+    target_user_id = test_db.user.insert_one(
+        {
+            "name": "Target User",
+            "email": "target@example.com",
+            "college": "GS College",
+            "is_admin": False,
+            "created_at": datetime(2026, 5, 25, 10, 0, tzinfo=timezone.utc),
+            "last_sync": datetime(2026, 5, 26, 8, 30, tzinfo=timezone.utc),
+            "leetcode_username": "targetlc",
+            "progress": {
+                str(target_question_id): {
+                    "done": True,
+                    "bookmark": True,
+                    "notes": "Reviewed approach",
+                    "timestamp": datetime(2026, 5, 26, 9, 0, tzinfo=timezone.utc),
+                }
+            },
+            "external_totals": {"LeetCode": 12},
+            "external_daily_counts": {"2026-05-26": 2},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.get(f"/admin/users/{target_user_id}?q=target&page=2")
+
+    body = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert "Target User" in body
+    assert "GS College" in body
+    assert "Two Sum" in body
+    assert "Arrays" in body
+    assert "targetlc" in body
+    assert "Back to Admin Dashboard" in body
+    assert "/admin?q=target&amp;page=2" in body
+
+
 def test_admin_cannot_delete_self(monkeypatch):
     flask_app, test_db = create_test_app(monkeypatch)
     admin_id = test_db.user.insert_one(

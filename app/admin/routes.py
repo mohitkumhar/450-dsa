@@ -28,6 +28,12 @@ def _tail_file(file_path, max_lines=80):
         return list(deque(file_obj, maxlen=max_lines))
 
 
+def _format_datetime(value):
+    if hasattr(value, "astimezone"):
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return "-"
+
+
 def _recent_error_logs(max_entries=120):
     root_dir = Path(__file__).resolve().parents[2]
     candidates = [
@@ -106,6 +112,81 @@ def _build_user_query(search_term):
     return {"$or": [{"name": pattern}, {"email": pattern}]}
 
 
+def _build_admin_user_detail(user_doc):
+    progress = user_doc.get("progress") or {}
+    solved_items = {question_id: item for question_id, item in progress.items() if item.get("done")}
+    all_questions = list(db.question.find({}, {"name": 1, "topic": 1, "url": 1}))
+    stats = _compute_system_stats()
+    _ = stats  # keep parity with existing admin route access patterns
+
+    question_ids = []
+    for question_id in solved_items:
+        if ObjectId.is_valid(question_id):
+            question_ids.append(ObjectId(question_id))
+
+    questions = list(db.question.find({"_id": {"$in": question_ids}}, {"name": 1, "topic": 1}))
+    question_map = {str(question["_id"]): question for question in questions}
+
+    topic_ids = list({question.get("topic") for question in questions if question.get("topic")})
+    topics = list(db.topic.find({"_id": {"$in": topic_ids}}, {"name": 1})) if topic_ids else []
+    topic_map = {topic["_id"]: topic.get("name", "Unknown Topic") for topic in topics}
+
+    recent_activity = []
+    for question_id, item in solved_items.items():
+        timestamp = item.get("timestamp")
+        if not timestamp:
+            continue
+        question = question_map.get(question_id, {})
+        recent_activity.append(
+            {
+                "question_name": question.get("name", "Question"),
+                "topic_name": topic_map.get(question.get("topic"), "Unknown Topic"),
+                "timestamp_display": _format_datetime(timestamp),
+            }
+        )
+    recent_activity.sort(key=lambda entry: entry["timestamp_display"], reverse=True)
+
+    external_totals = user_doc.get("external_totals") or {}
+    platform_accounts = [
+        {"label": "LeetCode", "username": user_doc.get("leetcode_username", ""), "total": external_totals.get("LeetCode", 0)},
+        {"label": "GitHub", "username": user_doc.get("github_username", ""), "total": external_totals.get("GitHub_Commits", 0)},
+        {"label": "GeeksforGeeks", "username": user_doc.get("gfg_username", ""), "total": external_totals.get("GFG", 0)},
+        {"label": "Coding Ninjas", "username": user_doc.get("codingninjas_username", ""), "total": external_totals.get("Coding Ninjas", 0)},
+        {"label": "HackerRank", "username": user_doc.get("hackerrank_username", ""), "total": external_totals.get("HackerRank", 0)},
+        {"label": "AtCoder", "username": user_doc.get("atcoder_username", ""), "total": external_totals.get("AtCoder", 0)},
+    ]
+
+    bookmarks = sum(1 for item in progress.values() if item.get("bookmark"))
+    notes = sum(1 for item in progress.values() if item.get("notes"))
+    active_days = len(user_doc.get("external_daily_counts") or {})
+    for item in progress.values():
+        timestamp = item.get("timestamp")
+        if timestamp and item.get("done"):
+            active_days += 0  # only keeping route-compatible summary fields
+
+    total_solved = len(solved_items) + sum(max(value, 0) for key, value in external_totals.items() if key in {"LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder"})
+
+    return {
+        "metadata": [
+            ("Name", user_doc.get("name") or "-"),
+            ("Email", user_doc.get("email") or "-"),
+            ("College", user_doc.get("college") or "-"),
+            ("Role", "Admin" if user_doc.get("is_admin") else "User"),
+            ("Created", _format_datetime(user_doc.get("created_at"))),
+            ("Last Sync", _format_datetime(user_doc.get("last_sync"))),
+        ],
+        "summary": {
+            "solved_in_app": len(solved_items),
+            "bookmarks": bookmarks,
+            "notes": notes,
+            "total_solved": total_solved,
+            "active_days": active_days,
+        },
+        "platform_accounts": platform_accounts,
+        "recent_activity": recent_activity[:8],
+    }
+
+
 @admin_bp.route("", methods=["GET"])
 @login_required
 @admin_required
@@ -142,6 +223,52 @@ def dashboard():
         total_pages=total_pages,
         stats=stats,
         logs=logs,
+    )
+
+
+@admin_bp.route("/users/<user_id>", methods=["GET"])
+@login_required
+@admin_required
+def user_detail(user_id):
+    search_term = request.args.get("q", "").strip()
+    page = max(_safe_int(request.args.get("page", 1), 1), 1)
+
+    if not ObjectId.is_valid(user_id):
+        flash("Invalid user id.", "danger")
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+    target_id = ObjectId(user_id)
+    user_doc = db.user.find_one(
+        {"_id": target_id},
+        {
+            "name": 1,
+            "email": 1,
+            "college": 1,
+            "is_admin": 1,
+            "created_at": 1,
+            "last_sync": 1,
+            "progress": 1,
+            "external_totals": 1,
+            "external_daily_counts": 1,
+            "leetcode_username": 1,
+            "github_username": 1,
+            "gfg_username": 1,
+            "codingninjas_username": 1,
+            "hackerrank_username": 1,
+            "atcoder_username": 1,
+        },
+    )
+    if not user_doc:
+        flash("User not found.", "danger")
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+    detail = _build_admin_user_detail(user_doc)
+    return render_template(
+        "admin/user_detail.html",
+        user_doc=user_doc,
+        detail=detail,
+        search_term=search_term,
+        page=page,
     )
 
 

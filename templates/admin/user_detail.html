@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.back-btn { display:inline-flex; align-items:center; gap:8px; color:var(--text-secondary); text-decoration:none; font-size:0.85rem; font-weight:600; margin-bottom:18px; padding:7px 14px; border:1px solid var(--border-color); border-radius:8px; transition:all 0.2s; }
+.back-btn:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.detail-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+.detail-title { font-size:1.7rem; font-weight:800; margin:0 0 4px; }
+.detail-subtitle { color:var(--text-secondary); font-size:0.9rem; }
+.detail-grid { display:grid; grid-template-columns: 1.2fr 0.9fr; gap:16px; }
+.detail-stack { display:grid; gap:16px; }
+.panel { background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; }
+.panel-title { font-size:1.02rem; font-weight:700; margin-bottom:12px; }
+.meta-grid, .stats-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:12px; }
+.meta-item, .stat-item, .account-item, .activity-item { background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:12px; padding:12px; }
+.meta-label, .stat-label { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-secondary); margin-bottom:6px; }
+.meta-value, .stat-value { font-size:0.95rem; font-weight:700; color:var(--text-primary); }
+.stat-value { font-size:1.45rem; line-height:1; }
+.account-list, .activity-list { display:grid; gap:10px; }
+.account-item, .activity-item { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+.account-label, .activity-name { font-weight:700; }
+.account-meta, .activity-meta { color:var(--text-secondary); font-size:0.84rem; }
+.account-status { font-size:0.8rem; font-weight:700; color:var(--accent); }
+.account-status.missing { color:var(--text-secondary); }
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .meta-grid, .stats-grid { grid-template-columns: 1fr; } }
+</style>
+
+<a href="{{ url_for('admin.dashboard', q=search_term, page=page) }}" class="back-btn">
+  <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Admin Dashboard
+</a>
+
+<section class="detail-header">
+  <div>
+    <h1 class="detail-title">{{ user_doc.name or user_doc.email or "User Detail" }}</h1>
+    <p class="detail-subtitle">Admin-only summary of profile metadata, platform sync state, and recent solved activity.</p>
+  </div>
+</section>
+
+<section class="detail-grid">
+  <div class="detail-stack">
+    <article class="panel">
+      <h2 class="panel-title">Profile Metadata</h2>
+      <div class="meta-grid">
+        {% for label, value in detail.metadata %}
+        <div class="meta-item">
+          <div class="meta-label">{{ label }}</div>
+          <div class="meta-value">{{ value }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="panel">
+      <h2 class="panel-title">Recent Solved Activity</h2>
+      <div class="activity-list">
+        {% if detail.recent_activity %}
+          {% for entry in detail.recent_activity %}
+          <div class="activity-item">
+            <div>
+              <div class="activity-name">{{ entry.question_name }}</div>
+              <div class="activity-meta">{{ entry.topic_name }}</div>
+            </div>
+            <div class="activity-meta">{{ entry.timestamp_display }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="activity-item">
+            <div class="activity-meta">No solved-question timestamps recorded yet.</div>
+          </div>
+        {% endif %}
+      </div>
+    </article>
+  </div>
+
+  <div class="detail-stack">
+    <article class="panel">
+      <h2 class="panel-title">Progress Summary</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">Solved In App</div>
+          <div class="stat-value">{{ detail.summary.solved_in_app }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Bookmarks</div>
+          <div class="stat-value">{{ detail.summary.bookmarks }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Notes</div>
+          <div class="stat-value">{{ detail.summary.notes }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Total Solved</div>
+          <div class="stat-value">{{ detail.summary.total_solved }}</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="panel">
+      <h2 class="panel-title">Platform Sync State</h2>
+      <div class="account-list">
+        {% for account in detail.platform_accounts %}
+        <div class="account-item">
+          <div>
+            <div class="account-label">{{ account.label }}</div>
+            <div class="account-meta">
+              {% if account.username %}
+                @{{ account.username }}{% if account.total %} · {{ account.total }}{% endif %}
+              {% else %}
+                Not connected
+              {% endif %}
+            </div>
+          </div>
+          <div class="account-status {% if not account.username %}missing{% endif %}">
+            {% if account.username %}Connected{% else %}Missing{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}
