@@ -77,7 +77,11 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
         "db",
         SimpleNamespace(user=SimpleNamespace(update_one=lambda query, update: captured.setdefault("db_update", (query, update)))),
     )
-    monkeypatch.setattr(profile_routes.cache, "clear", lambda: captured.setdefault("cleared_cache", True))
+    monkeypatch.setattr(
+        profile_routes.cache,
+        "delete",
+        lambda key: captured.setdefault("cleared_cache_key", key),
+    )
 
     def fake_run_fetch_jobs(fetch_jobs, max_workers=5):
         captured["job_names"] = sorted(fetch_jobs.keys())
@@ -138,3 +142,53 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
     assert update_fields["rating_history"] == [{"x": "2026-05-25", "y": 1800}]
     assert update_fields["lc_badges_json"] == '[{"name": "Knight"}]'
     assert update_fields["hr_badges_json"] == '[{"name": "Problem Solving", "stars": 5}]'
+
+
+def test_sync_platforms_tolerates_missing_cache_extension(monkeypatch):
+    app = create_profile_test_app()
+    captured = {}
+
+    monkeypatch.setattr(
+        profile_routes,
+        "current_user",
+        SimpleNamespace(
+            id="user-1",
+            is_authenticated=True,
+            last_sync=None,
+            leetcode_username="",
+            github_username="",
+            gfg_username="",
+            hackerrank_username="",
+            codingninjas_username="",
+            atcoder_username="",
+            reload=lambda: None,
+        ),
+    )
+    monkeypatch.setattr(
+        profile_routes,
+        "db",
+        SimpleNamespace(user=SimpleNamespace(update_one=lambda query, update: captured.setdefault("db_update", (query, update)))),
+    )
+
+    monkeypatch.setattr(
+        profile_routes,
+        "run_fetch_jobs",
+        lambda fetch_jobs, max_workers=5: (
+            {
+                "leetcode": {
+                    "stats": {
+                        "calendar": {"2026-05-25": 1},
+                        "total": 1,
+                        "difficulty": {"Easy": 1, "Medium": 0, "Hard": 0},
+                        "contest": {"attendedContestsCount": 0, "rating": 1500, "globalRanking": 1},
+                    }
+                }
+            },
+            {},
+        ),
+    )
+
+    response = app.test_client().post("/sync_platforms", json={"leetcode": "lc-user"})
+
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True

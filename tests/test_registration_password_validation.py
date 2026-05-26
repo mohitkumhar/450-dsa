@@ -1,19 +1,22 @@
 import app.auth.routes as auth_routes
-from conftest import build_test_app
+from conftest import build_test_app, set_csrf_token
 
 
 def test_register_rejects_weak_password_before_insert(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch)
 
-    response = flask_app.test_client().post(
-        "/register",
-        data={
-            "name": "Weak User",
-            "email": "weak@example.com",
-            "password": "password",
-            "confirm_password": "password",
-        },
-    )
+    with flask_app.test_client() as client:
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            "/register",
+            data={
+                "name": "Weak User",
+                "email": "weak@example.com",
+                "password": "password",
+                "confirm_password": "password",
+                "csrf_token": csrf_token,
+            },
+        )
 
     assert response.status_code == 302
     assert "/register" in response.headers["Location"]
@@ -23,15 +26,18 @@ def test_register_rejects_weak_password_before_insert(monkeypatch):
 def test_register_rejects_mismatched_confirmation(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch)
 
-    response = flask_app.test_client().post(
-        "/register",
-        data={
-            "name": "Mismatch User",
-            "email": "mismatch@example.com",
-            "password": "StrongPass1!",
-            "confirm_password": "StrongPass2!",
-        },
-    )
+    with flask_app.test_client() as client:
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            "/register",
+            data={
+                "name": "Mismatch User",
+                "email": "mismatch@example.com",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass2!",
+                "csrf_token": csrf_token,
+            },
+        )
 
     assert response.status_code == 302
     assert "/register" in response.headers["Location"]
@@ -41,15 +47,18 @@ def test_register_rejects_mismatched_confirmation(monkeypatch):
 def test_register_accepts_strong_confirmed_password(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch)
 
-    response = flask_app.test_client().post(
-        "/register",
-        data={
-            "name": "Strong User",
-            "email": "strong@example.com",
-            "password": "StrongPass1!",
-            "confirm_password": "StrongPass1!",
-        },
-    )
+    with flask_app.test_client() as client:
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            "/register",
+            data={
+                "name": "Strong User",
+                "email": "strong@example.com",
+                "password": "StrongPass1!",
+                "confirm_password": "StrongPass1!",
+                "csrf_token": csrf_token,
+            },
+        )
 
     user_doc = test_db.user.find_one({"email": "strong@example.com"})
     assert response.status_code == 302

@@ -1,6 +1,5 @@
 import hashlib
 import json
-import time
 from datetime import timezone
 from io import BytesIO
 
@@ -8,12 +7,11 @@ from bson.objectid import ObjectId
 
 import card_generator
 
-from app.extensions import db
+from app.extensions import cache, db
 from app.utils import compute_c_score, compute_user_platforms, ensure_utc_datetime
 from streaks import compute_streak
 
 
-card_cache = {}
 CACHE_TTL = 3600
 
 
@@ -78,12 +76,11 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     etag = _build_card_etag(name, c_score, dsa_progress, current_streak, platforms)
     last_modified = _card_last_modified(user, progress_data)
 
-    current_time = time.time()
-    if user_id in card_cache:
-        cached_time, cached_etag, cached_image = card_cache[user_id]
-        if current_time - cached_time < CACHE_TTL and cached_etag == etag:
-            cached_image.seek(0)
-            return cached_image, etag, last_modified
+    cached = cache.get(f"card_{user_id}")
+    if cached is not None:
+        cached_etag, cached_bytes = cached
+        if cached_etag == etag:
+            return BytesIO(cached_bytes), etag, last_modified
 
     img_io = card_generator.generate_progress_card(
         name, c_score, dsa_progress, current_streak, platforms
@@ -91,5 +88,5 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     if isinstance(img_io, BytesIO):
         img_io.seek(0)
 
-    card_cache[user_id] = (current_time, etag, img_io)
+    cache.set(f"card_{user_id}", (etag, img_io.getvalue()), timeout=CACHE_TTL)
     return img_io, etag, last_modified

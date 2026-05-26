@@ -313,6 +313,18 @@
             padding-bottom: 8px;
         }
 
+        .sidebar-logout-form {
+            display: flex;
+        }
+
+        .sidebar-logout-form .sidebar-link {
+            border: none;
+            background: transparent;
+            padding: 0;
+            cursor: pointer;
+            font: inherit;
+        }
+
         /* ─── Top Bar ─── */
         .topbar {
             position: fixed;
@@ -715,6 +727,23 @@
             color: var(--text-primary);
         }
 
+        @keyframes btnSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-spinner {
+            display: inline-block;
+            width: 13px;
+            height: 13px;
+            border: 2px solid rgba(255,255,255,.35);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: btnSpin .7s linear infinite;
+            flex-shrink: 0;
+        }
+
         @keyframes toastSlideIn {
             from {
                 opacity: 0;
@@ -972,10 +1001,13 @@
         </nav>
         <div class="sidebar-bottom">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('auth.logout') }}" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
-                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                <span class="tooltip-label">Logout</span>
-            </a>
+            <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                    <span class="tooltip-label">Logout</span>
+                </button>
+            </form>
             {% else %}
             <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login" aria-label="Login">
                 <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
@@ -1117,6 +1149,42 @@
             });
             toast.addEventListener('click', removeToast);
             setTimeout(removeToast, timeout);
+        };
+
+        window.setButtonBusyState = function(button, contentEl, options = {}) {
+            if (!button || !contentEl) return;
+
+            const {
+                busy = false,
+                busyLabel = 'Working...',
+                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
+            } = options;
+
+            if (!contentEl.dataset.idleHtml) {
+                contentEl.dataset.idleHtml = idleHTML;
+            }
+
+            if (busy) {
+                button.disabled = true;
+                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+                return;
+            }
+
+            button.disabled = false;
+            contentEl.innerHTML = contentEl.dataset.idleHtml;
+        };
+
+        window.setIconBusyState = function(icon, options = {}) {
+            if (!icon) return;
+
+            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
+            if (!icon.dataset.idleClassName) {
+                icon.dataset.idleClassName = idleClassName;
+            }
+
+            icon.className = options.busy
+                ? `${icon.dataset.idleClassName} btn-spinner`
+                : icon.dataset.idleClassName;
         };
 
         function applyTheme(theme) {

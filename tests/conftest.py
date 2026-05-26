@@ -59,3 +59,13 @@ def login_test_user(client, user_id):
         session["_user_id"] = str(user_id)
         session["_fresh"] = True
     return user_id
+
+
+def set_csrf_token(client, token="test-csrf-token"):
+    with client.session_transaction() as session:
+        session["csrf_token"] = token
+    return token
+
+
+def csrf_headers(client, token="test-csrf-token"):
+    return {"X-CSRFToken": set_csrf_token(client, token)}

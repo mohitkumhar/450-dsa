@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
+from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.platforms.fetchers import (
     fetch_atcoder,
     fetch_coding_ninjas,
@@ -15,14 +16,14 @@ from app.platforms.fetchers import (
     fetch_leetcode,
     fetch_leetcode_rating_history,
 )
-from app.profile.card_service import CACHE_TTL, card_cache, get_public_card_image
+from app.profile.card_service import CACHE_TTL, get_public_card_image
 from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
 from platform_fetcher import run_fetch_jobs
 from profile_validation import build_profile_updates
 
 profile_bp = Blueprint("profile", __name__)
 
-__all__ = ["CACHE_TTL", "card_cache", "get_public_card_image"]
+__all__ = ["CACHE_TTL", "get_public_card_image"]
 
 
 def build_sync_platforms_response(platform_status: dict):
@@ -37,6 +38,13 @@ def build_sync_platforms_response(platform_status: dict):
         return {"success": False, "error": "Sync failed for all platforms.", "platforms": platform_status}
 
     return {"success": True, "partial_success": partial_success, "platforms": platform_status}
+
+
+def clear_profile_caches(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except KeyError:
+        pass
 
 
 def build_platform_sync_jobs(
@@ -318,7 +326,8 @@ def sync_platforms():
     db.user.update_one({"_id": user_id}, {"$set": update_fields})
     current_user.reload()
 
-    cache.clear()
+    invalidate_leaderboard_cache()
+    clear_profile_caches(user_id)
     return jsonify(build_sync_platforms_response(platform_status))
 
 
@@ -396,6 +405,8 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
+        invalidate_leaderboard_cache()
+        clear_profile_caches(current_user.id)
     return json_success()
 
 

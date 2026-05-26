@@ -1,24 +1,41 @@
 import json
 import os
-import secrets
 from pathlib import Path
+from time import perf_counter
 
 from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
-from flask import Flask, session
+from flask import Flask, abort, g, jsonify, request
 
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.faq import faq_bp
-from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth, cache
+from app.extensions import bcrypt, cache, db, limiter, login_manager, mongo, oauth
 from app.leaderboard import leaderboard_bp
 from app.web.routes import public_bp
 from app.profile import profile_bp
-from app.security import build_content_security_policy
+from app.security import (
+    CSRF_PROTECTED_METHODS,
+    build_content_security_policy,
+    csrf_token,
+    validate_csrf_request,
+)
 from app.search import search_bp
 from app.tracker import tracker_bp
-from app.utils import platform_color_filter, platform_name_filter
+from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
+
+
+ROUTE_TIMING_ENDPOINTS = {
+    "profile.profile",
+    "profile.sync_platforms",
+    "leaderboard.leaderboard",
+    "leaderboard.api_leaderboard",
+    "search.search",
+    "search.api_search_questions",
+    "tracker.export_csv",
+    "tracker.export_notes",
+}
 
 
 def _configure_rate_limit_storage(app, config_class):
@@ -146,18 +163,30 @@ def create_app(config_class=None):
             init_db()
             app._db_initialized = True
 
+    @app.before_request
+    def start_route_timer():
+        if request.endpoint in ROUTE_TIMING_ENDPOINTS:
+            g.route_timer_start = perf_counter()
+
+    @app.before_request
+    def protect_unsafe_requests():
+        if request.method not in CSRF_PROTECTED_METHODS:
+            return None
+
+        if validate_csrf_request():
+            return None
+
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Invalid CSRF token."}), 403
+
+        abort(403)
+
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
+    app.add_template_filter(platform_profile_url, "platform_url")
 
     @app.context_processor
     def inject_csrf_token():
-        def csrf_token():
-            token = session.get("csrf_token")
-            if not token:
-                token = secrets.token_urlsafe(32)
-                session["csrf_token"] = token
-            return token
-
         return {"csrf_token": csrf_token}
 
     @app.route("/service-worker.js")
@@ -178,7 +207,6 @@ def create_app(config_class=None):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         retry_after = getattr(e, 'retry_after', 60)
-        from flask import jsonify
         response = jsonify({
             'error': 'Too many requests',
             'message': str(e.description),
@@ -190,6 +218,21 @@ def create_app(config_class=None):
 
     @app.after_request
     def add_security_headers(response):
+        started_at = getattr(g, "route_timer_start", None)
+        if started_at is not None and request.endpoint in ROUTE_TIMING_ENDPOINTS:
+            app.logger.info(
+                "route_timing %s",
+                json.dumps(
+                    {
+                        "endpoint": request.endpoint,
+                        "method": request.method,
+                        "route": request.url_rule.rule if request.url_rule else request.path,
+                        "status_code": response.status_code,
+                        "duration_ms": round((perf_counter() - started_at) * 1000, 2),
+                    },
+                    sort_keys=True,
+                ),
+            )
         response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
 
