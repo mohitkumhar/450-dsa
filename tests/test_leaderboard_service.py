@@ -150,3 +150,48 @@ def test_build_college_leaderboard_data_aggregates_and_sorts():
     beta = college_entries[1]
     assert beta["member_count"] == 1
     assert beta["lc_rating"] == 1700
+
+
+def test_build_college_leaderboard_data_distinguishes_verified_colleges():
+    entries = [
+        {
+            "user_id": "1",
+            "name": "Alice",
+            "college": "Alpha University",
+            "profile_photo": "alice.png",
+            "college_verification_status": "verified",
+            "c_score": 90,
+            "total_solved": 30,
+            "dsa_done": 20,
+            "lc_total": 10,
+            "gfg_total": 5,
+            "cn_total": 3,
+            "hr_total": 1,
+            "lc_rating": 1600,
+        },
+        {
+            "user_id": "2",
+            "name": "Bob",
+            "college": "Alpha University",
+            "profile_photo": "bob.png",
+            "college_verification_status": "pending",
+            "c_score": 120,
+            "total_solved": 40,
+            "dsa_done": 22,
+            "lc_total": 16,
+            "gfg_total": 7,
+            "cn_total": 4,
+            "hr_total": 2,
+            "lc_rating": 1700,
+        },
+    ]
+
+    college_entries = build_college_leaderboard_data(entries)
+
+    assert len(college_entries) == 2
+    assert college_entries[0]["verification_status"] == "verified"
+    assert college_entries[0]["college"] == "Alpha University"
+    assert college_entries[0]["member_count"] == 1
+    assert college_entries[1]["verification_status"] == "pending"
+    assert college_entries[1]["college"] == "Alpha University"
+    assert college_entries[1]["member_count"] == 1

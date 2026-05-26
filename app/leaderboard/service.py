@@ -1,3 +1,4 @@
+from app.college_verification import normalize_college_name
 from app.extensions import cache, db
 from app.utils import compute_c_score
 
@@ -16,6 +17,7 @@ def build_leaderboard_data():
                 "email": 1,
                 "profile_photo": 1,
                 "college": 1,
+                "college_verification_status": 1,
                 "leetcode_username": 1,
                 "github_username": 1,
                 "gfg_username": 1,
@@ -41,6 +43,7 @@ def build_leaderboard_data():
                 "name": name,
                 "profile_photo": user.get("profile_photo", ""),
                 "college": user.get("college", ""),
+                "college_verification_status": user.get("college_verification_status", ""),
                 "leetcode_username": user.get("leetcode_username", ""),
                 "codingninjas_username": user.get("codingninjas_username", ""),
                 **stats,
@@ -59,11 +62,16 @@ def build_college_leaderboard_data(entries=None):
         college = (entry.get("college") or "").strip()
         if not college:
             continue
+        verification_status = (
+            "verified" if entry.get("college_verification_status") == "verified" else "pending"
+        )
+        college_key = (normalize_college_name(college), verification_status)
 
         college_entry = colleges.setdefault(
-            college.lower(),
+            college_key,
             {
                 "college": college,
+                "verification_status": verification_status,
                 "member_count": 0,
                 "c_score": 0,
                 "total_solved": 0,
@@ -112,7 +120,12 @@ def build_college_leaderboard_data(entries=None):
 
     return sorted(
         college_entries,
-        key=lambda item: (item["c_score"], item["total_solved"], item["member_count"]),
+        key=lambda item: (
+            item["verification_status"] == "verified",
+            item["c_score"],
+            item["total_solved"],
+            item["member_count"],
+        ),
         reverse=True,
     )
 

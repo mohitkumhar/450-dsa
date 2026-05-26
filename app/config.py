@@ -1,5 +1,7 @@
 import os
 
+from app.college_verification import parse_college_domain_allowlist
+
 
 def env_flag(name, default=False):
     value = os.environ.get(name)
@@ -31,6 +33,7 @@ class BaseConfig:
         "uiversion": 3,
     }
     RATELIMIT_STORAGE_URI = "memory://"
+    COLLEGE_DOMAIN_ALLOWLIST = {}
 
     @classmethod
     def apply_environment_overrides(cls, app):
@@ -43,6 +46,9 @@ class BaseConfig:
         app.config["RATELIMIT_STORAGE_URI"] = os.environ.get(
             "RATELIMIT_STORAGE_URI",
             cls.RATELIMIT_STORAGE_URI,
+        )
+        app.config["COLLEGE_DOMAIN_ALLOWLIST"] = parse_college_domain_allowlist(
+            os.environ.get("COLLEGE_DOMAIN_ALLOWLIST")
         )
 
 

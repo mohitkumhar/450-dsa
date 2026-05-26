@@ -182,6 +182,12 @@
     background: var(--accent-dim);
 }
 
+.role-pill.pending {
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.12);
+}
+
 .pagination-row {
     margin-top: 14px;
     display: flex;
@@ -417,6 +423,49 @@
     </article>
 
     <article class="panel">
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">Pending College Verification</h2>
+                <p class="panel-subtitle">Approve colleges that could not be auto-verified by email domain.</p>
+            </div>
+        </div>
+
+        {% if pending_college_verifications %}
+        <div class="table-wrap" style="margin-bottom:16px">
+            <table class="users-table" aria-label="Pending college verifications">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>College</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pending_college_verifications %}
+                    <tr>
+                        <td>
+                            <div>{{ user.name or '-' }}</div>
+                            <div class="panel-subtitle">{{ user.email or '-' }}</div>
+                        </td>
+                        <td>
+                            <div>{{ user.college }}</div>
+                            <span class="role-pill pending"><i class="bi bi-hourglass-split"></i> Pending</span>
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin.verify_user_college', user_id=user._id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="action-btn" type="submit"><i class="bi bi-patch-check"></i> Verify</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state" style="margin-bottom:16px">No pending college verification requests right now.</p>
+        {% endif %}
+
         <div class="panel-title-row">
             <div>
                 <h2 class="panel-title">Recent Error Logs</h2>

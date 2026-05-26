@@ -11,6 +11,7 @@ from flask_login import current_user, login_required
 
 from app.decorators import admin_required
 from app.extensions import db
+from app.leaderboard.service import clear_leaderboard_snapshots
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -131,6 +132,14 @@ def dashboard():
 
     stats = _compute_system_stats()
     logs = _recent_error_logs(max_entries=80)
+    pending_college_verifications = list(
+        db.user.find(
+            {"college_verification_status": "pending", "college": {"$nin": ["", None]}},
+            {"name": 1, "email": 1, "college": 1},
+        )
+        .sort("_id", -1)
+        .limit(8)
+    )
 
     return render_template(
         "admin/dashboard.html",
@@ -142,6 +151,7 @@ def dashboard():
         total_pages=total_pages,
         stats=stats,
         logs=logs,
+        pending_college_verifications=pending_college_verifications,
     )
 
 
@@ -178,3 +188,38 @@ def delete_user(user_id):
     display_name = target_user.get("name") or target_user.get("email") or "user"
     flash(f"Deleted account for {display_name}.", "success")
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+
+@admin_bp.route("/users/<user_id>/verify-college", methods=["POST"])
+@login_required
+@admin_required
+def verify_user_college(user_id):
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+
+    if not ObjectId.is_valid(user_id):
+        flash("Invalid user id.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    target_id = ObjectId(user_id)
+    target_user = db.user.find_one({"_id": target_id}, {"name": 1, "email": 1, "college": 1})
+    if not target_user or not (target_user.get("college") or "").strip():
+        flash("User does not have a college to verify.", "warning")
+        return redirect(url_for("admin.dashboard"))
+
+    db.user.update_one(
+        {"_id": target_id},
+        {
+            "$set": {
+                "college_verification_status": "verified",
+                "college_verification_method": "admin",
+            }
+        },
+    )
+    clear_leaderboard_snapshots()
+
+    display_name = target_user.get("name") or target_user.get("email") or "user"
+    flash(f"Verified college for {display_name}.", "success")
+    return redirect(url_for("admin.dashboard"))

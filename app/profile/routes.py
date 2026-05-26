@@ -4,6 +4,7 @@ import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
 
+from app.college_verification import build_college_verification_updates
 from app.extensions import db
 from app.extensions import limiter, cache
 from app.leaderboard.service import clear_leaderboard_snapshots
@@ -351,6 +352,17 @@ def edit_profile():
     if error:
         return json_error(error, status_code=400)
     if update_fields:
+        if "college" in update_fields:
+            update_fields.update(
+                build_college_verification_updates(
+                    college=update_fields.get("college", ""),
+                    email=current_user.email,
+                    allowlist=current_app.config.get("COLLEGE_DOMAIN_ALLOWLIST", {}),
+                    previous_college=current_user.college or "",
+                    previous_status=current_user.college_verification_status or "",
+                    previous_method=current_user.college_verification_method or "",
+                )
+            )
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
         clear_leaderboard_snapshots()

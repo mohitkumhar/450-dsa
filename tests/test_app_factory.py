@@ -89,6 +89,7 @@ def test_create_app_preserves_routes_and_blueprints(monkeypatch):
     assert (([("problem", "text")],), {"name": "problem_text"}) in question_indexes
     assert "/admin" in routes
     assert "/admin/users/<user_id>/delete" in routes
+    assert "/admin/users/<user_id>/verify-college" in routes
 
     docs_response = flask_app.test_client().get("/apidocs/")
     assert docs_response.status_code == 200

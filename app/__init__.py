@@ -95,6 +95,8 @@ def create_app(config_class=None):
         db.user.create_index("github_id", unique=True, sparse=True)
         db.user.create_index("google_id", unique=True, sparse=True)
         db.user.create_index("is_admin")
+        db.user.create_index("college")
+        db.user.create_index("college_verification_status")
         db.topic.create_index("name", unique=True)
         db.topic.create_index("position")
         db.question.create_index("topic")

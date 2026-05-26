@@ -217,3 +217,72 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
+
+
+def test_admin_dashboard_lists_pending_college_verifications(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    test_db.user.insert_one(
+        {
+            "name": "Student",
+            "email": "student@example.com",
+            "is_admin": False,
+            "progress": {},
+            "college": "Alpha University",
+            "college_verification_status": "pending",
+        }
+    )
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.get("/admin")
+
+    body = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert "Pending College Verification" in body
+    assert "Alpha University" in body
+    assert "Verify" in body
+
+
+def test_admin_can_verify_pending_college(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Student",
+            "email": "student@example.com",
+            "is_admin": False,
+            "progress": {},
+            "college": "Alpha University",
+            "college_verification_status": "pending",
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        csrf_token = set_csrf_token(client)
+        response = client.post(
+            f"/admin/users/{user_id}/verify-college",
+            data={"csrf_token": csrf_token},
+            follow_redirects=True,
+        )
+
+    user = test_db.user.find_one({"_id": user_id})
+    assert response.status_code == 200
+    assert user["college_verification_status"] == "verified"
+    assert user["college_verification_method"] == "admin"
+    assert "Verified college for Student." in response.data.decode("utf-8")

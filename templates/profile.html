@@ -85,6 +85,9 @@
 .m-lbl{font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:5px}
 .m-inp{width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;margin-bottom:12px}
 .m-inp:focus{border-color:var(--accent)}
+.verify-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 10px;font-size:.72rem;font-weight:700;border:1px solid var(--border-color)}
+.verify-pill.ok{color:#10b981;border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.12)}
+.verify-pill.pending{color:#f59e0b;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.12)}
 .m-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
 .m-cancel{padding:8px 16px;border:1px solid var(--border-color);border-radius:8px;background:none;color:var(--text-secondary);font-size:0.83rem;cursor:pointer;font-family:inherit}
 .m-save{padding:8px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s}
@@ -175,7 +178,16 @@ body.modal-open {
     </div>
     {% if user.location or user.college %}
     <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
-    <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> {{ user.college }}{% endif %}</div>
+    <div class="meta-row">
+      {% if user.college %}
+      <i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> {{ user.college }}
+      {% if user.college_verification_status == 'verified' %}
+      <span class="verify-pill ok"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Verified</span>
+      {% elif user.college_verification_status == 'pending' %}
+      <span class="verify-pill pending"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Pending</span>
+      {% endif %}
+      {% endif %}
+    </div>
     {% else %}
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
@@ -540,6 +552,11 @@ body.modal-open {
         <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
         <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off">
         <div id="collegeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+        {% if user.college_verification_status == 'verified' %}
+        <div style="font-size:.72rem;color:#10b981;margin-top:-4px">Verified for leaderboard rankings.</div>
+        {% else %}
+        <div style="font-size:.72rem;color:var(--text-muted);margin-top:-4px">Auto-verifies when your email domain matches an approved college domain. Otherwise it stays pending until admin review.</div>
+        {% endif %}
       </div>
     </div>
     <!-- Social Links -->
