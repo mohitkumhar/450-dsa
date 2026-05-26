@@ -1,6 +1,6 @@
 import json
 import os
-import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 
@@ -12,11 +12,16 @@ from flask import Flask, g, request, session
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.faq import faq_bp
-from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth, cache
+from app.extensions import bcrypt, cache, db, limiter, login_manager, mongo, oauth
 from app.leaderboard import leaderboard_bp
 from app.web.routes import public_bp
 from app.profile import profile_bp
-from app.security import build_content_security_policy
+from app.security import (
+    CSRF_PROTECTED_METHODS,
+    build_content_security_policy,
+    csrf_token,
+    validate_csrf_request,
+)
 from app.search import search_bp
 from app.tracker import tracker_bp
 from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
@@ -155,6 +160,9 @@ def create_app(config_class=None):
 
     @app.before_request
     def ensure_db_initialized():
+        if request.endpoint == "health_check":
+            return None
+
         if not app._db_initialized:
             init_db()
             app._db_initialized = True
@@ -170,14 +178,14 @@ def create_app(config_class=None):
 
     @app.context_processor
     def inject_csrf_token():
-        def csrf_token():
-            token = session.get("csrf_token")
-            if not token:
-                token = secrets.token_urlsafe(32)
-                session["csrf_token"] = token
-            return token
-
         return {"csrf_token": csrf_token}
+
+    @app.get("/health")
+    def health_check():
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     @app.route("/service-worker.js")
     def service_worker():
@@ -197,7 +205,6 @@ def create_app(config_class=None):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         retry_after = getattr(e, 'retry_after', 60)
-        from flask import jsonify
         response = jsonify({
             'error': 'Too many requests',
             'message': str(e.description),

@@ -3,6 +3,7 @@ from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.utils import json_error, json_success, utc_now
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
@@ -10,6 +11,18 @@ from progress_export import build_progress_csv
 
 tracker_bp = Blueprint("tracker", __name__)
 
+DIFFICULTY_FILTERS = {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+}
+
+
+def normalize_difficulty_filter(raw_filter):
+    value = (raw_filter or "all").strip().lower()
+    if value == "all":
+        return "all"
+    return DIFFICULTY_FILTERS.get(value, "all")
 INDEX_QUESTION_PROJECTION = {"topic": 1}
 TOPIC_PAGE_QUESTION_PROJECTION = {
     "problem": 1,
@@ -94,7 +107,7 @@ def topic(topic_id):
     todo_count = total_count - done_count - skipped_count
     
     # Get difficulty filter from query parameter
-    difficulty_filter = request.args.get('difficulty', 'all')
+    difficulty_filter = normalize_difficulty_filter(request.args.get('difficulty', 'all'))
     status_filter = request.args.get('status', 'all')
     
     if difficulty_filter != 'all':
@@ -262,6 +275,7 @@ def update_question(question_id):
     if update_fields:
         db.user.update_one({"_id": user_id}, {"$set": update_fields})
         current_user.reload()
+        invalidate_leaderboard_cache()
         return json_success(message=message)
 
     return json_success(message="No changes made")

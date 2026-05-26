@@ -186,7 +186,6 @@ def compute_c_score(user_doc, all_questions=None):
         "total_solved": global_total,
     }
 
-
 def compute_user_platforms(solved_items, external_totals, all_questions):
     """Compute platform counts combining solved DSA questions with external totals."""
     platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "AtCoder": 0, "Other": 0}

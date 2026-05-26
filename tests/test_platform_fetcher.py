@@ -1,8 +1,7 @@
 import time
 from unittest.mock import MagicMock, patch
 
-from platform_fetcher import run_fetch_jobs
-from app.platforms.fetchers import clear_platform_http_session, fetch_atcoder
+from app.platforms.fetchers import clear_platform_http_session, fetch_atcoder, run_fetch_jobs
 
 
 def setup_function():

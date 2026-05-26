@@ -2,7 +2,7 @@ import json
 
 import app as app_module
 
-from tests.conftest import build_test_app
+from conftest import build_test_app
 
 
 def test_route_timing_targets_cover_key_profile_leaderboard_search_routes():

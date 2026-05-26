@@ -42,12 +42,15 @@ def _recent_error_logs(max_entries=120):
     existing.sort(key=lambda path: path.stat().st_mtime, reverse=True)
 
     entries = []
+    has_more = False
     per_file_limit = max(10, max_entries // max(1, len(existing)))
     for file_path in existing:
         try:
             lines = _tail_file(file_path, max_lines=per_file_limit)
         except OSError:
             continue
+        if len(lines) >= per_file_limit:
+            has_more = True
         rel_path = file_path.relative_to(root_dir).as_posix()
         for line in lines:
             text = line.rstrip("\n")
@@ -55,9 +58,9 @@ def _recent_error_logs(max_entries=120):
                 continue
             entries.append({"source": rel_path, "line": text})
             if len(entries) >= max_entries:
-                return entries
+                return entries, True
 
-    return entries
+    return entries, has_more
 
 
 def _compute_system_stats():
@@ -146,7 +149,22 @@ def dashboard():
 @login_required
 @admin_required
 def recent_logs():
-    return jsonify({"logs": _recent_error_logs(max_entries=80)})
+    log_page = max(_safe_int(request.args.get("page", 1), 1), 1)
+    log_page_size = 25
+    max_log_entries = min(log_page * log_page_size, 200)
+    recent_logs_result = _recent_error_logs(max_entries=max_log_entries)
+    if isinstance(recent_logs_result, tuple):
+        logs, has_more_logs = recent_logs_result
+    else:
+        logs, has_more_logs = recent_logs_result, False
+    return jsonify(
+        {
+            "logs": logs,
+            "has_more": has_more_logs,
+            "page": log_page,
+            "page_size": log_page_size,
+        }
+    )
 
 
 @admin_bp.route("/users/<user_id>/delete", methods=["POST"])

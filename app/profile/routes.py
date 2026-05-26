@@ -5,83 +5,22 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
-from app.platforms.fetchers import (
-    fetch_atcoder,
-    fetch_coding_ninjas,
-    fetch_gfg,
-    fetch_github,
-    fetch_hr_badges,
-    fetch_lc_badges,
-    fetch_leetcode,
-    fetch_leetcode_rating_history,
-)
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
 from app.profile.card_service import CACHE_TTL, get_public_card_image
-from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
-from platform_fetcher import run_fetch_jobs
+from app.profile.sync_service import (
+    build_sync_platforms_response,
+    clear_profile_caches,
+    sync_user_platforms,
+)
+from app.utils import json_error, json_success, utc_now, compute_user_platforms
 from profile_validation import build_profile_updates
 
 profile_bp = Blueprint("profile", __name__)
 
-__all__ = ["CACHE_TTL", "get_public_card_image"]
+__all__ = ["CACHE_TTL", "build_sync_platforms_response", "get_public_card_image"]
 
-
-def build_sync_platforms_response(platform_status: dict):
-    attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
-    synced = sum(1 for value in platform_status.values() if value.get("status") == "synced")
-    failed = sum(1 for value in platform_status.values() if value.get("status") == "failed")
-    partial_success = bool(synced and failed)
-
-    if attempted == 0:
-        return {"success": False, "error": "No platforms provided to sync.", "platforms": platform_status}
-    if synced == 0 and failed > 0:
-        return {"success": False, "error": "Sync failed for all platforms.", "platforms": platform_status}
-
-    return {"success": True, "partial_success": partial_success, "platforms": platform_status}
-
-
-def build_platform_sync_jobs(
-    leetcode_username="",
-    github_username="",
-    gfg_username="",
-    codingninjas_username="",
-    hackerrank_username="",
-    atcoder_username="",
-):
-    jobs = {}
-
-    if leetcode_username:
-        def fetch_leetcode_bundle():
-            result = {"stats": fetch_leetcode(leetcode_username)}
-            try:
-                rating_history = fetch_leetcode_rating_history(leetcode_username)
-                if rating_history:
-                    result["rating_history"] = rating_history
-            except Exception:
-                pass
-            try:
-                result["badges"] = fetch_lc_badges(leetcode_username)
-            except Exception:
-                pass
-            return result
-
-        jobs["leetcode"] = fetch_leetcode_bundle
-
-    if github_username:
-        jobs["github"] = lambda: fetch_github(github_username)
-
-    if gfg_username:
-        jobs["gfg"] = lambda: fetch_gfg(gfg_username)
-
-    if codingninjas_username:
-        jobs["codingninjas"] = lambda: fetch_coding_ninjas(codingninjas_username)
-
-    if hackerrank_username:
-        jobs["hackerrank"] = lambda: fetch_hr_badges(hackerrank_username)
-
-    if atcoder_username:
-        jobs["atcoder"] = lambda: fetch_atcoder(atcoder_username)
-
-    return jobs
+UNIVERSITY_SEARCH_TIMEOUT_SECONDS = 5
 
 
 def clear_profile_caches(user_id):
@@ -403,7 +342,8 @@ def edit_profile():
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
-        clear_profile_caches(current_user.id)
+        invalidate_leaderboard_cache()
+        clear_profile_caches(cache, current_user.id)
     return json_success()
 
 
@@ -414,6 +354,14 @@ def public_card(user_id):
         object_id = ObjectId(user_id)
     except Exception:
         return "Invalid User ID", 400
+
+    try:
+        user_doc = db.user.find_one({"_id": object_id}, {"is_deactivated": 1})
+    except TypeError:
+        # Some lightweight test doubles implement a simpler find_one(query) API.
+        user_doc = db.user.find_one({"_id": object_id})
+    if not user_doc or user_doc.get("is_deactivated"):
+        return "User not found", 404
 
     try:
         img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
@@ -472,7 +420,7 @@ def search_universities():
         response = requests.get(
             "https://universities.hipolabs.com/search",
             params={"name": query},
-            timeout=5,
+            timeout=UNIVERSITY_SEARCH_TIMEOUT_SECONDS,
         )
         if response.status_code == 200:
             data = response.json()
@@ -639,6 +587,9 @@ def profile():
     except (json.JSONDecodeError, ValueError):
         print("Unable to handle hackerrank badges")
 
+    leaderboard_entries = build_leaderboard_data()
+    profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
+
     return render_template(
         "profile.html",
         user=user,
@@ -664,4 +615,5 @@ def profile():
         rating_history=rating_history,
         lc_badges=lc_badges,
         hr_badges=hr_badges,
+        profile_leaderboard_rank=profile_leaderboard_rank,
     )

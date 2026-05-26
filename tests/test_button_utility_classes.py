@@ -2,18 +2,19 @@ from pathlib import Path
 
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
+STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 
 
 def test_base_template_defines_shared_button_utility_classes():
-    template = (TEMPLATE_DIR / "base.html").read_text(encoding="utf-8")
+    stylesheet = (STATIC_DIR / "css" / "main.css").read_text(encoding="utf-8")
 
-    assert ".ui-btn {" in template
-    assert ".ui-btn-primary {" in template
-    assert ".ui-btn-secondary {" in template
-    assert ".ui-btn-danger {" in template
-    assert ".ui-btn-icon {" in template
-    assert ".ui-btn-pill {" in template
-    assert ".ui-btn-block {" in template
+    assert ".ui-btn {" in stylesheet
+    assert ".ui-btn-primary {" in stylesheet
+    assert ".ui-btn-secondary {" in stylesheet
+    assert ".ui-btn-danger {" in stylesheet
+    assert ".ui-btn-icon {" in stylesheet
+    assert ".ui-btn-pill {" in stylesheet
+    assert ".ui-btn-block {" in stylesheet
 
 
 def test_profile_and_topic_templates_use_button_utilities():

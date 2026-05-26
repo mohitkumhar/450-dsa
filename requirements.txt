@@ -8,7 +8,6 @@ requests==2.31.0
 python-dotenv==1.0.1
 email-validator==2.1.1
 Flask-Bcrypt==1.0.1
-flask-bcrypt
 cloudinary==1.39.1
 Pillow==10.3.0
 Flask-Limiter==3.5.0

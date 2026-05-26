@@ -56,6 +56,27 @@
   outline-offset: 2px;
 }
 .platform-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.filter-select {
+  min-height: 34px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.filter-select:hover,
+.filter-select.active { border-color: var(--accent); color: var(--accent); background: rgba(255,107,0,0.08); }
+.filter-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.filter-select option { background: var(--bg-card); color: var(--text-primary); }
 .platform-chip {
   border: 1px solid var(--border-color);
   background: transparent;
@@ -266,6 +287,35 @@
       <button class="platform-chip" type="button" data-token="cn" aria-label="Filter to Coding Ninjas only">Coding Ninjas</button>
       <button class="platform-chip" type="button" data-token="hackerrank" aria-label="Filter to HackerRank only">HackerRank</button>
     </div>
+    <div class="filter-row" role="group" aria-label="Additional search filters">
+      <select id="filterTopic" class="filter-select" aria-label="Filter by topic">
+        <option value="">All Topics</option>
+        {% for topic in topics %}
+        <option value="{{ topic._id }}">{{ topic.name }}</option>
+        {% endfor %}
+      </select>
+      <select id="filterDifficulty" class="filter-select" aria-label="Filter by difficulty">
+        <option value="">All Difficulties</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <select id="filterPlatform" class="filter-select" aria-label="Filter by result platform">
+        <option value="">All Platforms</option>
+        <option value="lc">LeetCode</option>
+        <option value="gfg">GFG</option>
+        <option value="cn">Coding Ninjas</option>
+        <option value="hr">HackerRank</option>
+      </select>
+      {% if current_user.is_authenticated %}
+      <select id="filterStatus" class="filter-select" aria-label="Filter by completion status">
+        <option value="">All Status</option>
+        <option value="done">Done</option>
+        <option value="undone">Undone</option>
+        <option value="bookmarked">Bookmarked</option>
+      </select>
+      {% endif %}
+    </div>
     <div id="recentSearches" class="recent-searches" hidden>
       <div class="recent-searches-head">
         <div class="recent-searches-title">Recent searches</div>
@@ -295,6 +345,10 @@ const recentSearchesPanel = document.getElementById('recentSearches');
 const recentSearchesList = document.getElementById('recentSearchesList');
 const clearRecentSearchesBtn = document.getElementById('clearRecentSearches');
 const chips = document.querySelectorAll('.platform-chip');
+const filterTopic = document.getElementById('filterTopic');
+const filterDifficulty = document.getElementById('filterDifficulty');
+const filterPlatform = document.getElementById('filterPlatform');
+const filterStatus = document.getElementById('filterStatus');
 let activeToken = '';
 let debounceTimer = null;
 let controller = null;
@@ -306,6 +360,52 @@ const platformLabels = {
   cn: 'Coding Ninjas',
   hackerrank: 'HackerRank'
 };
+
+function getFilters() {
+  return {
+    topic_id: filterTopic ? filterTopic.value : '',
+    difficulty: filterDifficulty ? filterDifficulty.value : '',
+    platform: filterPlatform ? filterPlatform.value : '',
+    status: filterStatus ? filterStatus.value : ''
+  };
+}
+
+function hasActiveFilters() {
+  return Object.values(getFilters()).some(Boolean);
+}
+
+function setFilterActiveStates() {
+  [filterTopic, filterDifficulty, filterPlatform, filterStatus].forEach(filter => {
+    if (filter) filter.classList.toggle('active', !!filter.value);
+  });
+}
+
+function restoreStateFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('q')) input.value = params.get('q');
+  if (filterTopic && params.get('topic_id')) filterTopic.value = params.get('topic_id');
+  if (filterDifficulty && params.get('difficulty')) filterDifficulty.value = params.get('difficulty');
+  if (filterPlatform && params.get('platform')) filterPlatform.value = params.get('platform');
+  if (filterStatus && params.get('status')) filterStatus.value = params.get('status');
+  setFilterActiveStates();
+}
+
+function buildSearchParams(query) {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+  const filters = getFilters();
+  if (filters.topic_id) params.set('topic_id', filters.topic_id);
+  if (filters.difficulty) params.set('difficulty', filters.difficulty);
+  if (filters.platform) params.set('platform', filters.platform);
+  if (filters.status) params.set('status', filters.status);
+  return params;
+}
+
+function updateUrl(query) {
+  const params = buildSearchParams(query);
+  const nextUrl = params.toString() ? `?${params}` : window.location.pathname;
+  history.replaceState(null, '', nextUrl);
+}
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, ch => ({
@@ -419,7 +519,7 @@ function renderResults(payload) {
   const platforms = payload.requested_platforms || [];
   meta.textContent = count ? `${count} result${count === 1 ? '' : 's'}${platforms.length ? ' with ' + platforms.join(', ') : ''}` : '';
 
-  if (!input.value.trim()) {
+  if (!input.value.trim() && !hasActiveFilters()) {
     if (activeToken) {
       renderPlatformPrompt();
       return;
@@ -473,7 +573,7 @@ async function runSearch() {
   const query = currentQuery();
   if (controller) controller.abort();
 
-  if (!input.value.trim()) {
+  if (!input.value.trim() && !hasActiveFilters()) {
     if (activeToken) {
       renderPlatformPrompt();
       return;
@@ -484,12 +584,14 @@ async function runSearch() {
     return;
   }
 
+  updateUrl(query);
   controller = new AbortController();
   meta.textContent = 'Searching...';
   meta.setAttribute('aria-busy', 'true');
 
   try {
-    const res = await fetch(`${endpointConfig.searchQuestions}?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+    const params = buildSearchParams(query);
+    const res = await fetch(`${endpointConfig.searchQuestions}?${params}`, { signal: controller.signal });
     renderResults(await res.json());
     rememberRecentSearch(input.value, activeToken);
     meta.setAttribute('aria-busy', 'false');
@@ -527,18 +629,17 @@ chips.forEach(chip => {
     setActiveChip(chip.dataset.token);
     runSearch();
   });
-  // Allow keyboard Enter/Space to activate chip
-  chip.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setActiveChip(chip.dataset.token);
-      runSearch();
-    }
-  });
-  chip.setAttribute('role', 'button');
   chip.setAttribute('aria-pressed', 'false');
 });
+[filterTopic, filterDifficulty, filterPlatform, filterStatus].forEach(filter => {
+  if (!filter) return;
+  filter.addEventListener('change', () => {
+    setFilterActiveStates();
+    runSearch();
+  });
+});
 
+restoreStateFromUrl();
 setActiveChip('');
 renderRecentSearches();
 runSearch();

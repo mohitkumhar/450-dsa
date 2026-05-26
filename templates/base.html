@@ -1134,6 +1134,42 @@
             setTimeout(removeToast, timeout);
         };
 
+        window.setButtonBusyState = function(button, contentEl, options = {}) {
+            if (!button || !contentEl) return;
+
+            const {
+                busy = false,
+                busyLabel = 'Working...',
+                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
+            } = options;
+
+            if (!contentEl.dataset.idleHtml) {
+                contentEl.dataset.idleHtml = idleHTML;
+            }
+
+            if (busy) {
+                button.disabled = true;
+                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+                return;
+            }
+
+            button.disabled = false;
+            contentEl.innerHTML = contentEl.dataset.idleHtml;
+        };
+
+        window.setIconBusyState = function(icon, options = {}) {
+            if (!icon) return;
+
+            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
+            if (!icon.dataset.idleClassName) {
+                icon.dataset.idleClassName = idleClassName;
+            }
+
+            icon.className = options.busy
+                ? `${icon.dataset.idleClassName} btn-spinner`
+                : icon.dataset.idleClassName;
+        };
+
         function applyTheme(theme) {
             if (theme === 'light') {
                 root.style.setProperty('--bg-primary', '#f0f2f5');

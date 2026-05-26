@@ -252,7 +252,7 @@ body.modal-open {
     <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
     <div style="display:flex;align-items:center;gap:8px">
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
-      <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
+      <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
     </div>
     <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
     <div class="meta-footer">
@@ -489,6 +489,8 @@ body.modal-open {
     <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
     <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
+    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" data-modal-close="syncModal">Cancel</button>
@@ -555,26 +557,13 @@ body.modal-open {
     </div>
 {% endcall %}
 
-<!-- Toast notification -->
-<div class="toast" id="toast" style=""></div>
-
 <!-- Sync Loading Overlay -->
 <div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
   <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
   <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
   <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
-  <div style="display:flex;gap:8px;margin-top:4px" id="syncSteps">
-    <span id="ss_lc" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; LeetCode</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_gh" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GitHub</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_gfg" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GFG</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_cn" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; Coding Ninjas</span>
-  </div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px" id="syncSteps"></div>
 </div>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-
 {% endblock %}
 
 {% block scripts %}
@@ -582,9 +571,11 @@ body.modal-open {
 const endpointConfig = {{ {
   "editProfile": url_for('profile.edit_profile'),
   "syncPlatforms": url_for('profile.sync_platforms'),
+  "uploadPhoto": url_for('profile.upload_photo'),
   "searchUniversities": url_for('profile.search_universities'),
   "publicCardPath": url_for('profile.public_card', user_id=user.id),
 }|tojson }};
+const csrfToken = {{ csrf_token()|tojson }};
 
 // ── Event Listeners (registered first so Chart.js failure can't break them) ──
 window.handleSaveProfile = function(btn){
@@ -600,9 +591,8 @@ window.handleSaveProfile = function(btn){
     website_url: document.getElementById('ep_website').value,
     resume_url: document.getElementById('ep_resume').value,
   };
-  btn.disabled=true;
-  contentEl.innerHTML='<span class="btn-spinner"></span> Saving...';
-  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
+  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
@@ -611,13 +601,11 @@ window.handleSaveProfile = function(btn){
         setTimeout(()=>window.location.reload(),900);
       } else {
         showToast('❌ Error: '+(res.error||'unknown'));
-        btn.disabled=false;
-        contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+        window.setButtonBusyState(btn, contentEl, { busy: false });
       }
     }).catch(e=>{
       showToast('❌ Network error');
-      btn.disabled=false;
-      contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+      window.setButtonBusyState(btn, contentEl, { busy: false });
     });
 };
 
@@ -630,26 +618,26 @@ window.handleQuickSync = function(btn) {
   const gfg = '{{ user.gfg_username or "" }}';
   const hr = '{{ user.hackerrank_username or "" }}';
   const cn = '{{ user.codingninjas_username or "" }}';
+  const ac = '{{ user.atcoder_username or "" }}';
   
-  if(!lc && !gh && !gfg && !hr && !cn){
+  if(!lc && !gh && !gfg && !hr && !cn && !ac){
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
 
   btn.disabled = true;
-  icon.classList.add('btn-spinner');
-  icon.className = 'bi bi-arrow-clockwise btn-spinner';
+  window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
   showToast('⏳ Syncing profiles...');
   
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn})
+    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac})
   })
   .then(r => r.json())
   .then(res => {
     btn.disabled = false;
-    icon.className = 'bi bi-arrow-clockwise';
+    window.setIconBusyState(icon, { busy: false });
     if(res.success){
       showToast('✅ Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(), 1200);
@@ -659,7 +647,7 @@ window.handleQuickSync = function(btn) {
   })
   .catch(err => {
     btn.disabled = false;
-    icon.className = 'bi bi-arrow-clockwise';
+    window.setIconBusyState(icon, { busy: false });
     showToast('❌ Network error. Check connection.');
   });
 };
@@ -671,11 +659,11 @@ window.handleSyncProfile = function(btn){
   const gfg=document.getElementById('gfg_username').value.trim();
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
-  if(!lc && !gh && !gfg && !hr && !cn){showToast('⚠️ Enter at least one username');return;}
+  const ac=document.getElementById('ac_username').value.trim();
+  if(!lc && !gh && !gfg && !hr && !cn && !ac){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
-  btn.disabled=true;
-  syncContent.innerHTML='<span class="btn-spinner"></span> Syncing...';
+  window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
 
   // Show loading overlay
   const overlay=document.getElementById('syncOverlay');
@@ -683,8 +671,23 @@ window.handleSyncProfile = function(btn){
   document.getElementById('syncOverlayMsg').textContent='Syncing your profiles...';
 
   // Animate step indicators
-  const steps=['ss_lc','ss_gh','ss_gfg','ss_cn'];
-  const labels=['LeetCode','GitHub','GFG','Coding Ninjas'];
+  const syncPlatforms=[
+    {id:'ss_lc', label:'LeetCode', value:lc},
+    {id:'ss_gh', label:'GitHub', value:gh},
+    {id:'ss_gfg', label:'GFG', value:gfg},
+    {id:'ss_hr', label:'HackerRank', value:hr},
+    {id:'ss_cn', label:'Coding Ninjas', value:cn},
+    {id:'ss_ac', label:'AtCoder', value:ac}
+  ];
+  const activeSyncPlatforms=syncPlatforms.filter(platform=>platform.value);
+  const stepsContainer=document.getElementById('syncSteps');
+  stepsContainer.innerHTML=activeSyncPlatforms.map((platform,index)=>`
+    ${index?'<span style="color:rgba(255,255,255,.2)">·</span>':''}
+    <span id="${platform.id}" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; ${platform.label}</span>
+  `).join('');
+
+  const steps=activeSyncPlatforms.map(platform=>platform.id);
+  const labels=activeSyncPlatforms.map(platform=>platform.label);
   let si=0;
   const stepTimer=setInterval(()=>{
     if(si>0) document.getElementById(steps[si-1]).style.color='rgba(0,200,100,.8)';
@@ -701,8 +704,8 @@ window.handleSyncProfile = function(btn){
 
   fetch(endpointConfig.syncPlatforms,{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn}),
+    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac}),
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
@@ -714,16 +717,14 @@ window.handleSyncProfile = function(btn){
       showToast('✅ Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(),1200);
     }else{
-      btn.disabled=false;
-      syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
-      showToast('❌ Sync failed: '+(res.error||'unknown'));
+      window.setButtonBusyState(btn, syncContent, { busy: false });
+      showToast('\u274c Sync failed: '+(res.error||'unknown'));
     }
   })
   .catch(err=>{
     clearInterval(stepTimer);
     overlay.style.display='none';
-    btn.disabled=false;
-    syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+    window.setButtonBusyState(btn, syncContent, { busy: false });
     if(err.name==='AbortError'){
       showToast('⏰ Sync timed out. Try again.');
     }else{
@@ -797,12 +798,6 @@ window._chartJsReady.then(initCharts).catch(function(){
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
 function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
-function showToast(msg){
-  const t=document.getElementById('toast');
-  if(!t)return;
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
-}
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
 
@@ -870,7 +865,7 @@ function handlePhotoUpload(e){
   const fd=new FormData();
   fd.append('photo',file);
   showToast('⏳ Uploading photo...');
-  fetch('/upload_photo',{method:'POST',body:fd})
+  fetch(endpointConfig.uploadPhoto,{method:'POST',headers:{'X-CSRFToken':csrfToken},body:fd})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){
