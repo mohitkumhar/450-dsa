@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.import-shell { display:grid; gap:16px; max-width:1100px; }
+.top-row { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; }
+.title { font-size:1.7rem; font-weight:800; }
+.subtitle { color:var(--text-secondary); font-size:0.92rem; }
+.action-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:9px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); font-weight:600; font-size:0.8rem; padding:8px 12px; text-decoration:none; }
+.action-btn:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
+.panel-grid { display:grid; grid-template-columns: 1.1fr 1fr; gap:16px; align-items:start; }
+.panel { background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:16px; }
+.panel-title { font-size:1.05rem; font-weight:700; margin-bottom:10px; }
+.panel-subtitle { color:var(--text-secondary); font-size:0.82rem; margin-bottom:12px; }
+.upload-form { display:grid; gap:14px; }
+.field { display:grid; gap:6px; }
+.label { font-size:0.8rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.06em; }
+.file-input { background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:10px; padding:10px 12px; font:inherit; }
+.submit-row { display:flex; gap:10px; flex-wrap:wrap; }
+.btn { display:inline-flex; align-items:center; gap:6px; border-radius:9px; border:1px solid var(--border-color); background:transparent; color:var(--text-secondary); font-weight:700; font-size:0.84rem; padding:9px 14px; text-decoration:none; }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+.format-box { background:var(--bg-secondary); border:1px solid var(--border-subtle); border-radius:12px; padding:12px; font-size:0.84rem; color:var(--text-secondary); }
+.format-box code { color:var(--text-primary); }
+.stats-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.stat-chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:6px 10px; font-size:0.78rem; font-weight:700; border:1px solid var(--border-color); }
+.error-list,.topic-list { display:grid; gap:10px; margin-top:12px; }
+.error-item { border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.08); color:#fca5a5; border-radius:10px; padding:10px 12px; font-size:0.84rem; }
+.topic-item { border:1px solid var(--border-subtle); background:var(--bg-secondary); border-radius:10px; padding:10px 12px; font-size:0.84rem; }
+.table-wrap { overflow-x:auto; }
+.data-table { width:100%; border-collapse:collapse; min-width:680px; }
+.data-table th,.data-table td { padding:10px 8px; border-bottom:1px solid var(--border-subtle); text-align:left; vertical-align:top; }
+.data-table th { font-size:0.78rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.08em; }
+.difficulty-chip { display:inline-flex; align-items:center; border-radius:999px; padding:4px 10px; font-size:0.74rem; font-weight:700; border:1px solid var(--border-color); }
+.difficulty-chip.easy { color:#22c55e; border-color:rgba(34,197,94,0.35); }
+.difficulty-chip.medium { color:#f59e0b; border-color:rgba(245,158,11,0.35); }
+.difficulty-chip.hard { color:#ef4444; border-color:rgba(239,68,68,0.35); }
+@media (max-width: 980px) { .panel-grid { grid-template-columns:1fr; } }
+</style>
+
+<section class="import-shell">
+  <div class="top-row">
+    <div>
+      <h1 class="title">Import Custom Sheet</h1>
+      <p class="subtitle">Upload a JSON or CSV sheet, preview every parsed row, then import only after the whole sheet validates cleanly.</p>
+    </div>
+    <a class="action-btn" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-arrow-left"></i> Admin Dashboard</a>
+  </div>
+
+  <div class="panel-grid">
+    <article class="panel">
+      <h2 class="panel-title">Upload Sheet</h2>
+      <p class="panel-subtitle">Validation checks topic names and positions, question ordering, duplicate rows, and question URLs before anything is inserted.</p>
+      <form class="upload-form" method="POST" enctype="multipart/form-data" action="{{ url_for('admin.import_sheet') }}">
+        <div class="field">
+          <label class="label" for="sheet_file">JSON or CSV file</label>
+          <input class="file-input" id="sheet_file" name="sheet_file" type="file" accept=".json,.csv" required>
+        </div>
+        <div class="submit-row">
+          <button class="btn primary" type="submit"><i class="bi bi-eye"></i> Preview Import</button>
+        </div>
+      </form>
+
+      <div class="format-box">
+        <strong>CSV columns:</strong> <code>topic_name</code>, <code>topic_position</code>, <code>problem</code>, <code>url</code>, <code>url2</code>, <code>difficulty</code>, <code>position</code><br>
+        <strong>JSON format:</strong> same structure as <code>data.json</code> with <code>topicName</code>, <code>position</code>, and per-question <code>Problem</code>/<code>URL</code>/<code>URL2</code>/<code>difficulty</code>.
+      </div>
+    </article>
+
+    <article class="panel">
+      <h2 class="panel-title">Preview Summary</h2>
+      {% if preview %}
+      <div class="stats-row">
+        <span class="stat-chip">{{ preview.topic_count }} topics</span>
+        <span class="stat-chip">{{ preview.question_count }} questions</span>
+        <span class="stat-chip">{{ preview.errors|length }} errors</span>
+      </div>
+      <div class="topic-list">
+        {% for topic in preview.topics %}
+        <div class="topic-item">{{ topic.name }} · position {{ topic.position }}</div>
+        {% endfor %}
+      </div>
+      {% if preview.errors %}
+      <div class="error-list">
+        {% for error in preview.errors %}
+        <div class="error-item">{{ error }}</div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <form method="POST" action="{{ url_for('admin.confirm_import_sheet') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="submit-row" style="margin-top:14px;">
+          <button class="btn primary" type="submit"><i class="bi bi-database-add"></i> Import Sheet</button>
+        </div>
+      </form>
+      {% endif %}
+      {% else %}
+      <p class="panel-subtitle">Upload a sheet to see the preview here.</p>
+      {% endif %}
+    </article>
+  </div>
+
+  {% if preview %}
+  <article class="panel">
+    <h2 class="panel-title">Row Preview</h2>
+    <div class="table-wrap">
+      <table class="data-table" aria-label="Sheet row preview">
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>Problem</th>
+            <th>Difficulty</th>
+            <th>Position</th>
+            <th>URL</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in preview.rows %}
+          <tr>
+            <td>{{ row.topic_name }} <br><small>topic position {{ row.topic_position }}</small></td>
+            <td>{{ row.problem }}</td>
+            <td><span class="difficulty-chip {{ row.difficulty|lower }}">{{ row.difficulty }}</span></td>
+            <td>{{ row.position }}</td>
+            <td>{{ row.url }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+  {% endif %}
+</section>
+{% endblock %}

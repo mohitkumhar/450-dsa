@@ -1,3 +1,5 @@
+import io
+import json
 from datetime import datetime, timezone
 
 import mongomock
@@ -217,3 +219,79 @@ def test_non_admin_cannot_delete_users(monkeypatch):
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": victim_id}) is not None
+
+
+def test_admin_can_preview_and_import_json_sheet(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {"name": "Admin", "email": "admin@example.com", "is_admin": True, "progress": {}}
+    ).inserted_id
+
+    payload = [
+        {
+            "topicName": "Graphs",
+            "position": 9,
+            "questions": [
+                {
+                    "Problem": "Clone Graph",
+                    "URL": "https://leetcode.com/problems/clone-graph/",
+                    "URL2": "",
+                    "difficulty": "Medium",
+                    "position": 0,
+                }
+            ],
+        }
+    ]
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        preview_response = client.post(
+            "/admin/import-sheet",
+            data={
+                "sheet_file": (io.BytesIO(json.dumps(payload).encode("utf-8")), "custom-sheet.json"),
+            },
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        csrf_token = set_csrf_token(client)
+        import_response = client.post(
+            "/admin/import-sheet/confirm",
+            data={"csrf_token": csrf_token},
+            follow_redirects=True,
+        )
+
+    assert preview_response.status_code == 200
+    preview_body = preview_response.data.decode("utf-8")
+    assert "Clone Graph" in preview_body
+    assert "Import Sheet" in preview_body
+    assert import_response.status_code == 200
+    assert test_db.topic.find_one({"name": "Graphs"}) is not None
+    assert test_db.question.find_one({"problem": "Clone Graph"}) is not None
+
+
+def test_admin_import_preview_rejects_duplicate_csv_rows(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {"name": "Admin", "email": "admin@example.com", "is_admin": True, "progress": {}}
+    ).inserted_id
+    csv_text = "\n".join(
+        [
+            "topic_name,topic_position,problem,url,url2,difficulty,position",
+            "Array,0,Two Sum,https://leetcode.com/problems/two-sum/,,Easy,0",
+            "Array,0,Two Sum,https://leetcode.com/problems/two-sum/,,Easy,1",
+        ]
+    )
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        response = client.post(
+            "/admin/import-sheet",
+            data={"sheet_file": (io.BytesIO(csv_text.encode("utf-8")), "sheet.csv")},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+
+    body = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert "duplicate question row detected" in body.lower()
+    assert test_db.question.count_documents({}) == 0
