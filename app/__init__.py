@@ -60,7 +60,7 @@ def create_app(config_class=None):
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     config_class = config_class or resolve_config_class()
     app.config.from_object(config_class)
-    # Non-test environments must provide a real SECRET_KEY before the app boots.
+    # Non-test environments without a real SECRET_KEY use a temporary fallback.
     config_class.apply_environment_overrides(app)
     _configure_rate_limit_storage(app, config_class)
     app.config["SESSION_COOKIE_SECURE"] = env_flag(

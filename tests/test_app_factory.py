@@ -1,8 +1,10 @@
+import warnings
 from types import SimpleNamespace
 
 import app as app_module
+import app.config as config_module
 import app.faq.routes as faq_routes
-from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
+from app.config import BaseConfig, DevelopmentConfig, ProductionConfig, TestingConfig
 from app.extensions import login_manager
 
 
@@ -341,35 +343,47 @@ def test_create_app_allows_mongo_timeout_and_pool_overrides(monkeypatch):
     ]
 
 
-def test_create_app_requires_secret_key_outside_testing(monkeypatch):
+def test_create_app_generates_secret_key_when_missing(monkeypatch):
     monkeypatch.delenv("SECRET_KEY", raising=False)
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.delenv("APP_ENV", raising=False)
     monkeypatch.delenv("ENV", raising=False)
     monkeypatch.delenv("FLASK_DEBUG", raising=False)
+    monkeypatch.setattr(config_module.secrets, "token_hex", lambda length: "generated-secret")
     monkeypatch.setattr(app_module, "load_dotenv", lambda: None)
     monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
 
-    try:
-        app_module.create_app()
-    except RuntimeError as exc:
-        assert "SECRET_KEY" in str(exc)
-    else:
-        raise AssertionError("startup should require SECRET_KEY outside testing")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        flask_app = app_module.create_app()
+
+    assert flask_app.config["SECRET_KEY"] == "generated-secret"
+    assert any(
+        "SECRET_KEY is insecure or missing! Using a random temporary key. "
+        "User sessions will not persist across restarts."
+        in str(warning.message)
+        for warning in caught
+    )
 
 
-def test_create_app_rejects_insecure_secret_key_defaults(monkeypatch):
+def test_apply_environment_overrides_generates_secret_key_for_insecure_defaults(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "supersecretkey")
     monkeypatch.delenv("FLASK_ENV", raising=False)
     monkeypatch.delenv("APP_ENV", raising=False)
     monkeypatch.delenv("ENV", raising=False)
     monkeypatch.delenv("FLASK_DEBUG", raising=False)
-    monkeypatch.setattr(app_module, "load_dotenv", lambda: None)
-    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(config_module.secrets, "token_hex", lambda length: "generated-secret")
+    fake_app = SimpleNamespace(config={})
 
-    try:
-        app_module.create_app()
-    except RuntimeError as exc:
-        assert "SECRET_KEY" in str(exc)
-    else:
-        raise AssertionError("startup should reject insecure SECRET_KEY defaults")
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        BaseConfig.apply_environment_overrides(fake_app)
+
+    assert fake_app.config["SECRET_KEY"] == "generated-secret"
+    assert any("SECRET_KEY is insecure or missing!" in str(warning.message) for warning in caught)
