@@ -25,6 +25,10 @@ BOOKMARKS_QUESTION_PROJECTION = {
     "url": 1,
     "url2": 1,
 }
+NOTES_SEARCH_QUESTION_PROJECTION = {
+    "topic": 1,
+    "problem": 1,
+}
 CSV_EXPORT_QUESTION_PROJECTION = {
     "topic": 1,
     "problem": 1,
@@ -287,6 +291,54 @@ def bookmarks():
         question["topic_name"] = topic_docs.get(question["topic"], "Unknown")
 
     return render_template("bookmarks.html", questions=questions, progress_dict=progress)
+
+
+@tracker_bp.route("/notes/search")
+@login_required
+def search_notes():
+    query = " ".join((request.args.get("q", "") or "").split())
+    matches = []
+
+    if query:
+        query_l = query.lower()
+        progress = current_user.progress or {}
+        matching_ids = [
+            question_id
+            for question_id, progress_item in progress.items()
+            if query_l in (progress_item.get("notes") or "").lower()
+        ]
+
+        object_ids = []
+        for question_id in matching_ids:
+            try:
+                object_ids.append(ObjectId(question_id))
+            except Exception:
+                pass
+
+        questions = list(db.question.find({"_id": {"$in": object_ids}}, NOTES_SEARCH_QUESTION_PROJECTION))
+        question_lookup = {str(question["_id"]): question for question in questions}
+        topic_ids = list({question.get("topic") for question in questions if question.get("topic")})
+        topic_lookup = {
+            topic["_id"]: topic.get("name", "Unknown")
+            for topic in db.topic.find({"_id": {"$in": topic_ids}}, {"name": 1})
+        }
+
+        for question_id in matching_ids:
+            question = question_lookup.get(question_id)
+            if not question:
+                continue
+            note_text = (current_user.progress.get(question_id, {}) or {}).get("notes", "").strip()
+            matches.append(
+                {
+                    "question_id": question_id,
+                    "problem": question.get("problem", "Untitled Question"),
+                    "topic_id": str(question.get("topic")),
+                    "topic_name": topic_lookup.get(question.get("topic"), "Unknown"),
+                    "notes": note_text,
+                }
+            )
+
+    return render_template("notes_search.html", query=query, matches=matches)
 
 
 @tracker_bp.route("/export/csv")

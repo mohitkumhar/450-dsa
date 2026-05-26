@@ -132,8 +132,6 @@ def compute_total_solved(progress, external_totals, all_questions=None):
 def compute_c_score(user_doc, all_questions=None):
     """Compute composite C-Score (0-999) for a user document."""
     progress = user_doc.get("progress", {})
-    dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
-
     ext = user_doc.get("external_totals", {})
     lc_total = max(ext.get("LeetCode", 0), 0)
     lc_easy = max(ext.get("LeetCode_Easy", 0), 0)
@@ -146,10 +144,14 @@ def compute_c_score(user_doc, all_questions=None):
     external_total = sum(max(value, 0) for key, value in ext.items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
 
     ext_daily = user_doc.get("external_daily_counts", {})
+    dsa_done = 0
     extra_progress_days = set()
     for progress_item in progress.values():
+        if not progress_item.get("done"):
+            continue
+        dsa_done += 1
         timestamp = progress_item.get("timestamp")
-        if not timestamp or not progress_item.get("done"):
+        if not timestamp:
             continue
         if isinstance(timestamp, str):
             day_key = timestamp[:10]

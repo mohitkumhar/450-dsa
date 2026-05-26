@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .notes-search-shell { max-width: 980px; }
+  .notes-search-head { margin-bottom: 20px; }
+  .notes-search-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .notes-search-sub {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+  .notes-search-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 18px;
+  }
+  .notes-search-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .notes-search-input {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 0.95rem;
+    padding: 0 14px;
+  }
+  .notes-search-input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .notes-search-btn {
+    white-space: nowrap;
+  }
+  .notes-search-meta {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    margin: 0 0 10px;
+    min-height: 20px;
+  }
+  .notes-search-results {
+    display: grid;
+    gap: 12px;
+  }
+  .notes-search-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .notes-search-topic {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-bottom: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(99,102,241,0.12);
+    color: #818cf8;
+    border: 1px solid rgba(99,102,241,0.22);
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .notes-search-topic:hover,
+  .notes-search-topic:focus-visible {
+    text-decoration: none;
+    background: rgba(99,102,241,0.2);
+    color: #a5b4fc;
+  }
+  .notes-search-problem {
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    font-weight: 750;
+    margin-bottom: 10px;
+  }
+  .notes-search-note {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .notes-search-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .empty-notes-search {
+    background: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: 14px;
+    padding: 42px 18px;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+  .empty-notes-search i {
+    display: block;
+    color: var(--text-muted);
+    font-size: 2.3rem;
+    margin-bottom: 10px;
+  }
+  @media (max-width: 720px) {
+    .notes-search-form {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+
+<div class="notes-search-shell">
+  <div class="notes-search-head">
+    <div class="notes-search-title"><i class="bi bi-journal-text" style="color:var(--accent)" aria-hidden="true"></i> Notes Search</div>
+    <div class="notes-search-sub">Search across your private question notes without exposing them anywhere else.</div>
+  </div>
+
+  <div class="notes-search-panel">
+    <form class="notes-search-form" method="get" action="{{ url_for('tracker.search_notes') }}" role="search">
+      <label for="notesSearchInput" class="visually-hidden">Search your notes</label>
+      <input
+        id="notesSearchInput"
+        name="q"
+        class="notes-search-input"
+        type="search"
+        value="{{ query }}"
+        autocomplete="off"
+        placeholder="Search your notes for hints, reminders, or solution ideas..."
+        aria-label="Search your notes">
+      <button class="ui-btn ui-btn-primary notes-search-btn" type="submit">
+        <i class="bi bi-search" aria-hidden="true"></i> Search Notes
+      </button>
+    </form>
+  </div>
+
+  <div class="notes-search-meta" role="status" aria-live="polite">
+    {% if query and matches %}
+      {{ matches|length }} note match{{ '' if matches|length == 1 else 'es' }} for "{{ query }}"
+    {% elif query %}
+      No notes matched "{{ query }}"
+    {% else %}
+      Search only your saved note text.
+    {% endif %}
+  </div>
+
+  {% if matches %}
+    <div class="notes-search-results">
+      {% for item in matches %}
+        <article class="notes-search-card">
+          <a href="{{ url_for('tracker.topic', topic_id=item.topic_id) }}" class="notes-search-topic">
+            {{ item.topic_name }}
+          </a>
+          <div class="notes-search-problem">{{ item.problem }}</div>
+          <p class="notes-search-note">{{ item.notes }}</p>
+          <div class="notes-search-actions">
+            <a class="ui-btn ui-btn-secondary" href="{{ url_for('tracker.topic', topic_id=item.topic_id) }}">
+              <i class="bi bi-arrow-right" aria-hidden="true"></i> Open Topic
+            </a>
+            <a class="ui-btn ui-btn-secondary" href="{{ url_for('tracker.bookmarks') }}">
+              <i class="bi bi-bookmark" aria-hidden="true"></i> View Bookmarks
+            </a>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-notes-search">
+      {% if query %}
+        <i class="bi bi-journal-x" aria-hidden="true"></i>
+        <p>No saved notes matched your search yet.</p>
+      {% else %}
+        <i class="bi bi-journal-text" aria-hidden="true"></i>
+        <p>Start with a keyword to search your private notes across all questions.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
