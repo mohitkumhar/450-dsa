@@ -1,5 +1,7 @@
 import json
 import re
+import time
+from copy import deepcopy
 import threading
 from datetime import datetime
 
@@ -8,6 +10,31 @@ import requests
 from app.utils import normalize_coding_ninjas_profile_id
 
 
+PLATFORM_FETCH_CACHE_TTL = 300
+_platform_fetch_cache = {}
+
+
+def clear_platform_fetch_cache():
+    _platform_fetch_cache.clear()
+
+
+def _cached_platform_fetch(platform_key, username, fetcher):
+    normalized_username = (username or "").strip()
+    if not normalized_username:
+        return fetcher()
+
+    cache_key = (platform_key, normalized_username.lower())
+    now = time.monotonic()
+    cached_entry = _platform_fetch_cache.get(cache_key)
+    if cached_entry and (now - cached_entry["cached_at"]) < PLATFORM_FETCH_CACHE_TTL:
+        return deepcopy(cached_entry["value"])
+
+    value = fetcher()
+    _platform_fetch_cache[cache_key] = {
+        "cached_at": now,
+        "value": deepcopy(value),
+    }
+    return value
 _session_local = threading.local()
 
 
@@ -60,6 +87,10 @@ def build_leetcode_profile_payload(username):
 
 
 def fetch_leetcode(username):
+    return _cached_platform_fetch("leetcode", username, lambda: _fetch_leetcode(username))
+
+
+def _fetch_leetcode(username):
     try:
         response = _get_http_session().post(
             "https://leetcode.com/graphql",
@@ -182,6 +213,10 @@ def fetch_hr_badges(username):
 
 
 def fetch_github(username):
+    return _cached_platform_fetch("github", username, lambda: _fetch_github(username))
+
+
+def _fetch_github(username):
     try:
         response = _get_http_session().get(f"https://github.com/users/{username}/contributions", timeout=5)
         matches = re.findall(r"(\d+|No)\s+contributions?\s+on\s+(\d{4}-\d{2}-\d{2})", response.text)
@@ -223,6 +258,10 @@ def fetch_github(username):
 
 
 def fetch_gfg(username):
+    return _cached_platform_fetch("gfg", username, lambda: _fetch_gfg(username))
+
+
+def _fetch_gfg(username):
     """Fetch GFG solved count via multiple fallback methods."""
     try:
         try:
@@ -272,6 +311,10 @@ def fetch_gfg(username):
 
 
 def fetch_atcoder(handle):
+    return _cached_platform_fetch("atcoder", handle, lambda: _fetch_atcoder(handle))
+
+
+def _fetch_atcoder(handle):
     try:
         r = _get_http_session().get(
             'https://kenkoooo.com/atcoder/atcoder-api/v3/user/acceptance_count',
@@ -284,6 +327,10 @@ def fetch_atcoder(handle):
 
 
 def fetch_coding_ninjas(username):
+    return _cached_platform_fetch("codingninjas", username, lambda: _fetch_coding_ninjas(username))
+
+
+def _fetch_coding_ninjas(username):
     """Fetch Coding Ninjas/Code360 solved count from public profile pages."""
     profile_id = normalize_coding_ninjas_profile_id(username)
     if not profile_id:
