@@ -3,7 +3,7 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -109,7 +109,7 @@ def fetch_leetcode(username):
         calendar_data = json.loads(calendar_str) if calendar_str else {}
         result_calendar = {}
         for ts, count in calendar_data.items():
-            day = datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+            day = datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
             result_calendar[day] = result_calendar.get(day, 0) + count
         total_solved = 0
         diff_stats = {"Easy": 0, "Medium": 0, "Hard": 0}
@@ -154,7 +154,7 @@ def fetch_leetcode_rating_history(username):
         for item in history_raw:
             if item.get("attended"):
                 ts = item.get("contest", {}).get("startTime", 0)
-                day = datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+                day = datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
                 result.append({"x": day, "y": round(float(item.get("rating", 0)), 0)})
         return sorted(result, key=lambda item: item["x"])
     except Exception as exc:
