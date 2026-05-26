@@ -7,7 +7,12 @@ from app.profile.routes import profile_bp
 
 def create_profile_test_app():
     app = Flask(__name__)
-    app.config.update(TESTING=True, LOGIN_DISABLED=True, SECRET_KEY="test-secret")
+    app.config.update(
+        LOGIN_DISABLED=True,
+        RATELIMIT_ENABLED=False,
+        SECRET_KEY="test-secret",
+        TESTING=True,
+    )
     app.register_blueprint(profile_bp)
     return app
 
@@ -233,7 +238,11 @@ def test_sync_platforms_marks_github_rate_limit_payload_failed(monkeypatch):
         ),
     )
 
-    response = app.test_client().post("/sync_platforms", json={"github": "octocat"})
+    response = app.test_client().post(
+        "/sync_platforms",
+        environ_base={"REMOTE_ADDR": "203.0.113.10"},
+        json={"github": "octocat"},
+    )
     payload = response.get_json()
 
     assert response.status_code == 200
