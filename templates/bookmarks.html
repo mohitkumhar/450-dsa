@@ -2,27 +2,6 @@
 {% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
-  .back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: .85rem;
-    font-weight: 600;
-    margin-bottom: 20px;
-    padding: 7px 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    transition: all .2s
-  }
-
-  .back-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    text-decoration: none
-  }
-
   .page-title {
     font-size: 1.6rem;
     font-weight: 800;
@@ -73,62 +52,6 @@
     color: #fff
   }
 
-  .q-wrap {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    overflow: hidden
-  }
-
-  .q-table {
-    width: 100%;
-    border-collapse: collapse
-  }
-
-  .q-table thead th {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    font-size: .73rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    padding: 12px 16px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color)
-  }
-
-  .q-table tbody tr {
-    border-bottom: 1px solid var(--border-subtle);
-    transition: background .15s
-  }
-
-  .q-table tbody tr:last-child {
-    border-bottom: none
-  }
-
-  .q-table tbody tr:hover {
-    background: var(--bg-secondary)
-  }
-
-  .q-table tbody td {
-    padding: 12px 16px;
-    font-size: .87rem;
-    vertical-align: middle
-  }
-
-  .q-num {
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: .78rem
-  }
-
-  .q-checkbox {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--accent);
-    cursor: pointer
-  }
-
   .topic-tag {
     display: inline-flex;
     align-items: center;
@@ -142,89 +65,20 @@
     text-decoration: none
   }
 
-  .q-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 4px
-  }
-
-  .q-links {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap
-  }
-
-  .q-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 9px;
-    border-radius: 20px;
-    font-size: .73rem;
-    font-weight: 700;
-    text-decoration: none;
-    transition: all .2s
-  }
-
-  .q-badge:hover {
-    opacity: .85;
-    text-decoration: none
-  }
-
-  .badge-lc {
-    background: rgba(255, 184, 0, .15);
-    color: #ffb800;
-    border: 1px solid rgba(255, 184, 0, .25)
-  }
-
-  .badge-gfg {
-    background: rgba(34, 197, 94, .15);
-    color: var(--success);
-    border: 1px solid rgba(34, 197, 94, .25)
-  }
-
-  .badge-link {
-    background: rgba(99, 102, 241, .15);
-    color: #818cf8;
-    border: 1px solid rgba(99, 102, 241, .25)
-  }
-
-  .action-icon {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 8px;
-    font-size: 1.1rem;
+  .bookmark-btn {
     color: var(--warning);
-    transition: all .2s
   }
 
-  .action-icon:hover {
-    background: var(--bg-secondary)
+  .bookmarks-table-wrap .q-table thead th {
+    font-size: .73rem;
   }
 
-  .notes-btn-sm {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 5px 10px;
-    font-size: .77rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all .2s;
-    font-family: inherit
+  .bookmarks-table-wrap .q-table tbody td {
+    font-size: .87rem;
   }
 
-  .notes-btn-sm:hover {
-    border-color: var(--accent);
-    color: var(--accent)
-  }
-
-  .notes-btn-sm.has-notes {
-    border-color: var(--info);
-    color: var(--info)
+  .bookmarks-table-wrap .q-num {
+    font-size: .78rem;
   }
 
   @media(max-width:640px) {
@@ -246,7 +100,7 @@
 <div class="page-sub">Your saved questions for quick review</div>
 
 {% if questions %}
-<div class="q-wrap">
+<div class="questions-table-wrap bookmarks-table-wrap">
   <table class="q-table" aria-label="Bookmarked questions">
     <caption class="visually-hidden">Bookmarked questions</caption>
     <thead>
@@ -314,6 +168,7 @@
   const endpointConfig = {{ {
     "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
   }|tojson }};
+  const csrfToken = {{ csrf_token()|tojson }};
   const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
   const modal = document.getElementById('notesModal');
 
@@ -342,7 +197,7 @@
   }
 
   function updateQuestion(id, data, callback) {
-    fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify(data) })
       .then(r => r.json()).then(res => { if (res.success) callback(); })
       .catch(() => alert('Error updating.'));
   }

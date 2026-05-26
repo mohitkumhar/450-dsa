@@ -2,8 +2,6 @@
 {% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
-.back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
-.back-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .topic-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
 .topic-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px; }
 
@@ -14,52 +12,17 @@
 .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 .status-filter-buttons { margin-top: -8px; margin-bottom: 20px; }
 
-/* Difficulty badges - improved for color contrast */
-.difficulty-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
-.difficulty-easy { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
-.difficulty-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
-.difficulty-hard { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-
-/* High contrast mode support for difficulty badges */
-@media (prefers-contrast: high) {
-    .difficulty-easy { background: #10b981; color: black; border: 2px solid black; }
-    .difficulty-medium { background: #f59e0b; color: black; border: 2px solid black; }
-    .difficulty-hard { background: #ef4444; color: white; border: 2px solid white; }
-}
-
-.questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow-x: auto; }
 .q-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-.q-table thead th { background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
-.q-table tbody tr { border-bottom: 1px solid var(--border-subtle); transition: background 0.15s; }
-.q-table tbody tr:last-child { border-bottom: none; }
-.q-table tbody tr:hover { background: var(--bg-secondary); }
 .q-table tbody tr.row-done { background: rgba(34,197,94,0.04); }
-.q-table tbody td { padding: 12px 16px; font-size: 0.88rem; vertical-align: middle; }
 .q-num { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; min-width: 32px; }
-.q-checkbox { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
-.q-name { font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.q-links { display: flex; gap: 6px; flex-wrap: wrap; }
-.q-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 0.73rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
-.q-badge:hover { opacity: 0.85; text-decoration: none; }
-.badge-lc { background: rgba(255,184,0,0.15); color: #ffb800; border: 1px solid rgba(255,184,0,0.25); }
-.badge-gfg { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
-.badge-hr { background: rgba(0,189,108,0.15); color: #00bd6c; border: 1px solid rgba(0,189,108,0.25); }
-.badge-cn { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
-.badge-yt { background: rgba(255,0,0,0.15); color: #ff0000; border: 1px solid rgba(255,0,0,0.25); }
-.badge-link { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
-.action-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; font-size: 1.1rem; color: var(--text-muted); transition: all 0.2s; }
-.action-icon:hover { background: var(--bg-secondary); color: var(--accent); }
-.action-icon.bookmarked { color: var(--warning); }
-.action-icon.skipped { color: var(--danger); }
-.action-icon:disabled, .q-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
-.notes-btn-sm { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 0.77rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-family: inherit; }
-.notes-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
-.notes-btn-sm.has-notes { border-color: var(--info); color: var(--info); }
 .topic-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .topic-header-main { min-width: 0; }
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
+.bookmark-btn { color: var(--text-muted); }
+.bookmark-btn:hover { color: var(--accent); }
+.bookmark-btn.bookmarked { color: var(--warning); }
 .topic-status {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -270,6 +233,7 @@
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
 }|tojson }};
+const csrfToken = {{ csrf_token()|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -292,7 +256,7 @@ function setBookmarkState(btn, isBookmarked) {
 function updateQuestion(id, data, callback) {
     return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
         body: JSON.stringify(data)
     }).then(r => {
         if (!r.ok) throw new Error('Request failed');

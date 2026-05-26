@@ -1,12 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-/* ── Leaderboard Page ── */
 .lb-header { margin-bottom: 24px; }
 .lb-header h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
 .lb-header p { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
 
-/* Tab Switcher */
 .lb-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -43,7 +41,6 @@
   border-radius: 9px;
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -81,7 +78,6 @@
   font-size: 0.85rem;
 }
 
-/* Current user pinned row */
 .current-user-pinned {
   position: sticky;
   bottom: 0;
@@ -93,7 +89,6 @@
   background: rgba(255,107,0,0.1);
 }
 
-/* Table */
 .lb-table-wrap {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -195,7 +190,6 @@
   color: var(--text-muted);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .lb-tabs { width: 100%; }
   .lb-tab { flex: 1; text-align: center; padding: 8px 10px; font-size: 0.78rem; }
@@ -204,7 +198,6 @@
   .lb-table thead th:nth-child(5),
   .lb-table tbody td:nth-child(5) { display: none; }
 }
-/* Make "Go to your rank" link visible in dark mode */
 .current-user-pinned a {
   background: rgba(255, 107, 0, 0.25) !important;
   color: #ffab4a !important;
@@ -232,7 +225,6 @@
   <p>Compete with fellow coders — ranked across LeetCode, GFG, Coding Ninjas, HackerRank, and DSA progress</p>
 </div>
 
-<!-- Tab Switcher -->
 <div class="lb-tabs" id="lbTabs" role="tablist" aria-label="Leaderboard ranking modes">
   <button class="lb-tab active" data-mode="cscore" id="tab-cscore" role="tab" aria-selected="true" aria-label="C-Score ranking">
     <i class="bi bi-lightning-fill" aria-hidden="true"></i> C-Score
@@ -248,7 +240,6 @@
   </button>
 </div>
 
-<!-- Table -->
 <div class="lb-table-wrap">
   <table class="lb-table" aria-label="Leaderboard rankings">
     <thead>
@@ -266,7 +257,6 @@
   </table>
 </div>
 
-<!-- Pagination -->
 <div class="pagination" id="pagination" aria-label="Leaderboard pagination">
   <button class="pagination-btn" id="prevBtn" disabled aria-label="Previous page">← Previous</button>
   <span class="page-info" id="pageInfo" aria-live="polite">Page 1</span>
@@ -438,7 +428,6 @@ function renderTable(entries, mode) {
       </tr>`;
   });
   
-  // Add pinned row for current user if not already visible
   if (CURRENT_USER_ID && currentUserRank && !entries.some(e => e.user_id === CURRENT_USER_ID)) {
     const targetPage = Math.ceil(currentUserRank / 20);
     html += `<tr class="current-user-pinned me-row">
@@ -462,7 +451,6 @@ function renderPagination() {
   nextBtn.disabled = currentPage >= totalPages;
   pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
   
-  // Update ARIA labels for pagination buttons
   prevBtn.setAttribute('aria-label', currentPage <= 1 ? 'Previous page (disabled)' : 'Go to previous page');
   nextBtn.setAttribute('aria-label', currentPage >= totalPages ? 'Next page (disabled)' : 'Go to next page');
 }
@@ -471,7 +459,6 @@ function switchTab(mode) {
   activeMode = mode;
   currentPage = 1;
   
-  // Update tab ARIA states
   document.querySelectorAll('.lb-tab').forEach(tab => {
     tab.classList.remove('active');
     tab.setAttribute('aria-selected', 'false');
@@ -483,7 +470,6 @@ function switchTab(mode) {
   loadLeaderboard(1);
 }
 
-// Event Listeners
 document.getElementById('prevBtn').addEventListener('click', () => {
   if (currentPage > 1) loadLeaderboard(currentPage - 1);
 });
@@ -496,16 +482,8 @@ document.querySelectorAll('.lb-tab').forEach(tab => {
   tab.addEventListener('click', function() {
     switchTab(this.dataset.mode);
   });
-  // Allow keyboard Enter/Space to activate tab
-  tab.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      switchTab(this.dataset.mode);
-    }
-  });
 });
 
-// Initial load
 loadLeaderboard(1);
 </script>
 {% endblock %}

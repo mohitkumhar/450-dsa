@@ -19,7 +19,10 @@
             logArea.setAttribute("aria-busy", isBusy ? "true" : "false");
         };
 
-        const renderLogs = function (entries) {
+        const renderLogs = function (payload) {
+            const entries = Array.isArray(payload.logs) ? payload.logs : [];
+            const hasMore = Boolean(payload.has_more);
+            const page = Number(payload.page || 1);
             if (!entries.length) {
                 renderLogState(
                     '<p class="empty-state">No log files found yet. Add app logging to populate this panel.</p>',
@@ -28,21 +31,35 @@
                 return;
             }
 
-                renderLogState(
-                    entries
-                        .map(function (entry) {
+            const entriesHtml = entries
+                .map(function (entry) {
                         const source = escapeHtml(entry.source);
                         const line = escapeHtml(entry.line);
                         return '<div class="log-line"><span class="log-source">[' + source + ']</span>' + line + "</div>";
-                    })
-                    .join(""),
-                false
-            );
+                })
+                .join("");
+
+            const footerHtml = hasMore
+                ? '<div class="pagination-row" style="margin-top: 16px;">' +
+                    '<p class="panel-subtitle">Showing the latest ' + entries.length + ' log entries.</p>' +
+                    '<button type="button" class="page-chip" id="admin-load-more-logs" data-next-page="' + (page + 1) + '">Load More</button>' +
+                  "</div>"
+                : "";
+
+            renderLogState(entriesHtml + footerHtml, false);
+
+            const loadMoreButton = document.getElementById("admin-load-more-logs");
+            if (loadMoreButton) {
+                loadMoreButton.addEventListener("click", function () {
+                    loadLogs(Number(this.getAttribute("data-next-page") || "1"));
+                });
+            }
         };
 
-        const loadLogs = async function () {
+        const loadLogs = async function (page) {
+            renderLogState('<p class="empty-state">Loading recent logs...</p>', true);
             try {
-                const response = await fetch(logsUrl, {
+                const response = await fetch(logsUrl + "?page=" + encodeURIComponent(page || 1), {
                     headers: { Accept: "application/json" },
                 });
                 const payload = await response.json();
@@ -51,7 +68,7 @@
                     throw new Error("Invalid log response");
                 }
 
-                renderLogs(payload.logs);
+                renderLogs(payload);
             } catch (error) {
                 renderLogState(
                     '<p class="empty-state">Could not load logs right now. Refresh to try again.</p>',
@@ -60,7 +77,7 @@
             }
         };
 
-        loadLogs();
+        loadLogs(1);
     }
 })();
 

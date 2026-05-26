@@ -1,6 +1,8 @@
 import re
 from urllib.parse import quote_plus
 
+from bson import ObjectId
+
 from app.extensions import db
 
 
@@ -84,11 +86,40 @@ def question_links(question):
     return links
 
 
-def search_dsa_questions(raw_query, limit=40, db_handle=None):
+PLATFORM_FILTER_MAP = {
+    "lc": "LeetCode",
+    "gfg": "GFG",
+    "cn": "Coding Ninjas",
+    "hr": "HackerRank",
+}
+
+PLATFORM_URL_KEYWORDS = {
+    "LeetCode": "leetcode.com",
+    "GFG": "geeksforgeeks.org",
+    "Coding Ninjas": "codingninjas.com",
+    "HackerRank": "hackerrank.com",
+}
+
+DIFFICULTY_FILTERS = {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+}
+
+
+def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, progress=None):
     db_handle = db_handle or db
+    filters = filters or {}
+    progress = progress or {}
     query, requested_platforms = parse_search_query(raw_query)
     query_tokens = tokenize_search_text(query)
-    if not query_tokens:
+    topic_id_str = filters.get("topic_id", "")
+    difficulty_filter = filters.get("difficulty", "")
+    platform_filter = filters.get("platform", "")
+    status_filter = filters.get("status", "")
+    has_filters = any((topic_id_str, difficulty_filter, platform_filter, status_filter))
+
+    def empty_payload():
         return {
             "query": query,
             "requested_platforms": requested_platforms,
@@ -96,20 +127,58 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
             "external_searches": [],
         }
 
-    cursor = (
-        db_handle.question.find(
-            {"$text": {"$search": query}},
-            {
-                "problem": 1,
-                "topic": 1,
-                "url": 1,
-                "url2": 1,
-                "score": {"$meta": "textScore"},
-            },
-        )
-        .sort([("score", {"$meta": "textScore"})])
-        .limit(limit)
+    if not query_tokens and not has_filters:
+        return empty_payload()
+
+    mongo_query = {}
+    if query_tokens:
+        mongo_query["$text"] = {"$search": query}
+
+    if topic_id_str:
+        try:
+            mongo_query["topic"] = ObjectId(topic_id_str)
+        except Exception:
+            return empty_payload()
+
+    platform_name = PLATFORM_FILTER_MAP.get(platform_filter, "")
+    if platform_name:
+        url_keyword = PLATFORM_URL_KEYWORDS.get(platform_name, "")
+        if url_keyword:
+            mongo_query["$or"] = [
+                {"url": {"$regex": url_keyword, "$options": "i"}},
+                {"url2": {"$regex": url_keyword, "$options": "i"}},
+            ]
+
+    if status_filter in ("done", "bookmarked"):
+        flag = "done" if status_filter == "done" else "bookmark"
+        ids = [question_id for question_id, item in progress.items() if item.get(flag)]
+        if not ids:
+            return empty_payload()
+        try:
+            mongo_query["_id"] = {"$in": [ObjectId(question_id) for question_id in ids]}
+        except Exception:
+            return empty_payload()
+
+    projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1}
+    post_fetch_filters = bool(
+        requested_platforms
+        or difficulty_filter in DIFFICULTY_FILTERS
+        or status_filter == "undone"
     )
+    fetch_limit = limit * 4 if post_fetch_filters else limit
+    if difficulty_filter in DIFFICULTY_FILTERS:
+        projection["difficulty"] = 1
+
+    if query_tokens:
+        projection["score"] = {"$meta": "textScore"}
+        cursor = (
+            db_handle.question.find(mongo_query, projection)
+            .sort([("score", {"$meta": "textScore"})])
+            .limit(fetch_limit)
+        )
+    else:
+        cursor = db_handle.question.find(mongo_query, projection).limit(fetch_limit)
+
     questions = list(cursor)
     topic_ids = list({question.get("topic") for question in questions if question.get("topic")})
     topics = (
@@ -123,17 +192,26 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
 
     results = []
     for question in questions:
+        q_id_str = str(question["_id"])
         topic_doc = topics.get(question.get("topic"), {})
         problem = question.get("problem", "")
         topic_name = topic_doc.get("name", "Unknown")
         links = question_links(question)
+        progress_item = progress.get(q_id_str, {})
 
         if requested_platforms and not any(link["platform"] in requested_platforms for link in links):
             continue
 
+        if difficulty_filter in DIFFICULTY_FILTERS:
+            if question.get("difficulty", "Medium") != DIFFICULTY_FILTERS[difficulty_filter]:
+                continue
+
+        if status_filter == "undone" and progress_item.get("done"):
+            continue
+
         results.append(
             {
-                "id": str(question["_id"]),
+                "id": q_id_str,
                 "problem": problem,
                 "topic": topic_name,
                 "topic_id": str(question.get("topic")),
@@ -141,13 +219,15 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None):
                 "links": links,
                 "external_searches": build_external_searches(problem, requested_platforms),
                 "score": question.get("score", 0),
+                "done": progress_item.get("done", False),
+                "bookmarked": progress_item.get("bookmark", False),
             }
         )
 
     return {
         "query": query,
         "requested_platforms": requested_platforms,
-        "results": results,
+        "results": results[:limit],
         "external_searches": build_external_searches(query, requested_platforms),
     }
 

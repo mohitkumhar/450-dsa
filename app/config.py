@@ -1,4 +1,6 @@
 import os
+import secrets
+import warnings
 
 
 def env_flag(name, default=False):
@@ -37,6 +39,7 @@ class BaseConfig:
     MONGO_MIN_POOL_SIZE = 0
     CACHE_TYPE = "SimpleCache"
     CACHE_DEFAULT_TIMEOUT = 300
+    SEND_FILE_MAX_AGE_DEFAULT = 86400
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = True
@@ -65,10 +68,13 @@ class BaseConfig:
         if isinstance(secret_key, str):
             secret_key = secret_key.strip()
         if not app.config.get("TESTING") and secret_key in cls.INSECURE_SECRET_KEYS:
-            raise RuntimeError(
-                "SECRET_KEY is not set or is using an insecure default. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            warnings.warn(
+                "SECRET_KEY is insecure or missing! Using a random temporary key. "
+                "User sessions will not persist across restarts.",
+                RuntimeWarning,
+                stacklevel=2,
             )
+            secret_key = secrets.token_hex(32)
         app.config["SECRET_KEY"] = secret_key
         app.config["MONGO_URI"] = os.environ.get("MONGO_URI", cls.MONGO_URI)
         app.config["MONGO_SERVER_SELECTION_TIMEOUT_MS"] = env_int(

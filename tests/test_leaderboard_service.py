@@ -3,6 +3,7 @@ from bson.objectid import ObjectId
 from app.leaderboard.service import (
     build_college_leaderboard_data,
     build_leaderboard_data,
+    get_user_rank_by_c_score,
 )
 
 
@@ -150,3 +151,16 @@ def test_build_college_leaderboard_data_aggregates_and_sorts():
     beta = college_entries[1]
     assert beta["member_count"] == 1
     assert beta["lc_rating"] == 1700
+
+
+def test_get_user_rank_by_c_score_uses_sorted_c_score_order():
+    entries = [
+        {"user_id": "u1", "c_score": 90, "total_solved": 40},
+        {"user_id": "u2", "c_score": 140, "total_solved": 25},
+        {"user_id": "u3", "c_score": 110, "total_solved": 60},
+    ]
+
+    assert get_user_rank_by_c_score("u2", entries) == 1
+    assert get_user_rank_by_c_score("u3", entries) == 2
+    assert get_user_rank_by_c_score("u1", entries) == 3
+    assert get_user_rank_by_c_score("missing", entries) is None

@@ -3,13 +3,26 @@ from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.utils import json_error, json_success, utc_now
-from notes_export import build_topic_notes_markdown, topic_notes_filename
+from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
 
 
 tracker_bp = Blueprint("tracker", __name__)
 
+DIFFICULTY_FILTERS = {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+}
+
+
+def normalize_difficulty_filter(raw_filter):
+    value = (raw_filter or "all").strip().lower()
+    if value == "all":
+        return "all"
+    return DIFFICULTY_FILTERS.get(value, "all")
 INDEX_QUESTION_PROJECTION = {"topic": 1}
 TOPIC_PAGE_QUESTION_PROJECTION = {
     "problem": 1,
@@ -32,7 +45,7 @@ CSV_EXPORT_QUESTION_PROJECTION = {
     "url": 1,
     "url2": 1,
 }
-
+ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
 
 @tracker_bp.route("/")
 def index():
@@ -93,7 +106,7 @@ def topic(topic_id):
     todo_count = total_count - done_count - skipped_count
     
     # Get difficulty filter from query parameter
-    difficulty_filter = request.args.get('difficulty', 'all')
+    difficulty_filter = normalize_difficulty_filter(request.args.get('difficulty', 'all'))
     status_filter = request.args.get('status', 'all')
     
     if difficulty_filter != 'all':
@@ -261,6 +274,7 @@ def update_question(question_id):
     if update_fields:
         db.user.update_one({"_id": user_id}, {"$set": update_fields})
         current_user.reload()
+        invalidate_leaderboard_cache()
         return json_success(message=message)
 
     return json_success(message="No changes made")
@@ -300,4 +314,24 @@ def export_csv():
     csv_content = build_progress_csv(questions, topic_lookup, current_user.progress)
     response = Response(csv_content, mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=progress.csv'
+    return response
+
+
+@tracker_bp.route("/export/all-notes")
+@login_required
+def export_all_notes():
+    """Download all non-empty notes grouped by topic as a single Markdown file."""
+    topics = list(db.topic.find().sort("position", 1))
+    all_questions = list(db.question.find({}, ALL_NOTES_QUESTION_PROJECTION))
+
+    questions_by_topic = {}
+    for question in all_questions:
+        topic_id = str(question["topic"])
+        questions_by_topic.setdefault(topic_id, []).append(question)
+
+    markdown = build_all_notes_markdown(
+        topics, questions_by_topic, current_user.progress,
+    )
+    response = Response(markdown, mimetype="text/markdown")
+    response.headers["Content-Disposition"] = 'attachment; filename=all_notes.md'
     return response
