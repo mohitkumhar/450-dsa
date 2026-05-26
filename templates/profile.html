@@ -671,7 +671,7 @@ window.handleSyncProfile = function(btn){
   const gfg=document.getElementById('gfg_username').value.trim();
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
-  if(!lc && !gh && !gfg && !hr && !cn){showToast('\u26a0\ufe0f Enter at least one username');return;}
+  if(!lc && !gh && !gfg && !hr && !cn){showToast('⚠️ Enter at least one username');return;}
 
   // Disable button & show spinner
   btn.disabled=true;
@@ -711,12 +711,12 @@ window.handleSyncProfile = function(btn){
     overlay.style.display='none';
     if(res.success){
       syncContent.innerHTML='<i class="bi bi-check-lg"></i> Synced!';
-      showToast('\u2705 Synced successfully! Reloading...');
+      showToast('✅ Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(),1200);
     }else{
       btn.disabled=false;
       syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
-      showToast('\u274c Sync failed: '+(res.error||'unknown'));
+      showToast('❌ Sync failed: '+(res.error||'unknown'));
     }
   })
   .catch(err=>{
@@ -725,9 +725,9 @@ window.handleSyncProfile = function(btn){
     btn.disabled=false;
     syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
     if(err.name==='AbortError'){
-      showToast('\u23f0 Sync timed out. Try again.');
+      showToast('⏰ Sync timed out. Try again.');
     }else{
-      showToast('\u274c Network error. Check connection.');
+      showToast('❌ Network error. Check connection.');
     }
     console.error('Sync error:',err);
   });
