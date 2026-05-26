@@ -36,7 +36,7 @@ def get_cached_leaderboard_data():
 
 @leaderboard_bp.route("/leaderboard")
 @limiter.limit("20 per minute")
-# ❌ Removed @cache.cached(timeout=300) to prevent cross-session context leak
+# Removed @cache.cached(timeout=300) to prevent cross-session context leak
 def leaderboard():
     # Fetching data securely from memoized function
     by_cscore, by_questions, by_rating, by_college = get_cached_leaderboard_data()
@@ -66,7 +66,35 @@ def leaderboard():
 @leaderboard_bp.route("/api/leaderboard")
 @cache.cached(timeout=300, query_string=True)
 def api_leaderboard():
-    """Return paginated leaderboard rankings for the selected mode."""
+    """
+    Return paginated leaderboard rankings for the selected mode.
+    ---
+    tags:
+      - Leaderboard
+    parameters:
+      - name: mode
+        in: query
+        type: string
+        description: Sort mode (cscore, questions, rating, college)
+        default: cscore
+      - name: page
+        in: query
+        type: integer
+        description: Page number
+        default: 1
+      - name: per_page
+        in: query
+        type: integer
+        description: Number of entries per page
+        default: 20
+      - name: current_user_id
+        in: query
+        type: string
+        description: User ID to find current user's rank
+    responses:
+      200:
+        description: Paginated leaderboard entries
+    """
     mode = request.args.get("mode", "cscore")
     page = int(request.args.get("page", 1))
     per_page = min(int(request.args.get("per_page", 20)), 100)
