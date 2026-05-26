@@ -1,5 +1,5 @@
 import app.auth.routes as auth_routes
-from conftest import build_test_app
+from conftest import build_test_app, csrf_headers
 
 
 def test_register_stores_normalized_email(monkeypatch):
@@ -20,6 +20,7 @@ def test_register_stores_normalized_email(monkeypatch):
                 "password": "StrongPass1!",
                 "confirm_password": "StrongPass1!",
             },
+            headers=csrf_headers(client),
         )
 
     assert response.status_code == 302
@@ -45,6 +46,7 @@ def test_login_looks_up_normalized_email(monkeypatch):
         response = client.post(
             "/login",
             data={"email": " USER@Example.COM ", "password": "strong-password"},
+            headers=csrf_headers(client),
         )
 
     assert response.status_code == 302
