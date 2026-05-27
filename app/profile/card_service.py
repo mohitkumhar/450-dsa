@@ -4,15 +4,18 @@ from datetime import timezone
 from io import BytesIO
 
 from bson.objectid import ObjectId
+from cachetools import TTLCache
 
 import card_generator
 
-from app.extensions import cache, db
+from app.extensions import db
 from app.utils import compute_c_score, compute_user_platforms, ensure_utc_datetime, merge_platform_counts
 from streaks import compute_streak
 
 
 CACHE_TTL = 3600
+CACHE_MAXSIZE = 500
+card_cache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 
 
 def _build_card_etag(name, c_score, dsa_progress, current_streak, platforms):
@@ -79,7 +82,7 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     etag = _build_card_etag(name, c_score, dsa_progress, current_streak, platforms)
     last_modified = _card_last_modified(user, progress_data)
 
-    cached = cache.get(f"card_{user_id}")
+    cached = card_cache.get(f"card_{user_id}")
     if cached is not None:
         cached_etag, cached_bytes = cached
         if cached_etag == etag:
@@ -91,8 +94,13 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     if isinstance(img_io, BytesIO):
         img_io.seek(0)
 
-    cache.set(f"card_{user_id}", (etag, img_io.getvalue()), timeout=CACHE_TTL)
+    card_cache[f"card_{user_id}"] = (etag, img_io.getvalue())
     return img_io, etag, last_modified
+
+
+def delete_card_cache(user_id):
+    """Remove a user's card from the in-memory cache."""
+    card_cache.pop(f"card_{str(user_id)}", None)
 
 
 def warm_public_card_cache(user_id, db_handle=None):

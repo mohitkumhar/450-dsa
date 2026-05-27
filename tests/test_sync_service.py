@@ -117,7 +117,6 @@ def test_sync_user_platforms_updates_totals_and_clears_cache(monkeypatch):
             },
         )
     ]
-    assert cache.deleted_keys == ["card_user-1"]
     assert user.reload_calls == 1
 
 

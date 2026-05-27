@@ -37,10 +37,8 @@ def build_sync_platforms_response(platform_status: dict):
 
 
 def clear_profile_caches(cache_backend, user_id):
-    try:
-        cache_backend.delete(f"card_{str(user_id)}")
-    except KeyError:
-        pass
+    from app.profile.card_service import delete_card_cache
+    delete_card_cache(str(user_id))
 
 
 def build_platform_sync_jobs(

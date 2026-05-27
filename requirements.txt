@@ -13,6 +13,7 @@ Pillow==10.3.0
 Flask-Limiter==3.5.0
 redis==5.0.4
 # pyjson5==1.6.2
+cachetools==5.3.3
 Flask-Caching==2.0.2
 flasgger==0.9.7.1
 gunicorn==22.0.0
