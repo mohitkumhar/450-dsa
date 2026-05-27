@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from bson import ObjectId
 
 import app.auth.routes as auth_routes
@@ -32,6 +34,27 @@ def test_leaderboard_cache_keys_change_after_invalidation(monkeypatch):
         initial_page_key = leaderboard_page_cache_key()
         invalidate_leaderboard_cache()
         assert leaderboard_page_cache_key() != initial_page_key
+
+
+def test_leaderboard_page_cache_key_varies_by_authenticated_user(monkeypatch):
+    flask_app, _ = build_test_app(monkeypatch)
+
+    with flask_app.test_request_context("/leaderboard"):
+        monkeypatch.setattr(
+            "app.leaderboard.cache.current_user",
+            SimpleNamespace(is_authenticated=True, get_id=lambda: "user-1"),
+        )
+        first_user_key = leaderboard_page_cache_key()
+
+        monkeypatch.setattr(
+            "app.leaderboard.cache.current_user",
+            SimpleNamespace(is_authenticated=True, get_id=lambda: "user-2"),
+        )
+        second_user_key = leaderboard_page_cache_key()
+
+    assert first_user_key != second_user_key
+    assert first_user_key.endswith(":user:user-1")
+    assert second_user_key.endswith(":user:user-2")
 
 
 def test_update_question_invalidates_leaderboard_cache(monkeypatch):
