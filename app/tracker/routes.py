@@ -1,4 +1,5 @@
 from bson import ObjectId
+from bson.errors import InvalidId
 from flask import Blueprint, Response, jsonify, render_template, request
 from flask_login import current_user, login_required
 
@@ -97,9 +98,10 @@ def index():
 @tracker_bp.route("/topic/<topic_id>")
 def topic(topic_id):
     try:
-        topic_doc = db.topic.find_one({"_id": ObjectId(topic_id)})
-    except Exception:
+        topic_id_obj = ObjectId(topic_id)
+    except InvalidId:
         return "Topic not found", 404
+    topic_doc = db.topic.find_one({"_id": topic_id_obj})
     if not topic_doc:
         return "Topic not found", 404
 
@@ -163,9 +165,10 @@ def topic(topic_id):
 @login_required
 def export_topic_notes(topic_id):
     try:
-        topic_doc = db.topic.find_one({"_id": ObjectId(topic_id)})
-    except Exception:
+        topic_id_obj = ObjectId(topic_id)
+    except InvalidId:
         return "Topic not found", 404
+    topic_doc = db.topic.find_one({"_id": topic_id_obj})
     if not topic_doc:
         return "Topic not found", 404
 
@@ -235,9 +238,10 @@ def update_question(question_id):
               example: Question not found
     """
     try:
-        question = db.question.find_one({"_id": ObjectId(question_id)}, QUESTION_STATUS_PROJECTION)
-    except Exception:
+        question_id_obj = ObjectId(question_id)
+    except InvalidId:
         return json_error("Question not found", status_code=404)
+    question = db.question.find_one({"_id": question_id_obj}, QUESTION_STATUS_PROJECTION)
     if not question:
         return json_error("Question not found", status_code=404)
 
@@ -319,7 +323,7 @@ def bookmarks():
     for question_id in bookmarked_question_ids:
         try:
             object_ids.append(ObjectId(question_id))
-        except Exception:
+        except InvalidId:
             pass
     questions = list(db.question.find({"_id": {"$in": object_ids}}, BOOKMARKS_QUESTION_PROJECTION))
 

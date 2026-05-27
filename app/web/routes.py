@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, current_app
 from bson import ObjectId
 from bson.errors import InvalidId
 from app.extensions import db
@@ -12,7 +12,8 @@ def public_profile(user_id):
         user_doc = db.user.find_one({"_id": ObjectId(user_id)})
     except InvalidId:
         return "Invalid User ID", 400
-    except Exception:
+    except Exception as exc:
+        current_app.logger.exception(f"Failed to load public profile for user {user_id}: {exc}")
         return "Server Error", 500
 
     if not user_doc:

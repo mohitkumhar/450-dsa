@@ -2,6 +2,7 @@ import re
 from urllib.parse import quote_plus, urlparse
 
 from bson import ObjectId
+from bson.errors import InvalidId
 
 from app.extensions import db
 
@@ -158,7 +159,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
     if topic_id_str:
         try:
             mongo_query["topic"] = ObjectId(topic_id_str)
-        except Exception:
+        except InvalidId:
             return empty_payload()
 
     platform_name = PLATFORM_FILTER_MAP.get(platform_filter, "")
@@ -177,7 +178,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
             return empty_payload()
         try:
             mongo_query["_id"] = {"$in": [ObjectId(question_id) for question_id in ids]}
-        except Exception:
+        except InvalidId:
             return empty_payload()
 
     projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1, "editorial_links": 1}

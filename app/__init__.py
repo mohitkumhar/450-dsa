@@ -164,8 +164,8 @@ def create_app(config_class=None):
         
         # Lightweight schema backfill for legacy user documents.
         db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
-    except Exception:
-        pass
+    except Exception as exc:
+        app.logger.warning(f"Database indexing or schema backfill failed: {exc}")
     data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
 

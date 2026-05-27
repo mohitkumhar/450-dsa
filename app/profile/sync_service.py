@@ -1,4 +1,5 @@
 import json
+import logging
 
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.platforms.fetchers import (
@@ -14,6 +15,8 @@ from app.platforms.fetchers import (
     run_fetch_jobs,
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
+
+logger = logging.getLogger("flask.app")
 
 
 SYNC_COOLDOWN_SECONDS = 600
@@ -59,12 +62,12 @@ def build_platform_sync_jobs(
                 rating_history = fetch_leetcode_rating_history(leetcode_username)
                 if rating_history:
                     result["rating_history"] = rating_history
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"LeetCode rating history sync failed: {exc}")
             try:
                 result["badges"] = fetch_lc_badges(leetcode_username)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"LeetCode badges sync failed: {exc}")
             return result
 
         jobs["leetcode"] = fetch_leetcode_bundle
