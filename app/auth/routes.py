@@ -114,6 +114,9 @@ class UserWrapper(UserMixin):
             raise AttributeError(name)
         return self._doc.get(name)
 
+    def get(self, name, default=None):
+        return self._doc.get(name, default)
+
     def reload(self):
         self._doc = db.user.find_one({"_id": self._doc["_id"]}) or self._doc
         return self

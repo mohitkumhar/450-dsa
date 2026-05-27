@@ -207,6 +207,45 @@ def compute_total_solved(progress, external_totals, all_questions=None):
     return max(dsa_done, external_total)
 
 
+def _get_field(user_doc, name, default=None):
+    """Get a field from a raw dict or a ``UserWrapper`` (Flask-Login) object."""
+    if user_doc is None:
+        return default
+    try:
+        return user_doc.get(name, default)
+    except (TypeError, AttributeError):
+        pass
+    try:
+        return getattr(user_doc, name)
+    except AttributeError:
+        return default
+
+
+def get_merged_daily_counts(user_doc):
+    """Return merged flat dict of daily counts, preferring per-platform data with legacy fallback.
+
+    Uses the new ``platform_calendars`` dict (``{platform: {date: count}}``) when available,
+    then fills in any dates from the legacy ``external_daily_counts`` that are not already
+    covered.  Falls back entirely to ``external_daily_counts`` when no per-platform data exists.
+    """
+    platform_calendars = _get_field(user_doc, "platform_calendars", {})
+    if isinstance(platform_calendars, dict) and platform_calendars:
+        merged = {}
+        for _platform, counts in platform_calendars.items():
+            if isinstance(counts, dict):
+                for date, count in counts.items():
+                    if coerce_non_negative_number(count) > 0:
+                        merged[date] = merged.get(date, 0) + count
+        if merged:
+            legacy = _get_field(user_doc, "external_daily_counts", {})
+            if isinstance(legacy, dict):
+                for date, count in legacy.items():
+                    if date not in merged and coerce_non_negative_number(count) > 0:
+                        merged[date] = count
+            return merged
+    return _get_field(user_doc, "external_daily_counts", {})
+
+
 def compute_c_score(user_doc, all_questions=None):
     """Compute composite C-Score (0-999) for a user document."""
     progress = user_doc.get("progress", {})
@@ -230,7 +269,7 @@ def compute_c_score(user_doc, all_questions=None):
         if key in EXTERNAL_SOLVED_TOTAL_KEYS
     )
 
-    ext_daily = user_doc.get("external_daily_counts", {})
+    ext_daily = get_merged_daily_counts(user_doc)
     valid_external_days = count_valid_external_daily_entries(ext_daily)
     ext_daily_keys = valid_external_daily_keys(ext_daily)
     extra_progress_days = set()

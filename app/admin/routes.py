@@ -11,6 +11,7 @@ from flask_login import current_user, login_required
 
 from app.decorators import admin_required
 from app.extensions import db
+from app.utils import get_merged_daily_counts
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -70,7 +71,7 @@ def _compute_system_stats():
     active_users_today = set()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    projection = {"progress": 1, "external_totals": 1, "external_daily_counts": 1}
+    projection = {"progress": 1, "external_totals": 1, "external_daily_counts": 1, "platform_calendars": 1}
     for user in db.user.find({}, projection):
         progress = user.get("progress") or {}
         solved_in_app = 0
@@ -88,7 +89,7 @@ def _compute_system_stats():
             for key in ("LeetCode", "GFG", "Coding Ninjas", "HackerRank")
         )
 
-        daily_counts = user.get("external_daily_counts") or {}
+        daily_counts = get_merged_daily_counts(user)
         if daily_counts.get(today, 0) > 0:
             active_users_today.add(user["_id"])
 

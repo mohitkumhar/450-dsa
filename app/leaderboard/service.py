@@ -21,6 +21,7 @@ def build_leaderboard_data():
                 "progress": 1,
                 "external_totals": 1,
                 "external_daily_counts": 1,
+                "platform_calendars": 1,
             },
         )
     )

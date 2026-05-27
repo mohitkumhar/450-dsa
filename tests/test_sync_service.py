@@ -13,6 +13,7 @@ class FakeUser:
         self.hackerrank_username = kwargs.get("hackerrank_username", "")
         self.codingninjas_username = kwargs.get("codingninjas_username", "")
         self.atcoder_username = kwargs.get("atcoder_username", "")
+        self.platform_calendars = kwargs.get("platform_calendars", {})
         self.reload_calls = 0
 
     def reload(self):
@@ -103,7 +104,7 @@ def test_sync_user_platforms_updates_totals_and_clears_cache(monkeypatch):
                     "leetcode_username": "alice",
                     "rating_history": [{"rating": 1700}],
                     "lc_badges_json": '[{"name": "100 Days"}]',
-                    "external_daily_counts": {"2026-05-24": 3},
+                    "platform_calendars": {"leetcode": {"2026-05-24": 3}},
                     "external_totals": {
                         "LeetCode": 25,
                         "LeetCode_Easy": 10,
@@ -119,6 +120,49 @@ def test_sync_user_platforms_updates_totals_and_clears_cache(monkeypatch):
     ]
     assert cache.deleted_keys == ["card_user-1"]
     assert user.reload_calls == 1
+
+
+def test_sync_user_platforms_partial_sync_preserves_other_platforms(monkeypatch):
+    now = datetime.now(timezone.utc)
+    user = FakeUser(platform_calendars={"github": {"2026-05-24": 2}})
+    db = FakeDB()
+    cache = FakeCache()
+
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_leetcode",
+        lambda username: {
+            "calendar": {"2026-05-24": 3, "2026-05-25": 1},
+            "total": 10,
+            "difficulty": {"Easy": 5, "Medium": 4, "Hard": 1},
+            "contest": {"attendedContestsCount": 1, "rating": 1500, "globalRanking": 500},
+        },
+    )
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_leetcode_rating_history",
+        lambda username: [],
+    )
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_lc_badges",
+        lambda username: [],
+    )
+    monkeypatch.setattr("app.profile.sync_service.invalidate_leaderboard_cache", lambda: None)
+
+    payload, status_code = sync_user_platforms(
+        user,
+        {"leetcode": "alice"},
+        db,
+        cache,
+        now=now,
+    )
+
+    assert status_code == 200
+    assert payload["success"] is True
+
+    update_doc = db.user.updates[0][1]
+    assert update_doc["$set"]["platform_calendars"] == {
+        "github": {"2026-05-24": 2},
+        "leetcode": {"2026-05-24": 3, "2026-05-25": 1},
+    }
 
 
 def test_build_sync_platforms_response_all_failed():

@@ -16,6 +16,7 @@ from app.profile.sync_service import (
 )
 from app.utils import (
     compute_in_sheet_platform_counts,
+    get_merged_daily_counts,
     json_error,
     json_success,
     merge_platform_counts,
@@ -383,7 +384,7 @@ def profile():
             day = solved_at.strftime("%Y-%m-%d")
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
-    ext_daily = user.external_daily_counts
+    ext_daily = get_merged_daily_counts(user)
     if ext_daily:
         for day, count in ext_daily.items():
             daily_counts[day] = daily_counts.get(day, 0) + count

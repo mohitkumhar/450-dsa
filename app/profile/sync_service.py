@@ -142,7 +142,6 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         codewars_username = data.get("codewars", "").strip()
         update_fields["codewars_username"] = codewars_username
 
-    combined_daily_counts = {}
     platform_totals = {}
     platform_status = {}
 
@@ -151,6 +150,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         if error:
             payload["error"] = error
         platform_status[platform_key] = payload
+
+    # Preserve existing per-platform calendar data across partial syncs
+    existing_calendars = getattr(user, "platform_calendars", {})
+    if not isinstance(existing_calendars, dict):
+        existing_calendars = {}
+    platform_calendars = dict(existing_calendars)
 
     platform_jobs = build_platform_sync_jobs(
         leetcode_username=leetcode_username,
@@ -172,8 +177,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             _mark("leetcode", "failed", "No data returned (username may be invalid or rate-limited).")
         else:
             _mark("leetcode", "synced")
-            for key, value in leetcode_data.get("calendar", {}).items():
-                combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+            platform_calendars["leetcode"] = leetcode_data.get("calendar", {})
             if leetcode_data.get("total") is not None:
                 platform_totals["LeetCode"] = leetcode_data.get("total")
             if leetcode_data.get("difficulty"):
@@ -206,8 +210,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
                 _mark("github", "failed", "GitHub API returned an error. Please try again later.")
         else:
             _mark("github", "synced")
-            for key, value in github_data.get("calendar", {}).items():
-                combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+            platform_calendars["github"] = github_data.get("calendar", {})
             if github_data.get("stats"):
                 platform_totals["GitHub_Issues"] = github_data["stats"]["issues"]
                 platform_totals["GitHub_PRs"] = github_data["stats"]["prs"]
@@ -283,7 +286,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     else:
         _mark("codewars", "skipped")
 
-    update_fields["external_daily_counts"] = combined_daily_counts
+    update_fields["platform_calendars"] = platform_calendars
     update_fields["external_totals"] = platform_totals
     db_handle.user.update_one({"_id": user_id}, {"$set": update_fields})
     user.reload()

@@ -138,7 +138,7 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
     assert payload["platforms"]["hackerrank"]["status"] == "synced"
 
     update_fields = captured["db_update"][1]["$set"]
-    assert update_fields["external_daily_counts"] == {"2026-05-25": 5}
+    assert update_fields["platform_calendars"] == {"leetcode": {"2026-05-25": 2}, "github": {"2026-05-25": 3}}
     assert update_fields["external_totals"]["LeetCode"] == 101
     assert update_fields["external_totals"]["GitHub_Commits"] == 9
     assert update_fields["external_totals"]["GFG"] == 77
@@ -254,5 +254,5 @@ def test_sync_platforms_marks_github_rate_limit_payload_failed(monkeypatch):
         "error": "GitHub API rate limit reached. Please try again later.",
     }
     update_fields = captured["db_update"][1]["$set"]
-    assert update_fields["external_daily_counts"] == {}
+    assert update_fields["platform_calendars"] == {}
     assert "GitHub_Commits" not in update_fields["external_totals"]
