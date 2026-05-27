@@ -46,7 +46,6 @@ def leaderboard():
 
     # Dynamic session data context (never cached)
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
-<<<<<<< HEAD
     
     # Find current user's rank in each category dynamically
     current_user_rank = None
@@ -55,9 +54,6 @@ def leaderboard():
             if entry.get("user_id") == current_user_id:
                 current_user_rank = i + 1
                 break
-=======
-    current_user_rank = get_user_rank_by_c_score(current_user_id, by_cscore)
->>>>>>> 7e8defc7b0fe46fa2565f37344cd135276ffb2e7
     
     return render_template(
         "leaderboard.html",
