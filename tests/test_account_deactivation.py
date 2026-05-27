@@ -1,4 +1,5 @@
 import mongomock
+import re
 import werkzeug
 from bson import ObjectId
 
@@ -37,6 +38,16 @@ def login_as(client, user_id):
     with client.session_transaction() as session:
         session["_user_id"] = str(user_id)
         session["_fresh"] = True
+
+
+def get_csrf_from_login(client):
+    response = client.get("/login")
+    match = re.search(
+        rb'name="csrf_token" value="([^"]+)"',
+        response.data,
+    )
+    assert match is not None
+    return match.group(1).decode("utf-8")
 
 
 def test_deactivate_account_marks_user_and_logs_out(monkeypatch):
@@ -99,6 +110,46 @@ def test_login_reactivates_deactivated_password_user(monkeypatch):
     assert response.headers["Location"].endswith("/")
     assert user_doc["is_deactivated"] is False
     assert "deactivated_at" not in user_doc
+
+
+def test_login_missing_password_returns_invalid_login(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    hashed = auth_routes.bcrypt.generate_password_hash("StrongPass1!").decode("utf-8")
+    test_db.user.insert_one(
+        {
+            "name": "Missing Password",
+            "email": "missing-password@example.com",
+            "password": hashed,
+            "progress": {},
+        }
+    )
+
+    with flask_app.test_client() as client:
+        csrf_token = get_csrf_from_login(client)
+        response = client.post(
+            "/login",
+            data={
+                "email": "missing-password@example.com",
+                "csrf_token": csrf_token,
+            },
+        )
+
+    assert response.status_code == 200
+    assert b"Login unsuccessful" in response.data
+
+
+def test_login_missing_email_returns_invalid_login(monkeypatch):
+    flask_app, _ = create_test_app(monkeypatch)
+
+    with flask_app.test_client() as client:
+        csrf_token = get_csrf_from_login(client)
+        response = client.post(
+            "/login",
+            data={"password": "StrongPass1!", "csrf_token": csrf_token},
+        )
+
+    assert response.status_code == 200
+    assert b"Login unsuccessful" in response.data
 
 
 def test_public_profile_and_card_hide_deactivated_user(monkeypatch):

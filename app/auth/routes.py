@@ -149,9 +149,15 @@ def login():
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
         email = normalize_email(request.form.get("email"))
-        password = request.form.get("password")
+        password = request.form.get("password") or ""
         user_doc = db.user.find_one({"email": email})
-        if user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
+        if (
+            email
+            and password
+            and user_doc
+            and user_doc.get("password")
+            and bcrypt.check_password_hash(user_doc["password"], password)
+        ):
             user_doc = reactivate_user_if_needed(user_doc)
             login_user(UserWrapper(user_doc))
             flash(f"Welcome back, {user_doc.get('name', 'User')}! 👋", "success")
