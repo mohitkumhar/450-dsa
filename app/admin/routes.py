@@ -5,12 +5,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import ObjectId
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for, jsonify
 from flask import session
 from flask_login import current_user, login_required
 
 from app.decorators import admin_required
 from app.extensions import db
+from app.discord_webhook import DiscordWebhookConfig  # ADD THIS
+from app.utils import trigger_discord_event  # ADD THIS
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -200,3 +202,87 @@ def delete_user(user_id):
     display_name = target_user.get("name") or target_user.get("email") or "user"
     flash(f"Deleted account for {display_name}.", "success")
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
+# ========== DISCORD WEBHOOK MANAGEMENT ==========
+
+@admin_bp.route("/discord-webhooks", methods=["GET"])
+@login_required
+@admin_required
+def discord_webhooks():
+    """Manage Discord webhook configurations."""
+    webhooks = DiscordWebhookConfig.get_all()
+    return render_template("admin/discord_webhooks.html", webhooks=webhooks)
+
+@admin_bp.route("/discord-webhooks/create", methods=["POST"])
+@login_required
+@admin_required
+def create_discord_webhook():
+    """Create a new Discord webhook configuration."""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"success": False, "error": "No data provided"}), 400
+    
+    webhook_url = data.get("webhook_url", "").strip()
+    name = data.get("name", "").strip()
+    events = data.get("events", {})
+    
+    if not webhook_url:
+        return jsonify({"success": False, "error": "Webhook URL is required"}), 400
+    
+    try:
+        config = DiscordWebhookConfig.create(
+            webhook_url=webhook_url,
+            events=events,
+            created_by=current_user.id,
+            name=name if name else None
+        )
+        return jsonify({"success": True, "webhook": str(config["_id"])}), 201
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to create: {str(e)}"}), 500
+
+@admin_bp.route("/discord-webhooks/<webhook_id>/test", methods=["POST"])
+@login_required
+@admin_required
+def test_discord_webhook(webhook_id):
+    """Test a Discord webhook configuration."""
+    try:
+        result = DiscordWebhookConfig.test(webhook_id)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@admin_bp.route("/discord-webhooks/<webhook_id>/update", methods=["PUT"])
+@login_required
+@admin_required
+def update_discord_webhook(webhook_id):
+    """Update a Discord webhook configuration."""
+    data = request.get_json()
+    
+    try:
+        success = DiscordWebhookConfig.update(webhook_id, data)
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Webhook not found or no changes made"}), 404
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@admin_bp.route("/discord-webhooks/<webhook_id>/delete", methods=["DELETE"])
+@login_required
+@admin_required
+def delete_discord_webhook(webhook_id):
+    """Delete a Discord webhook configuration."""
+    try:
+        success = DiscordWebhookConfig.delete(webhook_id)
+        if success:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Webhook not found"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

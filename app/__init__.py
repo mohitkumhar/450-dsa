@@ -235,6 +235,20 @@ def create_app(config_class=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
 
+    # Initialize Discord webhook collection (skip if no active DB connection)
+    try:
+        from app.discord_webhook import DiscordWebhookConfig  # noqa: F401
+        # Only try to create collection if mongo is initialized
+        if mongo.db is not None:
+            actual_db = mongo.db
+            if "discord_webhooks" not in actual_db.list_collection_names():
+                actual_db.create_collection("discord_webhooks")
+                actual_db.discord_webhooks.create_index("created_at")
+                actual_db.discord_webhooks.create_index("is_active")
+                actual_db.discord_webhooks.create_index("events")
+    except Exception:
+        pass  # Skip Discord initialization if DB not ready (e.g., during tests)
+
     @app.errorhandler(429)
     def ratelimit_handler(e):
         retry_after = getattr(e, 'retry_after', 60)
@@ -266,7 +280,5 @@ def create_app(config_class=None):
             )
         response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
-
-
 
     return app

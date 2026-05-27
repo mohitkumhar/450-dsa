@@ -282,6 +282,21 @@
     gap: 8px;
 }
 
+/* Discord Webhook Card Styles */
+.discord-card {
+    background: linear-gradient(135deg, rgba(88, 101, 242, 0.1), rgba(88, 101, 242, 0.05));
+    border: 1px solid rgba(88, 101, 242, 0.3);
+    margin-bottom: 16px;
+}
+
+.discord-card:hover {
+    border-color: #5865F2;
+}
+
+.discord-icon {
+    color: #5865F2;
+}
+
 @media (max-width: 980px) {
     .admin-panels {
         grid-template-columns: 1fr;
@@ -416,18 +431,42 @@
         </div>
     </article>
 
-    <article class="panel">
-        <div class="panel-title-row">
-            <div>
-                <h2 class="panel-title">Recent Error Logs</h2>
-                <p class="panel-subtitle">Latest entries from known log files.</p>
+    <div>
+                <!-- Discord Webhooks Card -->
+        <article class="panel discord-card">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bi bi-discord discord-icon fs-1 me-3"></i>
+                <div>
+                    <h2 class="panel-title mb-0 text-light">Discord Webhooks</h2>
+                    <p class="text-secondary mb-0">Configure Discord notifications</p>
+                </div>
             </div>
-        </div>
+            <p class="text-secondary small mb-3">Send milestone achievements and leaderboard updates directly to your Discord server.</p>
+            <a href="{{ url_for('admin.discord_webhooks') }}" class="action-btn" style="background: #5865F2; color: white; border-color: #5865F2;">
+                <i class="bi bi-gear"></i> Manage Webhooks
+            </a>
+        </article>
 
-        <div class="log-area" id="admin-log-area" data-logs-url="{{ url_for('admin.recent_logs') }}" aria-busy="true">
-            <p class="empty-state">Loading recent logs...</p>
-        </div>
-    </article>
+        <!-- Recent Error Logs Panel -->
+        <article class="panel">
+            <div class="panel-title-row">
+                <div>
+                    <h2 class="panel-title">Recent Error Logs</h2>
+                    <p class="panel-subtitle">Latest entries from known log files.</p>
+                </div>
+            </div>
+
+            <div class="log-area">
+                {% if logs %}
+                    {% for entry in logs %}
+                    <div class="log-line"><span class="log-source">[{{ entry.source }}]</span>{{ entry.line }}</div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">No log files found yet. Add app logging to populate this panel.</p>
+                {% endif %}
+            </div>
+        </article>
+    </div>
 </section>
 
 <div class="modal-backdrop" id="delete-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">

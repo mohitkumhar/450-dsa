@@ -15,6 +15,7 @@ from app.utils import (
 from calendar_export import build_study_plan_ics
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
+from app.utils import trigger_discord_event  # ADD THIS LINE
 
 
 tracker_bp = Blueprint("tracker", __name__)
@@ -179,61 +180,7 @@ def export_topic_notes(topic_id):
 @tracker_bp.route("/update_question/<question_id>", methods=["POST"])
 @login_required
 def update_question(question_id):
-    """Update the authenticated user's saved progress for one question.
-    ---
-    tags:
-      - Tracker
-    parameters:
-      - name: question_id
-        in: path
-        type: string
-        required: true
-        description: MongoDB ObjectId of the question to update.
-      - name: body
-        in: body
-        required: true
-        schema:
-          type: object
-          properties:
-            done:
-              type: boolean
-              description: Whether the question is completed.
-            bookmark:
-              type: boolean
-              description: Whether the question is bookmarked.
-            skipped:
-              type: boolean
-              description: Whether the question is postponed for later review.
-            notes:
-              type: string
-              description: User notes for the question.
-    security:
-      - SessionAuth: []
-    responses:
-      200:
-        description: Question progress updated successfully.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-              example: true
-      401:
-        description: Login required.
-      400:
-        description: Invalid JSON payload.
-      404:
-        description: Question not found.
-        schema:
-          type: object
-          properties:
-            success:
-              type: boolean
-              example: false
-            error:
-              type: string
-              example: Question not found
-    """
+    """Update the authenticated user's saved progress for one question."""
     try:
         question = db.question.find_one({"_id": ObjectId(question_id)}, QUESTION_STATUS_PROJECTION)
     except Exception:
@@ -261,7 +208,17 @@ def update_question(question_id):
             update_fields[f"progress.{question_id}.timestamp"] = utc_now()
             message = f"✅ Marked '{question.get('problem', 'Question')}' as complete!"
             update_fields[f"progress.{question_id}.skipped"] = False
-            update_fields[platform_count_field] = 1
+            
+            # DISCORD MILESTONE TRIGGER - ADDED
+            current_user.reload()
+            user_progress = current_user.progress
+            done_count = sum(1 for item in user_progress.values() if item.get("done"))
+            if done_count in [50, 100, 200]:
+                trigger_discord_event("milestone", {
+                    "user_name": current_user.name,
+                    "milestone": done_count,
+                    "total_solved": done_count
+                })
         elif not data["done"] and existing.get("done"):
             message = f"📝 Marked '{question.get('problem', 'Question')}' as incomplete"
         if not data["done"] and existing.get("done"):
