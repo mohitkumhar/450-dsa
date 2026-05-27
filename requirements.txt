@@ -1,5 +1,5 @@
 Flask==2.3.2
-Werkzeug<3
+Werkzeug==2.3.8
 Flask-PyMongo==2.3.0
 pymongo==4.7.2
 Flask-Login==0.6.3
@@ -15,3 +15,4 @@ redis==5.0.4
 # pyjson5==1.6.2
 Flask-Caching==2.0.2
 flasgger==0.9.7.1
+gunicorn==22.0.0
