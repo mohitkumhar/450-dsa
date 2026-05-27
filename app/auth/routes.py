@@ -2,7 +2,7 @@ import re
 import secrets
 
 from bson import ObjectId
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
 from app.extensions import bcrypt, db, github, google, limiter, login_manager
@@ -52,6 +52,7 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
             "progress": {},
             "is_admin": False,
             "created_at": utc_now(),
+            **DEFAULT_THEME_PREFERENCES,
         }
     )
     user_doc = db.user.find_one({"_id": result.inserted_id})
@@ -82,10 +83,22 @@ def validate_registration_password(password, confirm_password):
     return errors
 
 
+<<<<<<< ours
 def normalize_email(email):
     if not email:
         return ""
     return email.strip().lower()
+=======
+DEFAULT_THEME_PREFERENCES = {
+    "theme_accent": "#ba5912",
+    "theme_density": "comfortable",
+    "theme_chart_palette": "default",
+}
+THEME_PREFERENCE_FIELDS = set(DEFAULT_THEME_PREFERENCES)
+HEX_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
+THEME_DENSITIES = {"comfortable", "compact"}
+CHART_PALETTES = {"default", "pastel", "vivid", "colorblind"}
+>>>>>>> theirs
 
 
 class UserWrapper(UserMixin):
@@ -93,6 +106,23 @@ class UserWrapper(UserMixin):
 
     def __init__(self, user_doc):
         self._doc = user_doc or {}
+
+    @property
+    def theme_accent(self):
+        return self._doc.get("theme_accent", DEFAULT_THEME_PREFERENCES["theme_accent"])
+
+    @property
+    def theme_density(self):
+        return self._doc.get("theme_density", DEFAULT_THEME_PREFERENCES["theme_density"])
+
+    @property
+    def theme_chart_palette(self):
+        return self._doc.get("theme_chart_palette", DEFAULT_THEME_PREFERENCES["theme_chart_palette"])
+
+    @property
+    def theme_preferences_customized(self):
+        preferences = _theme_preferences_from_user(self._doc)
+        return preferences["theme_preferences_customized"]
 
     def get_id(self):
         return str(self._doc["_id"])
@@ -144,6 +174,75 @@ def load_user(user_id):
         return UserWrapper(doc) if doc else None
     except Exception:
         return None
+
+
+def _theme_preferences_from_user(user_doc):
+    preferences = {
+        key: user_doc.get(key, default)
+        for key, default in DEFAULT_THEME_PREFERENCES.items()
+    }
+    preferences["theme_preferences_customized"] = bool(
+        user_doc.get("theme_preferences_updated_at")
+        or any(
+            preferences[key] != DEFAULT_THEME_PREFERENCES[key]
+            for key in THEME_PREFERENCE_FIELDS
+        )
+    )
+    return preferences
+
+
+def _validate_theme_preferences(data):
+    updates = {}
+    errors = {}
+
+    if "theme_accent" in data:
+        accent = str(data["theme_accent"]).strip()
+        if HEX_COLOR_PATTERN.match(accent):
+            updates["theme_accent"] = accent.lower()
+        else:
+            errors["theme_accent"] = "Accent color must be a 6-digit hex value."
+
+    if "theme_density" in data:
+        density = str(data["theme_density"]).strip()
+        if density in THEME_DENSITIES:
+            updates["theme_density"] = density
+        else:
+            errors["theme_density"] = "Density must be comfortable or compact."
+
+    if "theme_chart_palette" in data:
+        palette = str(data["theme_chart_palette"]).strip()
+        if palette in CHART_PALETTES:
+            updates["theme_chart_palette"] = palette
+        else:
+            errors["theme_chart_palette"] = "Chart palette is not supported."
+
+    return updates, errors
+
+
+@auth_bp.route("/theme_preferences", methods=["GET"])
+@login_required
+def get_theme_preferences():
+    user_doc = db.user.find_one({"_id": current_user.id})
+    if not user_doc:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(_theme_preferences_from_user(user_doc))
+
+
+@auth_bp.route("/theme_preferences", methods=["POST"])
+@login_required
+def update_theme_preferences():
+    data = request.get_json(silent=True) or {}
+    updates, errors = _validate_theme_preferences(data)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    if not updates:
+        return jsonify({"error": "No valid fields provided."}), 400
+
+    updates["theme_preferences_updated_at"] = utc_now()
+    db.user.update_one({"_id": current_user.id}, {"$set": updates})
+    current_user.reload()
+    user_doc = db.user.find_one({"_id": current_user.id}) or {}
+    return jsonify({"success": True, **_theme_preferences_from_user(user_doc)})
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -199,6 +298,7 @@ def register():
                     "progress": {},
                     "is_admin": False,
                     "created_at": utc_now(),
+                    **DEFAULT_THEME_PREFERENCES,
                 }
             )
             flash("Your account has been created! You can now log in.", "success")

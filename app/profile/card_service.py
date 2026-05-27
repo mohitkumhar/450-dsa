@@ -20,13 +20,14 @@ card_cache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 _cache_lock = Lock()
 
 
-def _build_card_etag(name, c_score, dsa_progress, current_streak, platforms):
+def _build_card_etag(name, c_score, dsa_progress, current_streak, platforms, accent_color):
     payload = {
         "name": name,
         "c_score": c_score,
         "dsa_progress": dsa_progress,
         "current_streak": current_streak,
         "platforms": platforms,
+        "accent_color": accent_color,
     }
     digest = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -75,6 +76,7 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     progress_data = user.get("progress", {})
     current_streak, _ = compute_streak(progress_data)
 
+<<<<<<< ours
     if user.get("in_sheet_platform_counts"):
         platforms = merge_platform_counts(user.get("in_sheet_platform_counts"), user.get("external_totals", {}))
     else:
@@ -82,6 +84,13 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
         solved_items = {qid: progress for qid, progress in progress_data.items() if progress.get("done")}
         platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
     etag = _build_card_etag(name, c_score, dsa_progress, current_streak, platforms)
+=======
+    all_questions = list(db_handle.question.find())
+    solved_items = {qid: progress for qid, progress in progress_data.items() if progress.get("done")}
+    platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
+    accent_color = user.get("theme_accent", "#ba5912")
+    etag = _build_card_etag(name, c_score, dsa_progress, current_streak, platforms, accent_color)
+>>>>>>> theirs
     last_modified = _card_last_modified(user, progress_data)
 
     with _cache_lock:
@@ -92,7 +101,7 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
                 return BytesIO(cached_bytes), etag, last_modified
 
     img_io = card_generator.generate_progress_card(
-        name, c_score, dsa_progress, current_streak, platforms
+        name, c_score, dsa_progress, current_streak, platforms, accent_color=accent_color
     )
     if isinstance(img_io, BytesIO):
         img_io.seek(0)

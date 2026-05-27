@@ -161,11 +161,23 @@ def create_app(config_class=None):
         _dedupe_seeded_questions()
         db.question.create_index([("topic", 1), ("problem", 1), ("url", 1)], unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
+<<<<<<< ours
         
         # Lightweight schema backfill for legacy user documents.
         db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
     except Exception as exc:
         app.logger.warning(f"Database indexing or schema backfill failed: {exc}")
+=======
+    except Exception:
+        pass
+
+    # Lightweight schema backfill for legacy user documents.
+    db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
+    db.user.update_many({"theme_accent": {"$exists": False}}, {"$set": {"theme_accent": "#ba5912"}})
+    db.user.update_many({"theme_density": {"$exists": False}}, {"$set": {"theme_density": "comfortable"}})
+    db.user.update_many({"theme_chart_palette": {"$exists": False}}, {"$set": {"theme_chart_palette": "default"}})
+
+>>>>>>> theirs
     data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
 

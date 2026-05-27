@@ -55,8 +55,8 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
     fake_cache = FakeCache()
     generated = []
 
-    def fake_generate(name, c_score, dsa_progress, current_streak, platforms):
-        generated.append((name, c_score, dsa_progress, current_streak, platforms))
+    def fake_generate(name, c_score, dsa_progress, current_streak, platforms, accent_color="#ba5912"):
+        generated.append((name, c_score, dsa_progress, current_streak, platforms, accent_color))
         return BytesIO(b"fake-png")
 
     monkeypatch.setattr("app.profile.card_service.db", fake_db)
@@ -73,7 +73,7 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
     second.seek(0)
     assert second.read() == b"fake-png"
     assert len(generated) == 1
-    assert generated[0] == ("Card User", 144, 100.0, 4, {"LeetCode": 12})
+    assert generated[0] == ("Card User", 144, 100.0, 4, {"LeetCode": 12}, "#ba5912")
     assert first_etag == second_etag
     assert first_etag.startswith("progress-card-")
     assert first_last_modified == second_last_modified
