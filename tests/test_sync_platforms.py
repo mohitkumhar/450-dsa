@@ -4,19 +4,20 @@ from types import SimpleNamespace
 import app.profile.routes as profile_routes
 import app.profile.sync_service as profile_sync_service
 from app.profile.routes import profile_bp
+from app.extensions import cache  # Added import for the cache extension
 
 
 def create_profile_test_app():
     app = Flask(__name__)
     app.config.update(
-        LOGIN_DISABLED=True,
-        RATELIMIT_ENABLED=False,
+        TESTING=True, 
+        LOGIN_DISABLED=True, 
         SECRET_KEY="test-secret",
-        TESTING=True,
+        CACHE_TYPE="NullCache"  # Prevents actual caching overhead during tests
     )
+    cache.init_app(app)  # Binds the cache extension to the dummy test app
     app.register_blueprint(profile_bp)
     return app
-
 
 def test_sync_platforms_rejects_missing_json_body():
     app = create_profile_test_app()

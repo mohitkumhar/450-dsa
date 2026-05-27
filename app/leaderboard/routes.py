@@ -14,10 +14,9 @@ from app.leaderboard.service import (
 leaderboard_bp = Blueprint("leaderboard", __name__)
 
 
-@leaderboard_bp.route("/leaderboard")
-@limiter.limit("20 per minute")
-@cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=leaderboard_page_cache_key)
-def leaderboard():
+# Added data-level caching to avoid context-leak in HTML
+@cache.memoize(timeout=300)
+def get_cached_leaderboard_data():
     entries = build_leaderboard_data()
 
     by_cscore = sort_leaderboard_entries_by_c_score(entries)
@@ -34,9 +33,27 @@ def leaderboard():
     assign_ranks(by_questions, "questions")
     assign_ranks(by_rating, "rating")
     assign_ranks(by_college, "college")
+    
+    return by_cscore, by_questions, by_rating, by_college
 
+
+@leaderboard_bp.route("/leaderboard")
+@limiter.limit("20 per minute")
+# Removed @cache.cached(timeout=300) to prevent cross-session context leak
+def leaderboard():
+    # Fetching data securely from memoized function
+    by_cscore, by_questions, by_rating, by_college = get_cached_leaderboard_data()
+
+    # Dynamic session data context (never cached)
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
-    current_user_rank = get_user_rank_by_c_score(current_user_id, by_cscore)
+    
+    # Find current user's rank in each category dynamically
+    current_user_rank = None
+    if current_user_id:
+        for i, entry in enumerate(by_cscore):
+            if entry.get("user_id") == current_user_id:
+                current_user_rank = i + 1
+                break
     
     return render_template(
         "leaderboard.html",
@@ -52,7 +69,8 @@ def leaderboard():
 @leaderboard_bp.route("/api/leaderboard")
 @cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=api_leaderboard_cache_key)
 def api_leaderboard():
-    """Return paginated leaderboard rankings for the selected mode.
+    """
+    Return paginated leaderboard rankings for the selected mode.
     ---
     tags:
       - Leaderboard
@@ -60,75 +78,25 @@ def api_leaderboard():
       - name: mode
         in: query
         type: string
-        required: false
+        description: Sort mode (cscore, questions, rating, college)
         default: cscore
-        enum:
-          - cscore
-          - questions
-          - rating
-          - college
-        description: Ranking mode used to sort leaderboard entries.
       - name: page
         in: query
         type: integer
-        required: false
+        description: Page number
         default: 1
-        minimum: 1
-        description: Page number for paginated results.
       - name: per_page
         in: query
         type: integer
-        required: false
+        description: Number of entries per page
         default: 20
-        maximum: 100
-        description: Number of entries per page.
       - name: current_user_id
         in: query
         type: string
-        required: false
-        description: Optional user id used to return that user's current rank.
+        description: User ID to find current user's rank
     responses:
       200:
-        description: Paginated leaderboard response.
-        schema:
-          type: object
-          properties:
-            entries:
-              type: array
-              items:
-                type: object
-                properties:
-                  rank:
-                    type: integer
-                  user_id:
-                    type: string
-                  name:
-                    type: string
-                  profile_photo:
-                    type: string
-                  college:
-                    type: string
-                  c_score:
-                    type: integer
-                  total_solved:
-                    type: integer
-                  dsa_done:
-                    type: integer
-                  lc_total:
-                    type: integer
-                  lc_rating:
-                    type: integer
-            total:
-              type: integer
-            page:
-              type: integer
-            per_page:
-              type: integer
-            total_pages:
-              type: integer
-            current_user_rank:
-              type: integer
-              x-nullable: true
+        description: Paginated leaderboard entries
     """
     mode = request.args.get("mode", "cscore")
     page = int(request.args.get("page", 1))
