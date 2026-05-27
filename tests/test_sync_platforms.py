@@ -83,15 +83,11 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
         "db",
         SimpleNamespace(user=SimpleNamespace(update_one=lambda query, update: captured.setdefault("db_update", (query, update)))),
     )
-<<<<<<< ours
     monkeypatch.setattr(
         profile_routes.cache,
         "delete",
         lambda key: captured.setdefault("cleared_cache_key", key),
     )
-=======
-    monkeypatch.setattr(profile_routes.cache, "delete", lambda key: captured.setdefault("deleted_cache_key", key))
->>>>>>> theirs
 
     def fake_run_fetch_jobs(fetch_jobs, max_workers=5):
         captured["job_names"] = sorted(fetch_jobs.keys())
@@ -152,7 +148,6 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
     assert update_fields["rating_history"] == [{"x": "2026-05-25", "y": 1800}]
     assert update_fields["lc_badges_json"] == '[{"name": "Knight"}]'
     assert update_fields["hr_badges_json"] == '[{"name": "Problem Solving", "stars": 5}]'
-<<<<<<< ours
 
 
 def test_sync_platforms_tolerates_missing_cache_extension(monkeypatch):
@@ -261,6 +256,3 @@ def test_sync_platforms_marks_github_rate_limit_payload_failed(monkeypatch):
     update_fields = captured["db_update"][1]["$set"]
     assert update_fields["platform_calendars"] == {}
     assert "GitHub_Commits" not in update_fields["external_totals"]
-=======
-    assert captured["deleted_cache_key"] == "card_user-1"
->>>>>>> theirs

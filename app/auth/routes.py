@@ -83,12 +83,12 @@ def validate_registration_password(password, confirm_password):
     return errors
 
 
-<<<<<<< ours
 def normalize_email(email):
     if not email:
         return ""
     return email.strip().lower()
-=======
+
+
 DEFAULT_THEME_PREFERENCES = {
     "theme_accent": "#ba5912",
     "theme_density": "comfortable",
@@ -98,7 +98,6 @@ THEME_PREFERENCE_FIELDS = set(DEFAULT_THEME_PREFERENCES)
 HEX_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
 THEME_DENSITIES = {"comfortable", "compact"}
 CHART_PALETTES = {"default", "pastel", "vivid", "colorblind"}
->>>>>>> theirs
 
 
 class UserWrapper(UserMixin):

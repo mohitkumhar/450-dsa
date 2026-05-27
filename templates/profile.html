@@ -4,109 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
 {% block content %}
-<<<<<<< ours
-=======
-<style>
-.prof-layout{display:grid;grid-template-columns:240px 1fr 260px;gap:16px;align-items:start}
-.prof-sidebar,.prof-main,.prof-right{display:flex;flex-direction:column;gap:14px}
-.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px;color:var(--text-primary)}
-.avatar-ring{width:90px;height:90px;border-radius:50%;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:var(--accent-foreground);margin:0 auto 12px;border:3px solid var(--border-color);position:relative;overflow:hidden}
-.avatar-ring::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skeleton-shimmer 1.15s linear infinite}
-.avatar-ring img{position:relative;z-index:1}
-.prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
-.prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
-.card-btn{margin-bottom:12px}
-.prof-bio{text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px}
-.social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;padding:10px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
-.social-icon{color:var(--text-muted);font-size:1.1rem;text-decoration:none;transition:color 0.2s}
-.social-icon:hover{color:var(--accent)}
-.meta-row{display:flex;align-items:center;gap:6px;font-size:0.79rem;color:var(--text-secondary);margin-bottom:6px}
-.sec-title{font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
-.platform-row{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:8px;margin-bottom:4px;font-size:0.82rem}
-.platform-row:hover{background:var(--bg-secondary)}
-.check-ok{color:var(--success);font-size:0.9rem}
-.link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
-.link-out:hover{color:var(--accent)}
-.add-btn{margin-top:4px}
-.rank-card{background:var(--accent-surface-gradient);border:1px solid var(--border-color);border-radius:14px;padding:14px}
-.rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
-.rank-label{font-size:0.75rem;color:var(--text-secondary)}
-.view-lb-btn{margin-top:10px}
-.meta-footer{font-size:0.72rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-top:8px}
-.meta-footer span{display:flex;justify-content:space-between}
-/* stat cards */
-.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:12px}
-.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
-.stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
-.stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
-/* heatmap */
-.heatmap-grid{display:grid;grid-template-rows:repeat(7,10px);grid-auto-flow:column;gap:2px;overflow-x:auto;padding-bottom:4px}
-.hm-cell{width:10px;height:10px;border-radius:2px;background:var(--bg-secondary)}
-.hm-cell[data-l="1"]{background:color-mix(in srgb,var(--chart-3) 30%,var(--bg-secondary))}
-.hm-cell[data-l="2"]{background:color-mix(in srgb,var(--chart-3) 52%,var(--bg-secondary))}
-.hm-cell[data-l="3"]{background:color-mix(in srgb,var(--chart-3) 74%,var(--bg-secondary))}
-.hm-cell[data-l="4"]{background:var(--chart-3)}
-.hm-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.72rem;color:var(--text-secondary)}
-/* contest row */
-.contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
-.empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
-.chart-shell{position:relative;min-height:130px}
-.chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
-.chart-shell .chart-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:skeleton-shimmer 1.15s linear infinite}
-.chart-shell canvas{position:relative;z-index:1}
-.chart-shell.is-ready .chart-skeleton{display:none}
-.awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
-.award-badge{width:64px;height:74px;background:var(--accent-surface-gradient);border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
-.award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
-.award-badge .a-lbl{font-size:.58rem;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px;text-align:center}
-.hr-stars{display:flex;gap:1px;align-items:center;justify-content:center;flex-wrap:nowrap;line-height:1}
-.hr-stars .s-on{color:#fbbf24;font-size:.65rem}
-.big-num{font-size:2.8rem;font-weight:900;line-height:1;color:var(--text-primary)}
-.metric-value{font-weight:900;line-height:1;color:var(--text-primary)}
-.metric-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
-.sub-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
-/* topic bars */
-.t-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.78rem}
-.t-bar-name{width:110px;text-align:right;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.t-bar-wrap{flex:1;height:20px;background:var(--bg-secondary);border-radius:4px;overflow:hidden}
-.t-bar-fill{height:100%;background:var(--chart-2);border-radius:4px;display:flex;align-items:center;padding-left:6px;color:#fff;font-weight:700;font-size:0.72rem}
-/* right panel */
-.section-title{font-size:0.88rem;font-weight:700;text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
-.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px}
-.donut-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:var(--text-primary)}
-.legend-item{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;background:var(--bg-secondary);margin-bottom:5px;font-size:0.8rem;color:var(--text-primary)}
-.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
-.rating-wrap{display:flex;align-items:center;gap:14px;padding:10px 0}
-.shield-icon{font-size:3.5rem;color:var(--text-muted)}
-.rating-num{font-size:2rem;font-weight:900;line-height:1;color:var(--text-primary)}
-.rating-sub{font-size:0.75rem;color:var(--text-secondary)}
-/* modal */
-.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
-.modal-ov.open{display:flex}
-.modal-bx{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:28px;width:90%;max-width:420px}
-.modal-bx h3{font-size:1rem;font-weight:700;margin-bottom:16px}
-.m-lbl{font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:5px}
-.m-inp{width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;margin-bottom:12px}
-.m-inp:focus{border-color:var(--accent)}
-.m-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
-.m-cancel{padding:8px 16px;border:1px solid var(--border-color);border-radius:8px;background:none;color:var(--text-secondary);font-size:0.83rem;cursor:pointer;font-family:inherit}
-.m-save{padding:8px 16px;background:var(--accent);border:none;border-radius:8px;color:var(--accent-foreground);font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s}
-.m-save:hover:not(:disabled){background:var(--accent-hover)}
-.m-save:disabled{opacity:0.7;cursor:not-allowed}
-.m-note{font-size:0.72rem;color:var(--text-muted);margin-top:-8px;margin-bottom:10px}
-@keyframes btn-spin{to{transform:rotate(360deg)}}
-.btn-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:btn-spin .7s linear infinite;flex-shrink:0}
-/* responsive */
-@media(max-width:1100px){.prof-layout{grid-template-columns:200px 1fr 220px}}
-@media(max-width:860px){.prof-layout{grid-template-columns:1fr}.prof-right{order:-1}.stat-row{grid-template-columns:1fr 1fr 1fr}}
-@media(max-width:520px){.stat-row{grid-template-columns:1fr 1fr}.contest-grid{grid-template-columns:1fr}}
-/* Modal focus trap - prevent background scroll */
-body.modal-open {
-    overflow: hidden;
-}
-</style>
 
->>>>>>> theirs
 <div class="prof-layout">
 
 <!-- ── LEFT SIDEBAR ── -->
@@ -418,29 +316,10 @@ body.modal-open {
     <div>
       {% for name in ['LeetCode', 'GFG', 'Coding Ninjas', 'HackerRank', 'AtCoder', 'Codewars'] %}
       <div class="legend-item">
-<<<<<<< ours
+
         <span><span class="legend-dot" style="background:{{ PLATFORM_META[name].brand_color }}"></span><span style="color:{{ PLATFORM_META[name].brand_color }};font-weight:700">{{ name }}</span></span>
         <strong>{{ platforms[name] }}</strong>
-=======
-        <span><span class="legend-dot" style="background:var(--chart-5)"></span><span style="color:var(--chart-5);font-weight:700">LeetCode</span></span>
-        <strong>{{ platforms['LeetCode'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:var(--chart-3)"></span><span style="color:var(--chart-3);font-weight:700">GFG</span></span>
-        <strong>{{ platforms['GFG'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:var(--chart-4)"></span><span style="color:var(--chart-4);font-weight:700">Coding Ninjas</span></span>
-        <strong>{{ platforms['Coding Ninjas'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:var(--chart-2)"></span><span style="color:var(--chart-2);font-weight:700">HackerRank</span></span>
-        <strong>{{ platforms['HackerRank'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:var(--chart-6)"></span><span style="color:var(--chart-6);font-weight:700">AtCoder</span></span>
-        <strong>{{ platforms['AtCoder'] }}</strong>
->>>>>>> theirs
+
       </div>
       {% endfor %}
       <div class="legend-item">
@@ -513,15 +392,12 @@ body.modal-open {
     <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
     <label class="m-lbl"><i class="bi bi-h-square" style="color:var(--chart-2);margin-right:4px"></i>HackerRank Username</label>
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
-<<<<<<< ours
-    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
-    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
-    <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
-=======
+
     <label class="m-lbl"><i class="bi bi-trophy" style="color:var(--chart-6);margin-right:4px"></i>AtCoder Handle</label>
     <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
->>>>>>> theirs
+    <label class="m-lbl"><i class="bi bi-fire" style="color:var(--chart-1);margin-right:4px"></i>Codewars Username</label>
+    <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
+
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
@@ -726,14 +602,11 @@ window.handleQuickSync = function(btn) {
   const hr = '{{ user.hackerrank_username or "" }}';
   const cn = '{{ user.codingninjas_username or "" }}';
   const ac = '{{ user.atcoder_username or "" }}';
-<<<<<<< ours
+
   const cw = '{{ user.codewars_username or "" }}';
   
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
-=======
-  
-  if(!lc && !gh && !gfg && !hr && !cn && !ac){
->>>>>>> theirs
+
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
@@ -744,13 +617,10 @@ window.handleQuickSync = function(btn) {
   
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
-<<<<<<< ours
+
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})
-=======
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac})
->>>>>>> theirs
+
   })
   .then(r => r.json())
   .then(res => {
@@ -778,12 +648,10 @@ window.handleSyncProfile = function(btn){
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
   const ac=document.getElementById('ac_username').value.trim();
-<<<<<<< ours
+
   const cw=document.getElementById('cw_username').value.trim();
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
-=======
-  if(!lc && !gh && !gfg && !hr && !cn && !ac){showToast('\u26a0\ufe0f Enter at least one username');return;}
->>>>>>> theirs
+
 
   // Disable button & show spinner
   window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
@@ -828,13 +696,10 @@ window.handleSyncProfile = function(btn){
 
   fetch(endpointConfig.syncPlatforms,{
     method:'POST',
-<<<<<<< ours
+
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw}),
-=======
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac}),
->>>>>>> theirs
+
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
@@ -863,8 +728,7 @@ window.handleSyncProfile = function(btn){
   });
 };
 
-<<<<<<< ours
-=======
+
 // ── Chart & Visualization Code ──
 const themeStyles = getComputedStyle(document.documentElement);
 const chartThemeColor = (name, fallback) => themeStyles.getPropertyValue(name).trim() || fallback;
@@ -878,7 +742,7 @@ const chartPalette = [
   chartThemeColor('--chart-6', '#64748b'),
   chartThemeColor('--chart-1', '#ba5912'),
 ];
->>>>>>> theirs
+
 const dailyCounts = {{ daily_counts | tojson }};
 const heatmap = document.getElementById('heatmap');
 function exportChart(id,file){
@@ -906,50 +770,13 @@ for(let i=0;i<days;i++){
 
 const ratingHistory = {{ rating_history | tojson }};
 const cumData = {{ cumulative_data | tojson }};
-<<<<<<< ours
+
 const pData = {{ platforms | tojson }};
 const chartShells=['progressChartShell','platformsChartShell','difficultyChartShell'].map(i=>document.getElementById(i)).filter(Boolean);let chartJsPromise;
 function loadChartJs(){return window.Chart?Promise.resolve(window.Chart):chartJsPromise||(chartJsPromise=new Promise((ok,bad)=>{let add=(src,err)=>{let s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>ok(window.Chart);s.onerror=err||bad;document.head.appendChild(s)};add('https://cdn.jsdelivr.net/npm/chart.js',()=>add('https://unpkg.com/chart.js@4/dist/chart.umd.js'))}))}
-function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
+function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:chartAccent,backgroundColor:chartAccentDim,borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:chartAccent}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
 if('IntersectionObserver'in window&&chartShells.length){const io=new IntersectionObserver((e,o)=>{if(e.some(x=>x.isIntersecting)){o.disconnect();renderProfileCharts()}},{rootMargin:'160px'});chartShells.forEach(s=>io.observe(s))}else renderProfileCharts();
-=======
-const chartCanvas = document.getElementById('progressChart');
-const chartData = ratingHistory.length > 0 ? ratingHistory : cumData;
-let progressChartInstance = null;
-let platformsChartInstance = null;
-let difficultyChartInstance = null;
-if(chartData.length > 0 && chartCanvas && typeof Chart !== 'undefined'){
-  progressChartInstance = new Chart(chartCanvas,{
-    type:'line',
-    data:{labels:chartData.map(d=>d.x),datasets:[{data:chartData.map(d=>d.y),borderColor:chartAccent,backgroundColor:chartAccentDim,borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length>0?3:0,pointHoverRadius:5,pointBackgroundColor:chartAccent}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:items=>items[0].label,label:ctx=>ratingHistory.length>0?'Rating: '+ctx.raw:'Solved: '+ctx.raw}}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}
-  });
-  markChartReady('progressChartShell');
-} else if(chartCanvas && typeof Chart !== 'undefined') {
-  // Show empty state inside canvas area
-  const ctx = chartCanvas.getContext('2d');
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fillRect(0,0,chartCanvas.width,chartCanvas.height);
-  ctx.fillStyle = '#555';
-  ctx.font = '13px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Sync LeetCode to see rating chart', chartCanvas.width/2, chartCanvas.height/2 - 8);
-  markChartReady('progressChartShell');
-}
 
-const pData = {{ platforms | tojson }};
-try{platformsChartInstance = new Chart(document.getElementById('platformsChart'),{
-  type:'doughnut',
-  data:{labels:['LeetCode','GFG','Coding Ninjas','HackerRank','AtCoder','Other'],datasets:[{data:[pData['LeetCode'],pData['GFG'],pData['Coding Ninjas'],pData['HackerRank'],pData['AtCoder'],pData['Other']],backgroundColor:chartPalette,borderWidth:0,cutout:'78%'}]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-}); markChartReady('platformsChartShell');}catch(e){console.warn('Chart.js load failed:',e); markChartReady('platformsChartShell');}
-
-try{difficultyChartInstance = new Chart(document.getElementById('difficultyChart'),{
-  type:'doughnut',
-  data:{labels:['Easy','Medium','Hard'],datasets:[{data:[{{lc_easy}},{{lc_medium}},{{lc_hard}}],backgroundColor:[chartThemeColor('--chart-3', '#22c55e'), chartThemeColor('--chart-5', '#a16207'), chartThemeColor('--chart-4', '#be185d')],borderWidth:0,cutout:'78%'}]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
-}); markChartReady('difficultyChartShell');}catch(e){console.warn('Difficulty chart error:',e); markChartReady('difficultyChartShell');}
->>>>>>> theirs
 
 window.refreshThemedCharts = function(){
   const styles = getComputedStyle(document.documentElement);
