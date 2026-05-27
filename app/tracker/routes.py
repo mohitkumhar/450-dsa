@@ -12,6 +12,7 @@ from app.utils import (
     json_success,
     platform_from_question_url,
     question_editorial_links,
+    update_computed_stats,
     utc_now,
 )
 from calendar_export import build_study_plan_ics
@@ -313,6 +314,10 @@ def update_question(question_id):
             update_doc["$inc"] = inc_fields
         db.user.update_one({"_id": user_id}, update_doc)
         current_user.reload()
+        pre = current_app.config.get("_PRECOMPUTED")
+        total_questions = (pre["total_questions"] if pre
+                           else db.question.count_documents({}))
+        update_computed_stats(user_id, current_user.progress, db, total_questions)
         invalidate_leaderboard_cache()
         warm_public_card_cache(user_id, db_handle=db)
         return json_success(message=message)

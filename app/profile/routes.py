@@ -19,9 +19,11 @@ from app.utils import (
     json_error,
     json_success,
     merge_platform_counts,
+    update_computed_stats,
     utc_now,
 )
 from profile_validation import build_profile_updates
+from streaks import compute_streak
 
 profile_bp = Blueprint("profile", __name__)
 
@@ -342,6 +344,7 @@ def profile():
     user = current_user
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
     dsa_done = len(solved_items)
+    current_streak, longest_streak = compute_streak(user.progress)
 
     pre = current_app.config.get("_PRECOMPUTED")
     if pre:
@@ -454,6 +457,8 @@ def profile():
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
+    update_computed_stats(user.id, user.progress, db, total_questions)
+
     return render_template(
         "profile.html",
         user=user,
@@ -480,4 +485,6 @@ def profile():
         lc_badges=lc_badges,
         hr_badges=hr_badges,
         profile_leaderboard_rank=profile_leaderboard_rank,
+        current_streak=current_streak,
+        longest_streak=longest_streak,
     )

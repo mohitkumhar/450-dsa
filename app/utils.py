@@ -312,3 +312,20 @@ def merge_platform_counts(in_sheet_counts, external_totals):
     platforms["Codewars"] = max(platforms["Codewars"], coerce_non_negative_number(ext_totals.get("Codewars", 0)))
 
     return platforms
+
+
+def update_computed_stats(user_id, progress, db_handle, total_questions):
+    from streaks import compute_streak
+
+    dsa_done = sum(1 for p in progress.values() if p.get("done"))
+    dsa_progress = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
+    current_streak, longest_streak = compute_streak(progress)
+
+    db_handle.user.update_one(
+        {"_id": user_id},
+        {"$set": {
+            "dsa_progress": dsa_progress,
+            "current_streak": current_streak,
+            "longest_streak": longest_streak,
+        }}
+    )
