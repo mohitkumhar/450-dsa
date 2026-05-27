@@ -145,6 +145,28 @@ def create_app(config_class=None):
     def init_db():
         with data_path.open("r", encoding="utf-8") as file_obj:
             data = json.load(file_obj)
+        if not all(hasattr(collection, "update_one") for collection in (db.topic, db.question)):
+            if db.topic.count_documents({}) == 0:
+                for topic in data:
+                    result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})
+                    topic_id = result.inserted_id
+                    questions = []
+                    for question in topic["questions"]:
+                        difficulty = question.get("difficulty", "Medium")
+                        questions.append(
+                            {
+                                "topic": topic_id,
+                                "problem": question["Problem"],
+                                "url": question["URL"],
+                                "url2": question.get("URL2", ""),
+                                "editorial_links": question_editorial_links(question),
+                                "difficulty": difficulty,
+                            }
+                        )
+                    if questions:
+                        db.question.insert_many(questions)
+            return
+
         for topic in data:
             db.topic.update_one(
                 {"name": topic["topicName"]},
