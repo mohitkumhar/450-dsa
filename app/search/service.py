@@ -6,28 +6,7 @@ from bson import ObjectId
 from app.extensions import db
 
 
-PLATFORM_SEARCHES = {
-    "LeetCode": {
-        "aliases": ("lc", "leetcode", "leet code"),
-        "color": "lc",
-        "url": "https://duckduckgo.com/?q=site%3Aleetcode.com%2Fproblems+{query}",
-    },
-    "GFG": {
-        "aliases": ("gfg", "geeksforgeeks", "geeks for geeks"),
-        "color": "gfg",
-        "url": "https://duckduckgo.com/?q=site%3Ageeksforgeeks.org%2Fproblems+{query}",
-    },
-    "Coding Ninjas": {
-        "aliases": ("cn", "coding ninjas", "codingninjas", "code360", "naukri code360"),
-        "color": "cn",
-        "url": "https://duckduckgo.com/?q=%28site%3Anaukri.com%2Fcode360%2Fproblems+OR+site%3Acodingninjas.com%2Fcodestudio%2Fproblems%29+{query}",
-    },
-    "HackerRank": {
-        "aliases": ("hr", "hackerrank", "hacker rank"),
-        "color": "hr",
-        "url": "https://duckduckgo.com/?q=site%3Ahackerrank.com%2Fchallenges+{query}",
-    },
-}
+from app.platforms.metadata import PLATFORM_META
 
 
 def parse_search_query(raw_query):
@@ -36,7 +15,9 @@ def parse_search_query(raw_query):
     query_l = query.lower()
     requested_platforms = []
 
-    for platform, meta in PLATFORM_SEARCHES.items():
+    for platform_name, meta in PLATFORM_META.items():
+        if not meta.get("search_url"):
+            continue
         platform_requested = False
         for alias in meta["aliases"]:
             pattern = r"(?<![a-z0-9])" + re.escape(alias) + r"(?![a-z0-9])"
@@ -45,7 +26,7 @@ def parse_search_query(raw_query):
                 query = re.sub(pattern, " ", query, flags=re.IGNORECASE)
                 query_l = query.lower()
         if platform_requested:
-            requested_platforms.append(platform)
+            requested_platforms.append(platform_name)
 
     cleaned = re.sub(r"\s+", " ", query).strip()
     return cleaned, requested_platforms
@@ -56,16 +37,17 @@ def tokenize_search_text(value):
 
 
 def build_external_searches(query, requested_platforms=None):
-    platforms = requested_platforms or list(PLATFORM_SEARCHES.keys())
+    searchable_platforms = [p for p, m in PLATFORM_META.items() if m.get("search_url")]
+    platforms = requested_platforms or searchable_platforms
     encoded = quote_plus(query)
     return [
         {
             "platform": platform,
-            "url": PLATFORM_SEARCHES[platform]["url"].format(query=encoded),
-            "color": PLATFORM_SEARCHES[platform]["color"],
+            "url": PLATFORM_META[platform]["search_url"].format(query=encoded),
+            "color": platform_badge_id(platform),
         }
         for platform in platforms
-        if platform in PLATFORM_SEARCHES and query
+        if platform in PLATFORM_META and PLATFORM_META[platform].get("search_url") and query
     ]
 
 
@@ -105,7 +87,7 @@ def question_links(question):
             {
                 "platform": platform,
                 "url": url,
-                "color": PLATFORM_SEARCHES.get(platform, {}).get("color", "link"),
+                "color": platform_badge_id(platform),
             }
         )
     return links
@@ -115,18 +97,28 @@ def question_editorial_links(question):
     return normalize_editorial_links(question.get("editorial_links") or question.get("editorials"))
 
 
+def platform_badge_id(platform):
+    badge_class = PLATFORM_META.get(platform, {}).get("badge_class", "badge-link")
+    return badge_class.removeprefix("badge-")
+
+
 PLATFORM_FILTER_MAP = {
-    "lc": "LeetCode",
-    "gfg": "GFG",
-    "cn": "Coding Ninjas",
-    "hr": "HackerRank",
+    meta["id"]: name
+    for name, meta in PLATFORM_META.items()
+    if meta.get("search_url")
 }
+PLATFORM_FILTER_MAP.update(
+    {
+        platform_badge_id(name): name
+        for name, meta in PLATFORM_META.items()
+        if meta.get("search_url")
+    }
+)
 
 PLATFORM_URL_KEYWORDS = {
-    "LeetCode": "leetcode.com",
-    "GFG": "geeksforgeeks.org",
-    "Coding Ninjas": "codingninjas.com",
-    "HackerRank": "hackerrank.com",
+    name: "|".join(re.escape(domain) for domain in meta["domains"])
+    for name, meta in PLATFORM_META.items()
+    if meta.get("search_url") and meta.get("domains")
 }
 
 DIFFICULTY_FILTERS = {
@@ -266,14 +258,10 @@ def platform_name_filter(url):
     if not url:
         return None
     url = url.lower()
-    if "leetcode.com" in url:
-        return "LeetCode"
-    if "geeksforgeeks.org" in url:
-        return "GFG"
-    if "codingninjas.com" in url or "naukri.com/code360" in url:
-        return "Coding Ninjas"
-    if "youtube.com" in url or "youtu.be" in url:
-        return "YouTube"
-    if "hackerrank.com" in url:
-        return "HackerRank"
+    for meta in PLATFORM_META.values():
+        for domain in meta["domains"]:
+            if domain in url:
+                return meta["name"]
     return "Link"
+
+

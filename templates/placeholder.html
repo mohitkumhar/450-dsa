@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <h1 class="fw-bold mb-4">{{ title }}</h1>
+            <div class="card bg-dark border-secondary p-5 rounded-4" style="background-color: var(--bg-card) !important; border-color: var(--border-color) !important;">
+                <i class="bi bi-gear-fill text-warning mb-4" style="font-size: 3rem; color: var(--accent) !important;"></i>
+                <h3>Under Construction</h3>
+                <p class="text-secondary mt-3">We are working hard to bring you the {{ title }} feature soon. Stay tuned!</p>
+                <a href="/" class="btn btn-outline-warning mt-4 px-4 py-2" style="border-radius: 50px; color: var(--accent) !important; border-color: var(--accent) !important;">Go Back Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

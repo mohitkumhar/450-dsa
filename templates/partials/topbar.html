@@ -1,0 +1,28 @@
+    <header class="topbar" role="banner">
+        <div class="topbar-left">
+            <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
+        </div>
+        <div class="topbar-right">
+            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+                <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
+                <span>Monthly Rewind</span>
+            </a>
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
+                <i class="bi bi-briefcase-fill"></i>
+                <span>Company Wise Kit</span>
+            </a>
+            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle" aria-label="Toggle dark/light theme">
+                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
+            </button>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
+                {{ current_user.name[0]|upper }}
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" aria-label="Login">
+                <i class="bi bi-person" aria-hidden="true"></i>
+                <span>Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </header>

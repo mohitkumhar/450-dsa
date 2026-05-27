@@ -224,11 +224,7 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.badge-lc { background: rgba(255,184,0,0.15); color: #ffb800; border: 1px solid rgba(255,184,0,0.25); }
-.badge-gfg { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
-.badge-cn { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
-.badge-hr { background: rgba(0,189,108,0.15); color: #00bd6c; border: 1px solid rgba(0,189,108,0.25); }
-.badge-link { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
+
 .result-actions { display: flex; align-items: flex-start; gap: 8px; }
 .topic-open {
   width: 36px;
@@ -282,10 +278,11 @@
     </div>
     <div class="platform-row" role="group" aria-label="Filter search results by coding platform">
       <button class="platform-chip" type="button" data-token="" aria-label="Show all platforms">All</button>
-      <button class="platform-chip" type="button" data-token="leetcode" aria-label="Filter to LeetCode only">LeetCode</button>
-      <button class="platform-chip" type="button" data-token="gfg" aria-label="Filter to GeeksForGeeks only">GFG</button>
-      <button class="platform-chip" type="button" data-token="cn" aria-label="Filter to Coding Ninjas only">Coding Ninjas</button>
-      <button class="platform-chip" type="button" data-token="hackerrank" aria-label="Filter to HackerRank only">HackerRank</button>
+      {% for name, meta in PLATFORM_META.items() %}
+      {% if meta.search_url %}
+      <button class="platform-chip" type="button" data-token="{{ meta.id }}" aria-label="Filter to {{ name }} only">{{ name }}</button>
+      {% endif %}
+      {% endfor %}
     </div>
     <div class="filter-row" role="group" aria-label="Additional search filters">
       <select id="filterTopic" class="filter-select" aria-label="Filter by topic">
@@ -302,10 +299,11 @@
       </select>
       <select id="filterPlatform" class="filter-select" aria-label="Filter by result platform">
         <option value="">All Platforms</option>
-        <option value="lc">LeetCode</option>
-        <option value="gfg">GFG</option>
-        <option value="cn">Coding Ninjas</option>
-        <option value="hr">HackerRank</option>
+        {% for name, meta in PLATFORM_META.items() %}
+        {% if meta.search_url %}
+        <option value="{{ meta.id }}">{{ name }}</option>
+        {% endif %}
+        {% endfor %}
       </select>
       {% if current_user.is_authenticated %}
       <select id="filterStatus" class="filter-select" aria-label="Filter by completion status">

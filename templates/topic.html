@@ -161,7 +161,7 @@
                         {% if q.url %}
                             {% set p1 = q.url|platform_name %}
                             <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               class="q-badge {{ p1 | platform_badge }}"
                                aria-label="Solve on {{ p1 }} (opens in new tab)">
                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
                             </a>
@@ -169,7 +169,7 @@
                         {% if q.url2 %}
                             {% set p2 = q.url2|platform_name %}
                             <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               class="q-badge {{ p2 | platform_badge }}"
                                aria-label="Solve on {{ p2 }} (opens in new tab)">
                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
                             </a>
@@ -260,7 +260,101 @@ function setBookmarkState(btn, isBookmarked) {
     icon.className = isBookmarked ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
 }
 
+/* Offline Progress Queue
+   Queues done / bookmark / notes changes in localStorage when the
+   user is offline and flushes them automatically on reconnection.
+   Conflicts are resolved with last-write-wins using a timestamp so
+   the most recent action always takes precedence.
+*/
+const QUEUE_KEY = 'offlineProgressQueue';
+
+function readQueue() {
+    try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+    catch { return []; }
+}
+
+function writeQueue(q) {
+    try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+    catch { /* storage full; skip queue persistence */ }
+}
+
+function enqueue(id, data) {
+    const queue = readQueue();
+    // Merge into existing entry for same question (last-write-wins per field)
+    const idx = queue.findIndex(e => e.id === id);
+    const entry = idx >= 0 ? queue[idx] : { id, data: {}, ts: 0 };
+    entry.data = { ...entry.data, ...data };
+    entry.ts = Date.now();
+    if (idx >= 0) queue[idx] = entry; else queue.push(entry);
+    writeQueue(queue);
+}
+
+function dequeue(id) {
+    writeQueue(readQueue().filter(e => e.id !== id));
+}
+
+function showOfflineBanner(show) {
+    let banner = document.getElementById('offlineQueueBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'offlineQueueBanner';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        banner.style.cssText =
+            'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);' +
+            'background:var(--bg-secondary,#1e293b);color:var(--text-secondary,#94a3b8);' +
+            'border:1px solid var(--border-color,#334155);border-radius:8px;' +
+            'padding:8px 18px;font-size:0.82rem;font-weight:600;z-index:9999;' +
+            'box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+        document.body.appendChild(banner);
+    }
+    if (show) {
+        const count = readQueue().length;
+        banner.textContent = `Offline - ${count} change${count !== 1 ? 's' : ''} queued`;
+        banner.style.opacity = '1';
+        banner.style.display = 'block';
+    } else {
+        banner.style.opacity = '0';
+        setTimeout(() => { banner.style.display = 'none'; }, 300);
+    }
+}
+
+async function flushQueue() {
+    const queue = readQueue();
+    if (!queue.length) return;
+    for (const entry of queue) {
+        try {
+            const r = await fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(entry.id)), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify(entry.data)
+            });
+            if (r.ok) {
+                const res = await r.json();
+                if (res.success) dequeue(entry.id);
+            }
+        } catch {
+            // Still offline; leave the queue intact and stop trying.
+            break;
+        }
+    }
+    if (!readQueue().length) {
+        showOfflineBanner(false);
+        showUpdateError('Offline changes synced!');
+    }
+}
+
+window.addEventListener('online', flushQueue);
+
 function updateQuestion(id, data, callback) {
+    if (!navigator.onLine) {
+        enqueue(id, data);
+        showOfflineBanner(true);
+        // Optimistic success so UI updates immediately
+        if (callback) callback({ success: true, offline: true });
+        return Promise.resolve({ success: true, offline: true });
+    }
+
     return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
@@ -272,8 +366,16 @@ function updateQuestion(id, data, callback) {
         if (!res.success) throw new Error(res.error || 'Update failed');
         if (callback) callback(res);
         return res;
+    }).catch(err => {
+        // Network error even though navigator.onLine was true (e.g. flaky connection)
+        enqueue(id, data);
+        showOfflineBanner(true);
+        throw err;
     });
 }
+
+// Flush any queued changes left from a previous session
+if (navigator.onLine) flushQueue();
 
 // Update the checkbox event listener
 document.querySelectorAll('.status-checkbox').forEach(cb => {

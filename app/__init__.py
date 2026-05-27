@@ -29,6 +29,7 @@ from app.utils import (
     platform_name_filter,
     platform_profile_url,
     question_editorial_links,
+    safe_url_filter,
 )
 
 
@@ -132,12 +133,11 @@ def create_app(config_class=None):
         db.topic.create_index("position")
         db.question.create_index("topic")
         db.question.create_index([("problem", "text")], name="problem_text")
+        
+        # Lightweight schema backfill for legacy user documents.
+        db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
     except Exception:
         pass
-
-    # Lightweight schema backfill for legacy user documents.
-    db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
-
     data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
 
@@ -173,6 +173,19 @@ def create_app(config_class=None):
             init_db()
             app._db_initialized = True
 
+    from app.platforms.metadata import PLATFORM_META
+
+    @app.template_filter("platform_badge")
+    def platform_badge_filter(name):
+        meta = PLATFORM_META.get(name)
+        if meta:
+            return meta["badge_class"]
+        return "badge-link"
+
+    @app.context_processor
+    def inject_platform_metadata():
+        return {"PLATFORM_META": PLATFORM_META}
+
     @app.before_request
     def start_route_timer():
         if request.endpoint in ROUTE_TIMING_ENDPOINTS:
@@ -181,6 +194,7 @@ def create_app(config_class=None):
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
     app.add_template_filter(platform_profile_url, "platform_url")
+    app.add_template_filter(safe_url_filter, "safe_url")
 
     @app.context_processor
     def inject_csrf_token():

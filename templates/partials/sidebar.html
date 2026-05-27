@@ -1,0 +1,54 @@
+    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
+                <i class="bi bi-house-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Home</span>
+            </a>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
+                <i class="bi bi-person-circle" aria-hidden="true"></i>
+                <span class="tooltip-label">Profile</span>
+            </a>
+            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
+                <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Bookmarks</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <span class="tooltip-label">Search</span>
+            </a>
+            <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
+                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Stats</span>
+            </a>
+            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
+                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Leaderboard</span>
+            </a>
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('admin.dashboard') }}"
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
+                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Admin</span>
+            </a>
+            {% endif %}
+        </nav>
+        <div class="sidebar-bottom">
+            {% if current_user.is_authenticated %}
+            <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
+                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                    <span class="tooltip-label">Logout</span>
+                </button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login" aria-label="Login">
+                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                <span class="tooltip-label">Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </aside>
