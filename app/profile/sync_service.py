@@ -157,14 +157,6 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         existing_calendars = {}
     platform_calendars = dict(existing_calendars)
 
-    # Backfill from legacy external_daily_counts during migration from the old
-    # combined flat-dict format to the new per-platform calendar storage.
-    # The ``_legacy`` entry preserves dates from platforms not yet re-synced.
-    if not any(k for k in platform_calendars if k != "_legacy"):
-        legacy_counts = getattr(user, "external_daily_counts", {})
-        if isinstance(legacy_counts, dict) and legacy_counts:
-            platform_calendars["_legacy"] = dict(legacy_counts)
-
     platform_jobs = build_platform_sync_jobs(
         leetcode_username=leetcode_username,
         github_username=github_username,
@@ -294,9 +286,17 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     else:
         _mark("codewars", "skipped")
 
-    # Once every platform the user has registered has been synced at least once,
-    # the ``_legacy`` migration entry is no longer needed.
-    if "_legacy" in platform_calendars:
+    # Backfill or remove ``_legacy`` depending on whether the current sync
+    # covered every platform the user has configured.  During the migration
+    # from the old flat ``external_daily_counts`` format to per-platform
+    # calendars, ``_legacy`` preserves dates from platforms not yet re-synced.
+    PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
+                     "codingninjas", "atcoder", "codewars"}
+    requested_platforms = {k for k in data if k in PLATFORM_KEYS}
+    legacy_counts = getattr(user, "external_daily_counts", {})
+    has_legacy = isinstance(legacy_counts, dict) and bool(legacy_counts)
+
+    if has_legacy:
         user_platforms = set()
         for attr in ("leetcode_username", "github_username", "gfg_username",
                      "hackerrank_username", "codingninjas_username",
@@ -304,9 +304,13 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             if getattr(user, attr, ""):
                 platform_name = attr.replace("_username", "")
                 user_platforms.add(platform_name)
-        synced_platforms = {k for k in platform_calendars if k != "_legacy"}
-        if user_platforms and synced_platforms and user_platforms == synced_platforms:
+
+        if user_platforms and requested_platforms and user_platforms.issubset(requested_platforms):
+            # All user platforms were included in this sync → migration done
             platform_calendars.pop("_legacy", None)
+        else:
+            # Partial sync — preserve legacy data for platforms not yet re-synced
+            platform_calendars["_legacy"] = dict(legacy_counts)
 
     update_fields["platform_calendars"] = platform_calendars
     update_fields["external_totals"] = platform_totals
