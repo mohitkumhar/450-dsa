@@ -157,6 +157,14 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         existing_calendars = {}
     platform_calendars = dict(existing_calendars)
 
+    # Backfill from legacy external_daily_counts during migration from the old
+    # combined flat-dict format to the new per-platform calendar storage.
+    # The ``_legacy`` entry preserves dates from platforms not yet re-synced.
+    if not any(k for k in platform_calendars if k != "_legacy"):
+        legacy_counts = getattr(user, "external_daily_counts", {})
+        if isinstance(legacy_counts, dict) and legacy_counts:
+            platform_calendars["_legacy"] = dict(legacy_counts)
+
     platform_jobs = build_platform_sync_jobs(
         leetcode_username=leetcode_username,
         github_username=github_username,
@@ -285,6 +293,20 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
                 platform_totals["Codewars"] = int(codewars_data.get("total", 0))
     else:
         _mark("codewars", "skipped")
+
+    # Once every platform the user has registered has been synced at least once,
+    # the ``_legacy`` migration entry is no longer needed.
+    if "_legacy" in platform_calendars:
+        user_platforms = set()
+        for attr in ("leetcode_username", "github_username", "gfg_username",
+                     "hackerrank_username", "codingninjas_username",
+                     "atcoder_username", "codewars_username"):
+            if getattr(user, attr, ""):
+                platform_name = attr.replace("_username", "")
+                user_platforms.add(platform_name)
+        synced_platforms = {k for k in platform_calendars if k != "_legacy"}
+        if user_platforms and synced_platforms and user_platforms == synced_platforms:
+            platform_calendars.pop("_legacy", None)
 
     update_fields["platform_calendars"] = platform_calendars
     update_fields["external_totals"] = platform_totals

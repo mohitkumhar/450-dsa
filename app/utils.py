@@ -224,24 +224,46 @@ def _get_field(user_doc, name, default=None):
 def get_merged_daily_counts(user_doc):
     """Return merged flat dict of daily counts, preferring per-platform data with legacy fallback.
 
-    Uses the new ``platform_calendars`` dict (``{platform: {date: count}}``) when available,
-    then fills in any dates from the legacy ``external_daily_counts`` that are not already
-    covered.  Falls back entirely to ``external_daily_counts`` when no per-platform data exists.
+    Uses the new ``platform_calendars`` dict (``{platform: {date: count}}``) when available.
+    A special ``_legacy`` key stores the old combined totals during the migration period;
+    for dates that overlap with real per-platform data the higher of the two values is kept
+    (so non-migrated platform contributions are not lost).  Dates from the legacy
+    ``external_daily_counts`` field are used as a second fallback for dates not yet covered
+    by any per-platform data.
+
+    Falls back entirely to ``external_daily_counts`` when no per-platform data exists.
     """
     platform_calendars = _get_field(user_doc, "platform_calendars", {})
     if isinstance(platform_calendars, dict) and platform_calendars:
+        legacy_fallback = {}
+        calendars = {}
+        for key, value in platform_calendars.items():
+            if key == "_legacy" and isinstance(value, dict):
+                legacy_fallback = value
+            else:
+                calendars[key] = value
+
         merged = {}
-        for _platform, counts in platform_calendars.items():
+        for _platform, counts in calendars.items():
             if isinstance(counts, dict):
                 for date, count in counts.items():
                     if coerce_non_negative_number(count) > 0:
                         merged[date] = merged.get(date, 0) + count
+
+        for date, count in legacy_fallback.items():
+            if coerce_non_negative_number(count) > 0:
+                merged[date] = max(merged.get(date, 0), count)
+
         if merged:
+            has_legacy_fallback = bool(legacy_fallback)
             legacy = _get_field(user_doc, "external_daily_counts", {})
             if isinstance(legacy, dict):
                 for date, count in legacy.items():
-                    if date not in merged and coerce_non_negative_number(count) > 0:
-                        merged[date] = count
+                    if coerce_non_negative_number(count) > 0:
+                        if has_legacy_fallback:
+                            merged[date] = max(merged.get(date, 0), count)
+                        elif date not in merged:
+                            merged[date] = count
             return merged
     return _get_field(user_doc, "external_daily_counts", {})
 
