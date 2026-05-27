@@ -103,7 +103,7 @@ class UserWrapper(UserMixin):
 
     @property
     def progress(self):
-        return self._doc.get("progress", {})
+        return self._doc.get("progress") or {}
 
     @property
     def is_admin(self):
