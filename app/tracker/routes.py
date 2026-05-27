@@ -6,6 +6,7 @@ from app.extensions import db
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.card_service import warm_public_card_cache
 from app.utils import (
+    compute_in_sheet_platform_counts,
     json_error,
     json_success,
     platform_from_question_url,
@@ -15,6 +16,7 @@ from app.utils import (
 from calendar_export import build_study_plan_ics
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
+from progress_import import parse_csv_backup, parse_json_backup, process_dry_run
 
 
 tracker_bp = Blueprint("tracker", __name__)
@@ -384,3 +386,188 @@ def export_all_notes():
     response = Response(markdown, mimetype="text/markdown")
     response.headers["Content-Disposition"] = 'attachment; filename=all_notes.md'
     return response
+
+
+@tracker_bp.route("/export/json")
+@login_required
+def export_json():
+    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+    topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
+    topic_lookup = {
+        topic['_id']: topic.get('name', 'Unknown')
+        for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
+    }
+
+    progress = current_user.progress
+    exported_progress = []
+
+    for question in questions:
+        question_id = str(question.get('_id'))
+        item_progress = progress.get(question_id, {}) or {}
+        if item_progress.get('done') or item_progress.get('bookmark') or item_progress.get('skipped') or item_progress.get('notes'):
+            topic_name = topic_lookup.get(question.get('topic'), 'Unknown')
+            exported_progress.append({
+                "topic": topic_name,
+                "problem": question.get('problem', ''),
+                "done": bool(item_progress.get('done', False)),
+                "bookmark": bool(item_progress.get('bookmark', False)),
+                "skipped": bool(item_progress.get('skipped', False)),
+                "notes": item_progress.get('notes', ''),
+                "url": question.get('url', ''),
+                "url2": question.get('url2', ''),
+            })
+
+    backup_data = {
+        "version": "1.0",
+        "exported_at": utc_now().isoformat(),
+        "progress": exported_progress
+    }
+
+    import json
+    response = Response(json.dumps(backup_data, indent=2), mimetype='application/json')
+    response.headers['Content-Disposition'] = 'attachment; filename=progress_backup.json'
+    return response
+
+
+@tracker_bp.route("/progress/import/preview", methods=["POST"])
+@login_required
+def import_preview():
+    if 'file' not in request.files:
+        return jsonify({"success": False, "error": "No file uploaded"}), 400
+
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": "No file selected"}), 400
+
+    filename = file.filename.lower()
+    content = file.read()
+    try:
+        content_str = content.decode('utf-8-sig')
+    except Exception:
+        return jsonify({"success": False, "error": "Unable to decode file. Please upload a UTF-8 encoded text file."}), 400
+
+    if filename.endswith('.csv'):
+        parsed_items, err = parse_csv_backup(content_str)
+    elif filename.endswith('.json'):
+        parsed_items, err = parse_json_backup(content_str)
+    else:
+        return jsonify({"success": False, "error": "Unsupported file format. Please upload a .csv or .json file."}), 400
+
+    if err:
+        return jsonify({"success": False, "error": err}), 400
+
+    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+    summary, changes, conflicts, _ = process_dry_run(parsed_items, questions, current_user.progress)
+
+    return jsonify({
+        "success": True,
+        "summary": summary,
+        "changes": changes[:50],
+        "conflicts": conflicts
+    })
+
+
+@tracker_bp.route("/progress/import/commit", methods=["POST"])
+@login_required
+def import_commit():
+    if 'file' not in request.files:
+        return jsonify({"success": False, "error": "No file uploaded"}), 400
+
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({"success": False, "error": "No file selected"}), 400
+
+    mode = request.form.get("mode", "merge")
+    if mode not in ("merge", "replace"):
+        return jsonify({"success": False, "error": "Invalid import mode"}), 400
+
+    filename = file.filename.lower()
+    content = file.read()
+    try:
+        content_str = content.decode('utf-8-sig')
+    except Exception:
+        return jsonify({"success": False, "error": "Unable to decode file. Please upload a UTF-8 encoded text file."}), 400
+
+    if filename.endswith('.csv'):
+        parsed_items, err = parse_csv_backup(content_str)
+    elif filename.endswith('.json'):
+        parsed_items, err = parse_json_backup(content_str)
+    else:
+        return jsonify({"success": False, "error": "Unsupported file format. Please upload a .csv or .json file."}), 400
+
+    if err:
+        return jsonify({"success": False, "error": err}), 400
+
+    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+    _, _, _, mapped_progress = process_dry_run(parsed_items, questions, current_user.progress)
+
+    user_id = current_user.id
+    current_db_progress = current_user.progress
+
+    new_progress = {}
+    if mode == "merge":
+        new_progress = dict(current_db_progress)
+        for q_id, imp_val in mapped_progress.items():
+            existing = new_progress.get(q_id, {})
+            done = imp_val["done"] or bool(existing.get("done"))
+            bookmark = imp_val["bookmark"] or bool(existing.get("bookmark"))
+            skipped = imp_val["skipped"] or bool(existing.get("skipped"))
+            if done:
+                skipped = False
+
+            db_notes = existing.get("notes") or ""
+            imp_notes = imp_val["notes"] or ""
+
+            if db_notes and imp_notes and db_notes != imp_notes:
+                notes = f"{db_notes}\n[Imported]: {imp_notes}"
+            else:
+                notes = imp_notes if imp_notes else db_notes
+
+            timestamp = existing.get("timestamp")
+            if imp_val["done"] and not existing.get("done"):
+                timestamp = utc_now()
+            elif not timestamp:
+                timestamp = utc_now()
+
+            new_progress[q_id] = {
+                "done": done,
+                "bookmark": bookmark,
+                "skipped": skipped,
+                "notes": notes,
+                "timestamp": timestamp
+            }
+    else:
+        for q_id, imp_val in mapped_progress.items():
+            existing = current_db_progress.get(q_id, {})
+            timestamp = existing.get("timestamp")
+            if imp_val["done"] and not existing.get("done"):
+                timestamp = utc_now()
+            elif not timestamp:
+                timestamp = utc_now()
+
+            new_progress[q_id] = {
+                "done": imp_val["done"],
+                "bookmark": imp_val["bookmark"],
+                "skipped": imp_val["skipped"] if not imp_val["done"] else False,
+                "notes": imp_val["notes"],
+                "timestamp": timestamp
+            }
+
+    solved_items = {q_id: prog for q_id, prog in new_progress.items() if prog.get("done")}
+    in_sheet_counts = compute_in_sheet_platform_counts(solved_items, questions)
+
+    db.user.update_one(
+        {"_id": user_id},
+        {
+            "$set": {
+                "progress": new_progress,
+                "in_sheet_platform_counts": in_sheet_counts
+            }
+        }
+    )
+
+    current_user.reload()
+    invalidate_leaderboard_cache()
+    warm_public_card_cache(user_id, db_handle=db)
+
+    return jsonify({"success": True, "message": "Progress imported successfully!"})
