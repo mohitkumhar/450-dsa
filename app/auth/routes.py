@@ -5,7 +5,7 @@ from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
-from app.extensions import bcrypt, db, github, google, login_manager
+from app.extensions import bcrypt, db, github, google, limiter, login_manager
 from app.utils import utc_now
 
 
@@ -144,6 +144,7 @@ def load_user(user_id):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
@@ -161,6 +162,7 @@ def login():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("3 per hour", methods=["POST"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
