@@ -221,7 +221,7 @@
                     <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
                         No questions match the selected difficulty.
                     </p>
-                    <button class="filter-btn" data-difficulty="all" onclick="document.querySelector('[data-difficulty=all]').click()" aria-label="Clear filter and show all questions">
+                    <button class="filter-btn" id="clearDifficultyFilterBtn" data-difficulty="all" aria-label="Clear filter and show all questions">
                         Clear filter &amp; show all
                     </button>
                 </td>
@@ -504,6 +504,16 @@ document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
         emptyRow.style.display = '';
     }
 })();
+
+const clearDifficultyFilterBtn = document.getElementById('clearDifficultyFilterBtn');
+if (clearDifficultyFilterBtn) {
+    clearDifficultyFilterBtn.addEventListener('click', () => {
+        const allDifficultyBtn = document.querySelector('.filter-btn[data-difficulty="all"]');
+        if (allDifficultyBtn && allDifficultyBtn !== clearDifficultyFilterBtn) {
+            allDifficultyBtn.click();
+        }
+    });
+}
 
 // Notes Modal with focus trap
 const modal = document.getElementById('notesModal');

@@ -57,6 +57,7 @@ CSV_EXPORT_QUESTION_PROJECTION = {
 }
 ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
 
+
 @tracker_bp.route("/")
 def index():
     topics = list(db.topic.find().sort("position", 1))

@@ -44,6 +44,13 @@ def filter_heatmap_counts(daily_counts, today=None, days=HEATMAP_DAYS):
     }
 
 
+def clear_profile_caches(user_id):
+    try:
+        cache.delete(f"card_{str(user_id)}")
+    except KeyError:
+        pass
+
+
 @profile_bp.route("/sync_platforms", methods=["POST"])
 @login_required
 @limiter.limit("5 per minute")

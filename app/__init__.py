@@ -7,7 +7,7 @@ from time import perf_counter
 from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
-from flask import Flask, abort, g, jsonify, request
+from flask import Flask, g, request, session
 
 from app.admin import admin_bp
 from app.auth import auth_bp
@@ -190,19 +190,6 @@ def create_app(config_class=None):
     def start_route_timer():
         if request.endpoint in ROUTE_TIMING_ENDPOINTS:
             g.route_timer_start = perf_counter()
-
-    @app.before_request
-    def protect_unsafe_requests():
-        if request.method not in CSRF_PROTECTED_METHODS:
-            return None
-
-        if validate_csrf_request():
-            return None
-
-        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            return jsonify({"success": False, "error": "Invalid CSRF token."}), 403
-
-        abort(403)
 
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")

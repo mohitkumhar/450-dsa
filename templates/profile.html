@@ -4,6 +4,107 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
 {% block content %}
+<style>
+.prof-layout{display:grid;grid-template-columns:240px 1fr 260px;gap:16px;align-items:start}
+.prof-sidebar,.prof-main,.prof-right{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:18px;color:var(--text-primary)}
+.avatar-ring{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:800;color:#fff;margin:0 auto 12px;border:3px solid var(--border-color);position:relative;overflow:hidden}
+.avatar-ring::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:skeleton-shimmer 1.15s linear infinite}
+.avatar-ring img{position:relative;z-index:1}
+.prof-name{font-size:1.1rem;font-weight:800;text-align:center;margin-bottom:2px}
+.prof-handle{text-align:center;font-size:0.8rem;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:4px}
+.card-btn{margin-bottom:12px}
+.prof-bio{text-align:center;font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px}
+.social-row{display:flex;justify-content:center;gap:12px;margin-bottom:12px;padding:10px 0;border-top:1px solid var(--border-color);border-bottom:1px solid var(--border-color)}
+.social-icon{color:var(--text-muted);font-size:1.1rem;text-decoration:none;transition:color 0.2s}
+.social-icon:hover{color:var(--accent)}
+.meta-row{display:flex;align-items:center;gap:6px;font-size:0.79rem;color:var(--text-secondary);margin-bottom:6px}
+.sec-title{font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.platform-row{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:8px;margin-bottom:4px;font-size:0.82rem}
+.platform-row:hover{background:var(--bg-secondary)}
+.check-ok{color:var(--success);font-size:0.9rem}
+.link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
+.link-out:hover{color:var(--accent)}
+.add-btn{margin-top:4px}
+.quick-sync-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center}
+.quick-sync-btn:hover,.quick-sync-btn:focus-visible{color:var(--accent)}
+.upload-photo-label{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s}
+.upload-photo-label:hover,.upload-photo-label:focus-within{border-color:var(--accent);color:var(--accent)}
+.rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
+.rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
+.rank-label{font-size:0.75rem;color:var(--text-secondary)}
+.view-lb-btn{margin-top:10px}
+.meta-footer{font-size:0.72rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.meta-footer span{display:flex;justify-content:space-between}
+/* stat cards */
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:12px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
+.stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
+.stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+/* heatmap */
+.heatmap-grid{display:grid;grid-template-rows:repeat(7,10px);grid-auto-flow:column;gap:2px;overflow-x:auto;padding-bottom:4px}
+.hm-cell{width:10px;height:10px;border-radius:2px;background:var(--bg-secondary)}
+.hm-cell[data-l="1"]{background:#0e4429}.hm-cell[data-l="2"]{background:#006d32}.hm-cell[data-l="3"]{background:#26a641}.hm-cell[data-l="4"]{background:#39d353}
+.hm-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:0.72rem;color:var(--text-secondary)}
+/* contest row */
+.contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
+.empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
+.chart-shell{position:relative;min-height:130px}
+.chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
+.chart-shell .chart-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:skeleton-shimmer 1.15s linear infinite}
+.chart-shell canvas{position:relative;z-index:1}
+.chart-shell.is-ready .chart-skeleton{display:none}
+.awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
+.award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
+.award-badge .a-lbl{font-size:.58rem;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px;text-align:center}
+.hr-stars{display:flex;gap:1px;align-items:center;justify-content:center;flex-wrap:nowrap;line-height:1}
+.hr-stars .s-on{color:#fbbf24;font-size:.65rem}
+.big-num{font-size:2.8rem;font-weight:900;line-height:1;color:var(--text-primary)}
+.metric-value{font-weight:900;line-height:1;color:var(--text-primary)}
+.metric-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+.sub-label{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+/* topic bars */
+.t-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.78rem}
+.t-bar-name{width:110px;text-align:right;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-bar-wrap{flex:1;height:20px;background:var(--bg-secondary);border-radius:4px;overflow:hidden}
+.t-bar-fill{height:100%;background:#1e5eff;border-radius:4px;display:flex;align-items:center;padding-left:6px;color:#fff;font-weight:700;font-size:0.72rem}
+/* right panel */
+.section-title{font-size:0.88rem;font-weight:700;text-align:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border-color)}
+.donut-wrap{position:relative;width:120px;height:120px;margin:0 auto 12px}
+.donut-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;color:var(--text-primary)}
+.legend-item{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-radius:6px;background:var(--bg-secondary);margin-bottom:5px;font-size:0.8rem;color:var(--text-primary)}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+.rating-wrap{display:flex;align-items:center;gap:14px;padding:10px 0}
+.shield-icon{font-size:3.5rem;color:var(--text-muted)}
+.rating-num{font-size:2rem;font-weight:900;line-height:1;color:var(--text-primary)}
+.rating-sub{font-size:0.75rem;color:var(--text-secondary)}
+/* modal */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal-bx{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:28px;width:90%;max-width:420px}
+.modal-bx h3{font-size:1rem;font-weight:700;margin-bottom:16px}
+.m-lbl{font-size:0.8rem;font-weight:600;color:var(--text-secondary);display:block;margin-bottom:5px}
+.m-inp{width:100%;padding:9px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;margin-bottom:12px}
+.m-inp:focus{border-color:var(--accent)}
+.m-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+.m-cancel{padding:8px 16px;border:1px solid var(--border-color);border-radius:8px;background:none;color:var(--text-secondary);font-size:0.83rem;cursor:pointer;font-family:inherit}
+.m-save{padding:8px 16px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:0.83rem;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s}
+.m-save:hover:not(:disabled){background:var(--accent-hover)}
+.m-save:disabled{opacity:0.7;cursor:not-allowed}
+.m-note{font-size:0.72rem;color:var(--text-muted);margin-top:-8px;margin-bottom:10px}
+@keyframes btn-spin{to{transform:rotate(360deg)}}
+.btn-spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:btn-spin .7s linear infinite;flex-shrink:0}
+/* responsive */
+@media(max-width:1100px){.prof-layout{grid-template-columns:200px 1fr 220px}}
+@media(max-width:860px){.prof-layout{grid-template-columns:1fr}.prof-right{order:-1}.stat-row{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:520px){.stat-row{grid-template-columns:1fr 1fr}.contest-grid{grid-template-columns:1fr}}
+/* Modal focus trap - prevent background scroll */
+body.modal-open {
+    overflow: hidden;
+}
+</style>
+
 <div class="prof-layout">
 
 <!-- ── LEFT SIDEBAR ── -->
@@ -22,8 +123,8 @@
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
       <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
-    <button class="card-btn ui-btn ui-btn-success ui-btn-block" onclick="copyProgressCardUrl()" aria-label="Share progress image URL">
+    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" id="showCodolioCardBtn" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn ui-btn ui-btn-success ui-btn-block" id="copyProgressCardBtn" aria-label="Share progress image URL">
       <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
     <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
@@ -84,8 +185,8 @@
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
+    <button class="ui-btn ui-btn-secondary ui-btn-block" id="openEditProfileBtn" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button class="ui-btn ui-btn-danger ui-btn-block" id="openDeleteAccountBtn" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -97,39 +198,39 @@
     <div class="platform-row">
       <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" data-action="open-sync-modal" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" data-action="open-sync-modal" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" data-action="open-sync-modal" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" data-action="open-sync-modal" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
       <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" data-action="open-sync-modal" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
-    <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+    <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" data-action="open-sync-modal" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
       <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" data-action="open-sync-modal" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
   </div>
@@ -218,7 +319,7 @@
       {% for badge in lc_badges %}
       <div class="award-badge" title="{{ badge.name }}" role="listitem">
         {% if badge.icon %}
-          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
+          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" class="award-badge-icon" style="width:36px;height:36px;object-fit:contain" alt="{{ badge.name }} badge">
         {% else %}🏅{% endif %}
         <span class="a-lbl">{{ badge.name[:10] }}</span>
       </div>
@@ -245,7 +346,7 @@
       {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days" role="listitem">🗓️<span class="a-lbl">100 Days</span></div>
       {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days" role="listitem">📅<span class="a-lbl">30 Days</span></div>{% endif %}
       {% if lc_badges|length == 0 and hr_badges|length == 0 and dsa_done < 50 %}
-      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit" aria-label="Connect platforms to see awards">Connect Now</button></div>
+      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button data-action="open-sync-modal" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit" aria-label="Connect platforms to see awards">Connect Now</button></div>
       {% endif %}
     </div>
   </div>
@@ -284,14 +385,9 @@
   <div class="card">
     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Problems Solved</span>
-      <div style="display:flex;gap:10px;">
-        <button onclick="exportChart('platformsChart', 'platforms-solved.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export platform chart">
-          <i class="bi bi-download" aria-hidden="true"></i>
-        </button>
-        <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Sync connected platforms">
-          <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
-        </button>
-      </div>
+      <button id="quickSyncBtn" class="quick-sync-btn" title="Sync Connected Platforms" aria-label="Sync connected platforms">
+        <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
+      </button>
     </div>
 
     <!-- Fundamentals -->
@@ -365,7 +461,7 @@
 </div>
 
 <!-- Sync Modal -->
-{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
+{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
     <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
     <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
@@ -381,13 +477,13 @@
     <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
-      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
-      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
+      <button class="m-cancel" data-modal-close="syncModal">Cancel</button>
+      <button class="m-save" id="btnSync"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
     </div>
 {% endcall %}
 
 <!-- Codolio Card Modal -->
-{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
     <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
       <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
       <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
@@ -399,11 +495,11 @@
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button id="shareCardBtn" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
 {% endcall %}
 
 <!-- Edit Profile Modal -->
-{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
+{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
     <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
     <!-- Photo Upload -->
     <div style="text-align:center;margin-bottom:20px">
@@ -411,10 +507,10 @@
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
           {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
-        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+        <label for="photoInput" class="upload-photo-label">
           <i class="bi bi-camera"></i> Upload Photo
         </label>
-        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+        <input type="file" id="photoInput" accept="image/*" style="display:none">
       </div>
       <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
     </div>
@@ -440,8 +536,8 @@
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
     </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
-      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
-      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
+      <button class="m-cancel" data-modal-close="editProfileModal">Cancel</button>
+      <button class="m-save" id="btnSaveProfile"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
     </div>
 {% endcall %}
 
@@ -602,7 +698,7 @@ window.handleSyncProfile = function(btn){
     overlay.style.display='none';
     if(res.success){
       syncContent.innerHTML='<i class="bi bi-check-lg"></i> Synced!';
-      showToast('\u2705 Synced successfully! Reloading...');
+      showToast('✅ Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(),1200);
     }else{
       window.setButtonBusyState(btn, syncContent, { busy: false });
@@ -614,9 +710,9 @@ window.handleSyncProfile = function(btn){
     overlay.style.display='none';
     window.setButtonBusyState(btn, syncContent, { busy: false });
     if(err.name==='AbortError'){
-      showToast('\u23f0 Sync timed out. Try again.');
+      showToast('⏰ Sync timed out. Try again.');
     }else{
-      showToast('\u274c Network error. Check connection.');
+      showToast('❌ Network error. Check connection.');
     }
     console.error('Sync error:',err);
   });
@@ -661,6 +757,56 @@ function showCodelioCard(){document.getElementById('cardModal').classList.add('o
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
 
+document.querySelectorAll('[data-action="open-sync-modal"]').forEach((trigger) => {
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    openSyncModal();
+  });
+});
+
+document.getElementById('showCodolioCardBtn')?.addEventListener('click', () => {
+  showCodelioCard();
+});
+
+document.getElementById('copyProgressCardBtn')?.addEventListener('click', () => {
+  copyProgressCardUrl();
+});
+
+document.getElementById('openEditProfileBtn')?.addEventListener('click', () => {
+  openEditProfile();
+});
+
+document.getElementById('openDeleteAccountBtn')?.addEventListener('click', () => {
+  if (typeof window.openDeleteModal === 'function') {
+    window.openDeleteModal();
+  }
+});
+
+document.getElementById('quickSyncBtn')?.addEventListener('click', function() {
+  window.handleQuickSync(this);
+});
+
+document.getElementById('btnSync')?.addEventListener('click', function() {
+  window.handleSyncProfile(this);
+});
+
+document.getElementById('btnSaveProfile')?.addEventListener('click', function() {
+  window.handleSaveProfile(this);
+});
+
+document.getElementById('shareCardBtn')?.addEventListener('click', () => {
+  showToast('Profile card copied! 📋');
+});
+
+document.getElementById('photoInput')?.addEventListener('change', handlePhotoUpload);
+
+document.querySelectorAll('[data-modal-close]').forEach((trigger) => {
+  trigger.addEventListener('click', () => {
+    const modal = document.getElementById(trigger.dataset.modalClose);
+    if (modal) modal.classList.remove('open');
+  });
+});
+
 ['syncModal','cardModal','editProfileModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
@@ -688,6 +834,14 @@ function handlePhotoUpload(e){
       } else showToast('❌ '+res.error);
     }).catch(()=>showToast('❌ Upload failed'));
 }
+
+document.querySelectorAll('.award-badge-icon').forEach((badgeIcon) => {
+  badgeIcon.addEventListener('error', () => {
+    const fallback = document.createElement('span');
+    fallback.textContent = '🏅';
+    badgeIcon.replaceWith(fallback);
+  }, { once: true });
+});
 
 // ── College/University Autocomplete ──
 (function(){
