@@ -60,6 +60,32 @@ def _mongo_client_options(app):
     }
 
 
+def _dedupe_seeded_questions():
+    if not all(hasattr(db.question, attr) for attr in ("aggregate", "delete_many")):
+        return
+
+    duplicate_groups = db.question.aggregate(
+        [
+            {
+                "$group": {
+                    "_id": {
+                        "topic": "$topic",
+                        "problem": "$problem",
+                        "url": "$url",
+                    },
+                    "ids": {"$push": "$_id"},
+                    "count": {"$sum": 1},
+                }
+            },
+            {"$match": {"count": {"$gt": 1}}},
+        ]
+    )
+    for group in duplicate_groups:
+        duplicate_ids = group["ids"][1:]
+        if duplicate_ids:
+            db.question.delete_many({"_id": {"$in": duplicate_ids}})
+
+
 def create_app(config_class=None):
     load_dotenv()
 
@@ -132,6 +158,7 @@ def create_app(config_class=None):
         db.topic.create_index("name", unique=True)
         db.topic.create_index("position")
         db.question.create_index("topic")
+        _dedupe_seeded_questions()
         db.question.create_index([("topic", 1), ("problem", 1), ("url", 1)], unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
         
