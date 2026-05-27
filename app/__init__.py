@@ -132,6 +132,7 @@ def create_app(config_class=None):
         db.topic.create_index("name", unique=True)
         db.topic.create_index("position")
         db.question.create_index("topic")
+        db.question.create_index([("topic", 1), ("problem", 1), ("url", 1)], unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
         
         # Lightweight schema backfill for legacy user documents.
@@ -142,27 +143,36 @@ def create_app(config_class=None):
     app._db_initialized = False
 
     def init_db():
-        if db.topic.count_documents({}) == 0:
-            with data_path.open("r", encoding="utf-8") as file_obj:
-                data = json.load(file_obj)
-            for topic in data:
-                result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})
-                topic_id = result.inserted_id
-                questions = []
-                for question in topic["questions"]:
-                    difficulty = question.get("difficulty", "Medium")
-                    questions.append(
-                        {
-                            "topic": topic_id,
-                            "problem": question["Problem"],
-                            "url": question["URL"],
+        with data_path.open("r", encoding="utf-8") as file_obj:
+            data = json.load(file_obj)
+        for topic in data:
+            db.topic.update_one(
+                {"name": topic["topicName"]},
+                {"$set": {"position": topic["position"]}},
+                upsert=True,
+            )
+            topic_doc = db.topic.find_one({"name": topic["topicName"]})
+            if not topic_doc:
+                continue
+
+            topic_id = topic_doc["_id"]
+            for question in topic["questions"]:
+                difficulty = question.get("difficulty", "Medium")
+                db.question.update_one(
+                    {
+                        "topic": topic_id,
+                        "problem": question["Problem"],
+                        "url": question["URL"],
+                    },
+                    {
+                        "$set": {
                             "url2": question.get("URL2", ""),
                             "editorial_links": question_editorial_links(question),
                             "difficulty": difficulty,
                         }
-                    )
-                if questions:
-                    db.question.insert_many(questions)
+                    },
+                    upsert=True,
+                )
 
     @app.before_request
     def ensure_db_initialized():
