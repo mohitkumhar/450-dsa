@@ -1,6 +1,6 @@
 from bson import ObjectId
 from bson.errors import InvalidId
-from flask import Blueprint, Response, jsonify, render_template, request
+from flask import Blueprint, Response, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -60,8 +60,19 @@ ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
 
 @tracker_bp.route("/")
 def index():
-    topics = list(db.topic.find().sort("position", 1))
-    total_questions = db.question.count_documents({})
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        total_questions = pre["total_questions"]
+        topic_question_count = pre["topic_question_count"]
+    else:
+        topics = list(db.topic.find().sort("position", 1))
+        total_questions = db.question.count_documents({})
+        all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
+        topic_question_count = {}
+        for question in all_questions:
+            topic_id = str(question["topic"])
+            topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
 
     if current_user.is_authenticated:
         progress = current_user.progress
@@ -69,12 +80,6 @@ def index():
     else:
         progress = {}
         done_questions = 0
-
-    all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
-    topic_question_count = {}
-    for question in all_questions:
-        topic_id = str(question["topic"])
-        topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
 
     topic_progress = {}
     for topic in topics:
@@ -338,12 +343,17 @@ def bookmarks():
 @tracker_bp.route("/export/csv")
 @login_required
 def export_csv():
-    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
-    topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
-    topic_lookup = {
-        topic['_id']: topic.get('name', 'Unknown')
-        for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
-    }
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        questions = pre["all_questions"]
+        topic_lookup = {tid: t["name"] for tid, t in pre["topic_lookup"].items()}
+    else:
+        questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+        topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
+        topic_lookup = {
+            topic['_id']: topic.get('name', 'Unknown')
+            for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
+        }
     csv_content = build_progress_csv(questions, topic_lookup, current_user.progress)
     response = Response(csv_content, mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=progress.csv'
@@ -353,16 +363,23 @@ def export_csv():
 @tracker_bp.route("/export/study-plan.ics")
 @login_required
 def export_study_plan_ics():
-    topics = list(db.topic.find({}, {"name": 1, "position": 1}).sort("position", 1))
-    topic_ids = [topic["_id"] for topic in topics]
-    questions = list(db.question.find({"topic": {"$in": topic_ids}}, {"topic": 1}))
-
-    questions_by_topic = {}
-    for question in questions:
-        questions_by_topic.setdefault(question["topic"], []).append(question)
-
-    for topic in topics:
-        topic["questions"] = questions_by_topic.get(topic["_id"], [])
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        questions_by_topic = {}
+        for q in pre["all_questions"]:
+            questions_by_topic.setdefault(q["topic"], []).append(q)
+        for topic in topics:
+            topic["questions"] = questions_by_topic.get(topic["_id"], [])
+    else:
+        topics = list(db.topic.find({}, {"name": 1, "position": 1}).sort("position", 1))
+        topic_ids = [topic["_id"] for topic in topics]
+        questions = list(db.question.find({"topic": {"$in": topic_ids}}, {"topic": 1}))
+        questions_by_topic = {}
+        for question in questions:
+            questions_by_topic.setdefault(question["topic"], []).append(question)
+        for topic in topics:
+            topic["questions"] = questions_by_topic.get(topic["_id"], [])
 
     calendar_text = build_study_plan_ics(topics, current_user.progress)
     response = Response(calendar_text, mimetype="text/calendar")
@@ -374,13 +391,19 @@ def export_study_plan_ics():
 @login_required
 def export_all_notes():
     """Download all non-empty notes grouped by topic as a single Markdown file."""
-    topics = list(db.topic.find().sort("position", 1))
-    all_questions = list(db.question.find({}, ALL_NOTES_QUESTION_PROJECTION))
-
-    questions_by_topic = {}
-    for question in all_questions:
-        topic_id = str(question["topic"])
-        questions_by_topic.setdefault(topic_id, []).append(question)
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        questions_by_topic = {}
+        for question in pre["all_questions"]:
+            questions_by_topic.setdefault(question["topic"], []).append(question)
+    else:
+        topics = list(db.topic.find().sort("position", 1))
+        all_questions = list(db.question.find({}, ALL_NOTES_QUESTION_PROJECTION))
+        questions_by_topic = {}
+        for question in all_questions:
+            topic_id = str(question["topic"])
+            questions_by_topic.setdefault(topic_id, []).append(question)
 
     markdown = build_all_notes_markdown(
         topics, questions_by_topic, current_user.progress,

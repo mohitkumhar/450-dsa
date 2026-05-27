@@ -339,18 +339,31 @@ def upload_photo():
 @profile_bp.route("/profile")
 @login_required
 def profile():
-    topics = list(db.topic.find().sort("position", 1))
     user = current_user
-
-    all_questions = list(db.question.find())
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
+    dsa_done = len(solved_items)
 
-    difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
-    
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        all_questions = pre["all_questions"]
+        difficulty_map = pre["difficulty_map"]
+        topic_question_count = pre["topic_question_count"]
+        total_questions = pre["total_questions"]
+    else:
+        topics = list(db.topic.find().sort("position", 1))
+        all_questions = list(db.question.find())
+        difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
+        topic_question_count = {}
+        for question in all_questions:
+            topic_id = str(question["topic"])
+            topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
+        total_questions = len(all_questions)
+
     dsa_easy = 0
     dsa_medium = 0
     dsa_hard = 0
-    
+
     for q_id in solved_items.keys():
         diff = difficulty_map.get(q_id, "Medium")
         if diff == "Easy":
@@ -359,14 +372,11 @@ def profile():
             dsa_medium += 1
         elif diff == "Hard":
             dsa_hard += 1
+
     platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "Other": 0}
     daily_counts = {}
 
-    topic_question_count = {}
     for question in all_questions:
-        topic_id = str(question["topic"])
-        topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
-
         question_id = str(question["_id"])
         if question_id in solved_items:
             solved_at = solved_items[question_id].get("timestamp") or utc_now()
@@ -388,7 +398,6 @@ def profile():
         cumulative_data.append({"x": day, "y": cumulative_sum})
 
     topic_progress = []
-    dsa_done = len(solved_items)
 
     ext_platform_totals = user.external_totals or {}
     if user.in_sheet_platform_counts:
@@ -401,7 +410,7 @@ def profile():
     lc_easy = dsa_easy
     lc_medium = dsa_medium
     lc_hard = dsa_hard
-    
+
     lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
     lc_rank = ext_platform_totals.get("LeetCode_GlobalRank", 0)
@@ -411,7 +420,6 @@ def profile():
     gh_commits = ext_platform_totals.get("GitHub_Commits", 0)
 
     global_total_solved = sum(platforms.values())
-    total_questions = len(all_questions)
 
     for topic_doc in topics:
         topic_id = str(topic_doc["_id"])

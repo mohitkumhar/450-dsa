@@ -223,6 +223,52 @@ def create_app(config_class=None):
                     upsert=True,
                 )
 
+    def _precompute_static_data(app):
+        """Precompute static question/topic metadata and store in app config."""
+        try:
+            questions = list(db.question.find())
+            topics = list(db.topic.find().sort("position", 1))
+        except Exception:
+            return
+
+        topic_question_count = {}
+        difficulty_map = {}
+        all_questions_pc = []
+        topic_lookup = {}
+
+        for t in topics:
+            tid = str(t["_id"])
+            topic_lookup[tid] = {"name": t["name"], "position": t["position"]}
+
+        for q in questions:
+            qid = str(q["_id"])
+            tid = str(q["topic"])
+            topic_question_count.setdefault(tid, []).append(qid)
+            difficulty_map[qid] = q.get("difficulty", "Medium")
+            all_questions_pc.append({
+                "_id": qid,
+                "topic": tid,
+                "problem": q.get("problem", ""),
+                "url": q.get("url", ""),
+                "url2": q.get("url2", ""),
+                "difficulty": q.get("difficulty", "Medium"),
+                "editorial_links": q.get("editorial_links", []),
+            })
+
+        topics_pc = [
+            {"_id": str(t["_id"]), "name": t["name"], "position": t["position"]}
+            for t in topics
+        ]
+
+        app.config["_PRECOMPUTED"] = {
+            "all_questions": all_questions_pc,
+            "topics": topics_pc,
+            "topic_lookup": topic_lookup,
+            "topic_question_count": topic_question_count,
+            "difficulty_map": difficulty_map,
+            "total_questions": len(questions),
+        }
+
     @app.before_request
     def ensure_db_initialized():
         if request.endpoint == "health_check":
@@ -230,6 +276,7 @@ def create_app(config_class=None):
 
         if not app._db_initialized:
             init_db()
+            _precompute_static_data(app)
             app._db_initialized = True
 
     from app.platforms.metadata import PLATFORM_META
