@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+{% from "macros/modals.html" import notes_modal %}
+
+{% block content %}
+<style>
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+.detail-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+.detail-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+.challenge-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 992px) {
+    .challenge-details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.questions-card, .leaderboard-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+}
+.panel-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.progress-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+.progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+.progress-bar-wrap {
+    background: var(--bg-primary);
+    border-radius: 10px;
+    height: 10px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    background: var(--accent);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+}
+
+/* Question table style */
+.q-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+.q-table tbody tr.row-done { background: rgba(34,197,94,0.04); }
+.q-num { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; min-width: 32px; }
+.bookmark-btn { color: var(--text-muted); }
+.bookmark-btn:hover { color: var(--accent); }
+.bookmark-btn.bookmarked { color: var(--warning); }
+.row-updating { opacity: 0.55; }
+.topic-tag {
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 2px 8px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+/* Leaderboard design */
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    transition: transform 0.2s;
+}
+.leaderboard-item.current-user-item {
+    border-color: var(--accent);
+    background: rgba(255, 107, 0, 0.04);
+}
+.leaderboard-rank {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: var(--border-color);
+}
+.rank-1 { background: #ffd700; color: #111; }
+.rank-2 { background: #c0c0c0; color: #111; }
+.rank-3 { background: #cd7f32; color: #111; }
+.user-avatar-mini {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+.user-info-wrap {
+    flex-grow: 1;
+    min-width: 0;
+}
+.user-name-mini {
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+.user-ts {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+.solved-badge-mini {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(255, 107, 0, 0.10);
+    padding: 4px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+.topic-status {
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    border: 1px solid rgba(239,68,68,0.35);
+    border-radius: 8px;
+    background: rgba(239,68,68,0.12);
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.topic-status:empty { display: none; }
+</style>
+
+<div class="page-load-target">
+<a href="{{ url_for('challenge.challenges') }}" class="back-btn" aria-label="Back to Challenges">
+    <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to Challenges
+</a>
+
+<div class="detail-header mt-3">
+    <div>
+        <h1 class="detail-title">{{ challenge.title }}</h1>
+        <p class="detail-subtitle">Week {{ challenge.week_num }} curation & rankings</p>
+    </div>
+</div>
+
+<div class="challenge-details-grid">
+    <!-- Left Column: Questions -->
+    <div class="questions-card">
+        <div class="progress-section">
+            <div class="progress-stats">
+                <span>Your Challenge Progress</span>
+                <span>{{ completed_count }} of {{ total_count }} Solved ({{ progress_percent }}%)</span>
+            </div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width: {{ progress_percent }}%;"></div>
+            </div>
+        </div>
+
+        <h3 class="panel-title"><i class="bi bi-list-task" style="color: var(--accent);"></i> Challenge Questions</h3>
+        
+        <div class="topic-status" id="topicStatus" role="status" aria-live="polite"></div>
+
+        <div class="questions-table-wrap">
+            <table class="q-table" id="questions-table" aria-label="Weekly challenge questions">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Problem</th>
+                        <th scope="col">Difficulty</th>
+                        <th scope="col">Save</th>
+                        <th scope="col">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in questions %}
+                    {% set q_id_str = q._id | string %}
+                    {% set p = progress_dict.get(q_id_str) %}
+                    {% set difficulty = q.get('difficulty', 'Medium') %}
+                    <tr class="{% if p and p.done %}row-done{% endif %}" id="row-{{ q_id_str }}" data-difficulty="{{ difficulty }}">
+                        <td class="q-num">{{ loop.index }}</td>
+                        <td>
+                            <input type="checkbox" class="q-checkbox status-checkbox"
+                                id="check_{{ q_id_str }}"
+                                data-id="{{ q_id_str }}"
+                                aria-label="Mark '{{ q.problem }}' as {% if p and p.done %}incomplete{% else %}complete{% endif %}"
+                                {% if p and p.done %}checked{% endif %}>
+                        </td>
+                        <td>
+                            <span class="topic-tag">{{ q.topic_name }}</span>
+                            <div class="q-name">{{ q.problem }}</div>
+                            <div class="q-links">
+                                {% if q.url %}
+                                    {% set p1 = q.url|platform_name %}
+                                    <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
+                                       class="q-badge {{ p1 | platform_badge }}"
+                                       aria-label="Solve on {{ p1 }} (opens in new tab)">
+                                       <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
+                                    </a>
+                                {% endif %}
+                                {% if q.url2 %}
+                                    {% set p2 = q.url2|platform_name %}
+                                    <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
+                                       class="q-badge {{ p2 | platform_badge }}"
+                                       aria-label="Solve on {{ p2 }} (opens in new tab)">
+                                       <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
+                                    </a>
+                                {% endif %}
+                                {% for editorial in q.editorial_links %}
+                                    <a href="{{ editorial.url }}" target="_blank" rel="noopener noreferrer"
+                                       class="q-badge badge-link"
+                                       aria-label="Read {{ editorial.label }} (opens in new tab)">
+                                       <i class="bi bi-journal-text" aria-hidden="true"></i> {{ editorial.label }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            <span class="difficulty-badge difficulty-{{ difficulty|lower }}" aria-label="{{ difficulty }} difficulty question">
+                                <span aria-hidden="true">{% if difficulty == 'Easy' %}🟢{% elif difficulty == 'Medium' %}🟡{% else %}🔴{% endif %}</span>
+                                {{ difficulty }}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="action-icon bookmark-btn {% if p and p.bookmark %}bookmarked{% endif %}"
+                                data-id="{{ q_id_str }}"
+                                data-bookmarked="{{ 'true' if p and p.bookmark else 'false' }}"
+                                aria-label="{% if p and p.bookmark %}Remove bookmark for '{{ q.problem }}'{% else %}Bookmark '{{ q.problem }}'{% endif %}"
+                                aria-pressed="{{ 'true' if p and p.bookmark else 'false' }}">
+                                <i class="bi {% if p and p.bookmark %}bi-bookmark-fill{% else %}bi-bookmark{% endif %}" aria-hidden="true"></i>
+                            </button>
+                            <button class="action-icon skip-btn {% if p and p.skipped %}skipped{% endif %}"
+                                data-id="{{ q_id_str }}"
+                                data-skipped="{{ 'true' if p and p.skipped else 'false' }}"
+                                aria-label="{% if p and p.skipped %}Remove skipped status for '{{ q.problem }}'{% else %}Mark '{{ q.problem }}' as skipped{% endif %}"
+                                aria-pressed="{{ 'true' if p and p.skipped else 'false' }}">
+                                <i class="bi {% if p and p.skipped %}bi-skip-forward-fill{% else %}bi-skip-forward{% endif %}" aria-hidden="true"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn"
+                                data-id="{{ q_id_str }}"
+                                data-notes="{{ p.notes if p and p.notes else '' }}"
+                                aria-label="{% if p and p.notes %}Edit notes for '{{ q.problem }}'{% else %}Add notes for '{{ q.problem }}'{% endif %}">
+                                <i class="bi bi-journal-text" aria-hidden="true"></i>
+                                {% if p and p.notes %}Edit{% else %}Add{% endif %}
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Column: Leaderboard -->
+    <div class="leaderboard-card">
+        <h3 class="panel-title"><i class="bi bi-trophy-fill" style="color: #ffd700;"></i> Challenge Board</h3>
+        <div class="leaderboard-list">
+            {% if leaderboard %}
+                {% for entry in leaderboard %}
+                    {% set is_curr = (current_user.is_authenticated and current_user.id|string == entry.user_id|string) %}
+                    <div class="leaderboard-item {% if is_curr %}current-user-item{% endif %}">
+                        <span class="leaderboard-rank rank-{{ entry.rank }}">{{ entry.rank }}</span>
+                        {% if entry.profile_photo %}
+                            <img src="{{ entry.profile_photo }}" class="user-avatar-mini" alt="{{ entry.name }}">
+                        {% else %}
+                            <span class="user-avatar-mini">{{ entry.name[0] }}</span>
+                        {% endif %}
+                        <div class="user-info-wrap">
+                            <span class="user-name-mini" title="{{ entry.name }}">{{ entry.name }}</span>
+                            {% if entry.latest_timestamp %}
+                                <span class="user-ts">Last solved: {{ entry.latest_timestamp.strftime('%b %d, %H:%M') }}</span>
+                            {% endif %}
+                        </div>
+                        <span class="solved-badge-mini">{{ entry.solved_count }} solved</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">No active submissions for this challenge. Be the first to start!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Notes Modal -->
+{{ notes_modal(textarea_label='Notes for this question') }}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const endpointConfig = {{ {
+  "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+}|tojson }};
+const csrfToken = {{ csrf_token()|tojson }};
+const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
+const topicStatus = document.getElementById('topicStatus');
+
+function showUpdateError(message = 'Unable to save your change. Please try again.') {
+    topicStatus.textContent = message;
+    window.clearTimeout(topicStatus._hideTimer);
+    topicStatus._hideTimer = window.setTimeout(() => {
+        topicStatus.textContent = '';
+    }, 5000);
+}
+
+function setBookmarkState(btn, isBookmarked) {
+    const icon = btn.querySelector('i');
+    btn.dataset.bookmarked = isBookmarked ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', isBookmarked ? 'true' : 'false');
+    btn.classList.toggle('bookmarked', isBookmarked);
+    icon.className = isBookmarked ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
+}
+
+function updateQuestion(id, data, callback) {
+    return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        body: JSON.stringify(data)
+    }).then(r => {
+        if (!r.ok) throw new Error('Request failed');
+        return r.json();
+    }).then(res => {
+        if (!res.success) throw new Error(res.error || 'Update failed');
+        if (callback) callback(res);
+        return res;
+    });
+}
+
+// Checkbox event listener: reloads the page to update the leaderboard/progress in sync!
+document.querySelectorAll('.status-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        if (!isAuthenticated) { 
+            this.checked = !this.checked; 
+            window.location.href = "{{ url_for('auth.login') }}"; 
+            return; 
+        }
+        const row = document.getElementById('row-' + this.dataset.id);
+        const previousChecked = !this.checked;
+        const nextChecked = this.checked;
+        this.disabled = true;
+        row.classList.add('row-updating');
+        
+        row.classList.toggle('row-done', nextChecked);
+        updateQuestion(this.dataset.id, {done: nextChecked})
+            .then(() => {
+                // Reload page to recompute leaderboard and progress bar
+                window.location.reload();
+            })
+            .catch(() => {
+                this.checked = previousChecked;
+                row.classList.toggle('row-done', previousChecked);
+                showUpdateError();
+                this.disabled = false;
+                row.classList.remove('row-updating');
+            });
+    });
+});
+
+document.querySelectorAll('.bookmark-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) { 
+            window.location.href = "{{ url_for('auth.login') }}"; 
+            return; 
+        }
+        const isBookmarked = this.dataset.bookmarked === 'true';
+        const newStatus = !isBookmarked;
+        this.disabled = true;
+        this.classList.add('row-updating');
+        setBookmarkState(this, newStatus);
+        updateQuestion(this.dataset.id, {bookmark: newStatus})
+            .catch(() => {
+                setBookmarkState(this, isBookmarked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.classList.remove('row-updating');
+            });
+    });
+});
+
+function setSkippedState(btn, isSkipped) {
+    const icon = btn.querySelector('i');
+    btn.dataset.skipped = isSkipped ? 'true' : 'false';
+    btn.setAttribute('aria-pressed', isSkipped ? 'true' : 'false');
+    btn.classList.toggle('skipped', isSkipped);
+    icon.className = isSkipped ? 'bi bi-skip-forward-fill' : 'bi bi-skip-forward';
+}
+
+document.querySelectorAll('.skip-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+        const isSkipped = this.dataset.skipped === 'true';
+        const nextSkipped = !isSkipped;
+        const row = document.getElementById('row-' + this.dataset.id);
+        const checkbox = row.querySelector('.status-checkbox');
+        const previousChecked = checkbox.checked;
+        this.disabled = true;
+        checkbox.disabled = true;
+        row.classList.add('row-updating');
+        setSkippedState(this, nextSkipped);
+        if (nextSkipped) {
+            checkbox.checked = false;
+            row.classList.remove('row-done');
+        }
+        updateQuestion(this.dataset.id, {skipped: nextSkipped})
+            .then(() => {
+                // Reload on skip status change if they were previously marked as done
+                if (previousChecked) {
+                    window.location.reload();
+                }
+            })
+            .catch(() => {
+                setSkippedState(this, isSkipped);
+                checkbox.checked = previousChecked;
+                row.classList.toggle('row-done', previousChecked);
+                showUpdateError();
+            })
+            .finally(() => {
+                this.disabled = false;
+                checkbox.disabled = false;
+                row.classList.remove('row-updating');
+            });
+    });
+});
+
+// Notes Modal setup
+const modal = document.getElementById('notesModal');
+const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
+
+function openModal(triggerEl) {
+    modal.classList.add('open');
+    modal._trigger = triggerEl;
+    const focusable = modal.querySelectorAll(FOCUSABLE);
+    if (focusable.length) focusable[0].focus();
+    modal.addEventListener('keydown', trapFocus);
+}
+
+function closeModal() {
+    modal.classList.remove('open');
+    modal.removeEventListener('keydown', trapFocus);
+    if (modal._trigger) modal._trigger.focus();
+}
+
+function trapFocus(e) {
+    const focusable = Array.from(modal.querySelectorAll(FOCUSABLE));
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.key === 'Tab') {
+        if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+        else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+    }
+    if (e.key === 'Escape') closeModal();
+}
+
+document.querySelectorAll('.notes-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) { window.location.href = "{{ url_for('auth.login') }}"; return; }
+        document.getElementById('currentQuestionId').value = this.dataset.id;
+        document.getElementById('notesTextarea').value = this.dataset.notes || '';
+        openModal(this);
+    });
+});
+
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+document.getElementById('saveNotesBtn').addEventListener('click', function() {
+    const qId = document.getElementById('currentQuestionId').value;
+    const notes = document.getElementById('notesTextarea').value;
+    const previousContent = this.innerHTML;
+    this.disabled = true;
+    this.textContent = 'Saving...';
+    updateQuestion(qId, {notes: notes}, () => {
+        closeModal();
+        const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
+        if (btn) {
+            btn.dataset.notes = notes;
+            btn.classList.toggle('has-notes', notes.trim() !== '');
+            const label = notes.trim() ? 'Edit' : 'Add';
+            btn.innerHTML = `<i class="bi bi-journal-text" aria-hidden="true"></i> ${label}`;
+        }
+    }).catch(() => {
+        showUpdateError('Unable to save notes. Please try again.');
+    }).finally(() => {
+        this.disabled = false;
+        this.innerHTML = previousContent;
+    });
+});
+</script>
+{% endblock %}

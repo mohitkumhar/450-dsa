@@ -1,0 +1,28 @@
+[
+  {
+    "week_num": 1,
+    "title": "Week 1: Array Foundations",
+    "questions": [
+      { "topic": "Array", "problem": "Reverse the array" },
+      { "topic": "Array", "problem": "Find the maximum and minimum element in an array" },
+      { "topic": "Array", "problem": "Find the \"Kth\" max and min element of an array " }
+    ]
+  },
+  {
+    "week_num": 2,
+    "title": "Week 2: Matrix & Basic Strings",
+    "questions": [
+      { "topic": "Matrix", "problem": "Spiral traversal on a Matrix" },
+      { "topic": "String", "problem": "Reverse a String" },
+      { "topic": "String", "problem": "Check whether a String is Palindrome or not" }
+    ]
+  },
+  {
+    "week_num": 3,
+    "title": "Week 3: Advanced Strings",
+    "questions": [
+      { "topic": "String", "problem": "Find Duplicate characters in a string" },
+      { "topic": "String", "problem": "Write a Code to check whether one string is a rotation of another" }
+    ]
+  }
+]

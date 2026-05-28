@@ -24,6 +24,7 @@ from app.security import (
 )
 from app.search import search_bp
 from app.tracker import tracker_bp
+from app.challenge import challenge_bp
 from app.utils import (
     platform_color_filter,
     platform_name_filter,
@@ -48,7 +49,9 @@ ROUTE_TIMING_ENDPOINTS = {
 def _configure_rate_limit_storage(app, config_class):
     storage_uri = app.config["RATELIMIT_STORAGE_URI"]
     if storage_uri == "memory://" and config_class is ProductionConfig:
-        raise RuntimeError("Set RATELIMIT_STORAGE_URI to a persistent backend before running in production.")
+        raise RuntimeError(
+            "Set RATELIMIT_STORAGE_URI to a persistent backend before running in production."
+        )
 
 
 def _mongo_client_options(app):
@@ -99,7 +102,7 @@ def create_app(config_class=None):
         "SESSION_COOKIE_SECURE",
         default=app.config["SESSION_COOKIE_SECURE"],
     )
-    
+
     cache.init_app(app)
     Swagger(
         app,
@@ -133,7 +136,9 @@ def create_app(config_class=None):
     oauth.register(
         name="github",
         client_id=os.environ.get("GITHUB_CLIENT_ID", "your-github-client-id"),
-        client_secret=os.environ.get("GITHUB_CLIENT_SECRET", "your-github-client-secret"),
+        client_secret=os.environ.get(
+            "GITHUB_CLIENT_SECRET", "your-github-client-secret"
+        ),
         access_token_url="https://github.com/login/oauth/access_token",
         access_token_params=None,
         authorize_url="https://github.com/login/oauth/authorize",
@@ -145,7 +150,9 @@ def create_app(config_class=None):
     oauth.register(
         name="google",
         client_id=os.environ.get("GOOGLE_CLIENT_ID", "your-google-client-id"),
-        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
+        client_secret=os.environ.get(
+            "GOOGLE_CLIENT_SECRET", "your-google-client-secret"
+        ),
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid email profile"},
     )
@@ -159,11 +166,16 @@ def create_app(config_class=None):
         db.topic.create_index("position")
         db.question.create_index("topic")
         _dedupe_seeded_questions()
-        db.question.create_index([("topic", 1), ("problem", 1), ("url", 1)], unique=True)
+        db.question.create_index(
+            [("topic", 1), ("problem", 1), ("url", 1)], unique=True
+        )
         db.question.create_index([("problem", "text")], name="problem_text")
-        
+        db.challenge.create_index("week_num", unique=True)
+
         # Lightweight schema backfill for legacy user documents.
-        db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
+        db.user.update_many(
+            {"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}}
+        )
     except Exception as exc:
         app.logger.warning(f"Database indexing or schema backfill failed: {exc}")
     data_path = Path(app.root_path).parent / "data.json"
@@ -172,10 +184,14 @@ def create_app(config_class=None):
     def init_db():
         with data_path.open("r", encoding="utf-8") as file_obj:
             data = json.load(file_obj)
-        if not all(hasattr(collection, "update_one") for collection in (db.topic, db.question)):
+        if not all(
+            hasattr(collection, "update_one") for collection in (db.topic, db.question)
+        ):
             if db.topic.count_documents({}) == 0:
                 for topic in data:
-                    result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})
+                    result = db.topic.insert_one(
+                        {"name": topic["topicName"], "position": topic["position"]}
+                    )
                     topic_id = result.inserted_id
                     questions = []
                     for question in topic["questions"]:
@@ -223,6 +239,38 @@ def create_app(config_class=None):
                     upsert=True,
                 )
 
+        # Seed challenges from challenges.json
+        challenges_path = Path(app.root_path).parent / "challenges.json"
+        if challenges_path.is_file():
+            try:
+                with challenges_path.open("r", encoding="utf-8") as ch_file:
+                    challenges_data = json.load(ch_file)
+                for ch in challenges_data:
+                    q_ids = []
+                    for q_ref in ch.get("questions", []):
+                        topic_doc = db.topic.find_one({"name": q_ref["topic"]})
+                        if topic_doc:
+                            q_doc = db.question.find_one(
+                                {"topic": topic_doc["_id"], "problem": q_ref["problem"]}
+                            )
+                            if q_doc:
+                                q_ids.append(q_doc["_id"])
+
+                    db.challenge.update_one(
+                        {"week_num": ch["week_num"]},
+                        {
+                            "$set": {
+                                "title": ch["title"],
+                                "question_ids": q_ids,
+                                "start_date": ch.get("start_date"),
+                                "end_date": ch.get("end_date"),
+                            }
+                        },
+                        upsert=True,
+                    )
+            except Exception as e:
+                app.logger.warning(f"Failed to seed challenges: {e}")
+
     @app.before_request
     def ensure_db_initialized():
         if request.endpoint == "health_check":
@@ -258,7 +306,10 @@ def create_app(config_class=None):
         if validate_csrf_request():
             return None
 
-        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        if (
+            request.is_json
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        ):
             return jsonify({"success": False, "error": "Invalid CSRF token."}), 403
 
         abort(403)
@@ -286,8 +337,9 @@ def create_app(config_class=None):
         return response
 
     app.register_blueprint(auth_bp)
-    app.register_blueprint(faq_bp)  
+    app.register_blueprint(faq_bp)
     app.register_blueprint(tracker_bp)
+    app.register_blueprint(challenge_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(search_bp)
@@ -296,14 +348,16 @@ def create_app(config_class=None):
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        retry_after = getattr(e, 'retry_after', 60)
-        response = jsonify({
-            'error': 'Too many requests',
-            'message': str(e.description),
-            'retry_after': retry_after
-        })
+        retry_after = getattr(e, "retry_after", 60)
+        response = jsonify(
+            {
+                "error": "Too many requests",
+                "message": str(e.description),
+                "retry_after": retry_after,
+            }
+        )
         response.status_code = 429
-        response.headers['Retry-After'] = str(retry_after)
+        response.headers["Retry-After"] = str(retry_after)
         return response
 
     @app.after_request
@@ -316,7 +370,9 @@ def create_app(config_class=None):
                     {
                         "endpoint": request.endpoint,
                         "method": request.method,
-                        "route": request.url_rule.rule if request.url_rule else request.path,
+                        "route": (
+                            request.url_rule.rule if request.url_rule else request.path
+                        ),
                         "status_code": response.status_code,
                         "duration_ms": round((perf_counter() - started_at) * 1000, 2),
                     },
@@ -325,7 +381,5 @@ def create_app(config_class=None):
             )
         response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
-
-
 
     return app

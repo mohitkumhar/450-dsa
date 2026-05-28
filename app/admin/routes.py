@@ -5,7 +5,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import ObjectId
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from bson.errors import InvalidId
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask import session
 from flask_login import current_user, login_required
 
@@ -79,7 +89,11 @@ def _compute_system_stats():
             if progress_item.get("done"):
                 solved_in_app += 1
                 solved_at = progress_item.get("timestamp")
-                if solved_at and hasattr(solved_at, "strftime") and solved_at.strftime("%Y-%m-%d") == today:
+                if (
+                    solved_at
+                    and hasattr(solved_at, "strftime")
+                    and solved_at.strftime("%Y-%m-%d") == today
+                ):
                     active_users_today.add(user["_id"])
 
         external_totals = user.get("external_totals") or {}
@@ -200,3 +214,139 @@ def delete_user(user_id):
     display_name = target_user.get("name") or target_user.get("email") or "user"
     flash(f"Deleted account for {display_name}.", "success")
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+
+@admin_bp.route("/challenges", methods=["GET"])
+@login_required
+@admin_required
+def challenges():
+    challenges_list = list(db.challenge.find().sort("week_num", 1))
+    return render_template("admin/challenges.html", challenges=challenges_list)
+
+
+@admin_bp.route("/challenges/new", methods=["GET", "POST"])
+@admin_bp.route("/challenges/<challenge_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_challenge(challenge_id=None):
+    challenge_doc = None
+    if challenge_id:
+        try:
+            challenge_doc = db.challenge.find_one({"_id": ObjectId(challenge_id)})
+        except InvalidId:
+            abort(404)
+        if not challenge_doc:
+            abort(404)
+
+    if request.method == "POST":
+        form_token = request.form.get("csrf_token", "")
+        session_token = session.get("csrf_token", "")
+        if not form_token or not session_token or form_token != session_token:
+            abort(400)
+
+        week_num = request.form.get("week_num")
+        title = request.form.get("title")
+        start_date_raw = request.form.get("start_date")
+        end_date_raw = request.form.get("end_date")
+        selected_qids = request.form.getlist("question_ids")
+
+        if not week_num or not title:
+            flash("Week Number and Title are required.", "danger")
+            return redirect(request.referrer or url_for("admin.challenges"))
+
+        try:
+            week_num = int(week_num)
+        except ValueError:
+            flash("Week Number must be an integer.", "danger")
+            return redirect(request.referrer or url_for("admin.challenges"))
+
+        start_date = None
+        end_date = None
+        if start_date_raw:
+            try:
+                start_date = datetime.fromisoformat(start_date_raw).replace(
+                    tzinfo=timezone.utc
+                )
+            except ValueError:
+                pass
+        if end_date_raw:
+            try:
+                end_date = datetime.fromisoformat(end_date_raw).replace(
+                    tzinfo=timezone.utc
+                )
+            except ValueError:
+                pass
+
+        q_ids = []
+        for qid in selected_qids:
+            try:
+                q_ids.append(ObjectId(qid))
+            except InvalidId:
+                pass
+
+        update_data = {
+            "week_num": week_num,
+            "title": title,
+            "question_ids": q_ids,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+
+        query = {"week_num": week_num}
+        if challenge_doc:
+            query["_id"] = {"$ne": challenge_doc["_id"]}
+        if db.challenge.find_one(query):
+            flash(f"A challenge for Week {week_num} already exists.", "danger")
+            return redirect(request.referrer or url_for("admin.challenges"))
+
+        if challenge_doc:
+            db.challenge.update_one(
+                {"_id": challenge_doc["_id"]}, {"$set": update_data}
+            )
+            flash(f"Challenge '{title}' updated successfully.", "success")
+        else:
+            db.challenge.insert_one(update_data)
+            flash(f"Challenge '{title}' created successfully.", "success")
+
+        return redirect(url_for("admin.challenges"))
+
+    topics = list(db.topic.find().sort("position", 1))
+    questions = list(db.question.find({}, {"problem": 1, "topic": 1}))
+
+    questions_by_topic = {}
+    for q in questions:
+        questions_by_topic.setdefault(str(q["topic"]), []).append(q)
+
+    selected_qid_strs = set()
+    if challenge_doc:
+        selected_qid_strs = {str(qid) for qid in challenge_doc.get("question_ids", [])}
+
+    return render_template(
+        "admin/edit_challenge.html",
+        challenge=challenge_doc,
+        topics=topics,
+        questions_by_topic=questions_by_topic,
+        selected_qids=selected_qid_strs,
+    )
+
+
+@admin_bp.route("/challenges/<challenge_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_challenge(challenge_id):
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+
+    try:
+        challenge_id_obj = ObjectId(challenge_id)
+    except InvalidId:
+        abort(404)
+
+    result = db.challenge.delete_one({"_id": challenge_id_obj})
+    if result.deleted_count != 1:
+        abort(500)
+
+    flash("Challenge deleted successfully.", "success")
+    return redirect(url_for("admin.challenges"))

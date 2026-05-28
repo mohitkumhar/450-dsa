@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+.form-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+.form-group {
+    margin-bottom: 16px;
+}
+.form-label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.form-control {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 10px 12px;
+    width: 100%;
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.questions-picker-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 24px 0 12px 0;
+}
+.topic-accordion {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.topic-header {
+    background: var(--bg-secondary);
+    padding: 14px 16px;
+    cursor: pointer;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-subtle);
+    user-select: none;
+}
+.topic-body {
+    padding: 16px;
+    display: none;
+    background: var(--bg-card);
+}
+.topic-body.open {
+    display: block;
+}
+.question-select-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.question-select-row:last-child {
+    border-bottom: none;
+}
+.question-label {
+    font-size: 0.9rem;
+    cursor: pointer;
+    user-select: none;
+}
+.btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 9px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 0.88rem;
+    padding: 10px 20px;
+    text-decoration: none;
+    cursor: pointer;
+}
+.action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.action-btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+.action-btn.primary:hover {
+    background: #e05b00;
+}
+</style>
+
+<a href="{{ url_for('admin.challenges') }}" class="back-btn">
+    <i class="bi bi-arrow-left"></i> Back to Challenges
+</a>
+
+<div class="form-card mt-3">
+    <h1 class="form-title">
+        {% if challenge %}Edit Weekly Challenge{% else %}Create Weekly Challenge{% endif %}
+    </h1>
+    
+    <form method="POST" action="{% if challenge %}{{ url_for('admin.edit_challenge', challenge_id=challenge._id|string) }}{% else %}{{ url_for('admin.edit_challenge') }}{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <div class="row">
+            <div class="col-md-4 form-group">
+                <label class="form-label" for="week_num">Week Number</label>
+                <input type="number" id="week_num" name="week_num" class="form-control" required min="1"
+                       value="{{ challenge.week_num if challenge else '' }}">
+            </div>
+            
+            <div class="col-md-8 form-group">
+                <label class="form-label" for="title">Challenge Title</label>
+                <input type="text" id="title" name="title" class="form-control" required placeholder="e.g. Week 1: Array Foundations"
+                       value="{{ challenge.title if challenge else '' }}">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 form-group">
+                <label class="form-label" for="start_date">Start Date (UTC)</label>
+                <input type="datetime-local" id="start_date" name="start_date" class="form-control"
+                       value="{{ challenge.start_date.strftime('%Y-%m-%dT%H:%M') if challenge and challenge.start_date else '' }}">
+            </div>
+            
+            <div class="col-md-6 form-group">
+                <label class="form-label" for="end_date">End Date (UTC)</label>
+                <input type="datetime-local" id="end_date" name="end_date" class="form-control"
+                       value="{{ challenge.end_date.strftime('%Y-%m-%dT%H:%M') if challenge and challenge.end_date else '' }}">
+            </div>
+        </div>
+
+        <h3 class="questions-picker-title">Select Questions</h3>
+        <p class="text-secondary" style="font-size: 0.85rem; margin-top: -6px; margin-bottom: 16px;">
+            Choose the curated set of questions to include in this weekly challenge.
+        </p>
+
+        {% if topics %}
+            {% for topic in topics %}
+                {% set topic_id_str = topic._id|string %}
+                {% set topic_questions = questions_by_topic.get(topic_id_str, []) %}
+                {% if topic_questions %}
+                    <div class="topic-accordion">
+                        <div class="topic-header" onclick="toggleAccordion('{{ topic_id_str }}')">
+                            <span>{{ topic.name }} ({{ topic_questions | length }} questions)</span>
+                            <i class="bi bi-chevron-down" id="arrow-{{ topic_id_str }}"></i>
+                        </div>
+                        <div class="topic-body" id="body-{{ topic_id_str }}">
+                            {% for q in topic_questions %}
+                                {% set q_id_str = q._id|string %}
+                                <div class="question-select-row">
+                                    <input type="checkbox" name="question_ids" value="{{ q_id_str }}" id="q-{{ q_id_str }}"
+                                           {% if q_id_str in selected_qids %}checked{% endif %}>
+                                    <label for="q-{{ q_id_str }}" class="question-label">{{ q.problem }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <p class="text-secondary">No topics found. Please seed the question database first.</p>
+        {% endif %}
+
+        <div class="btn-row">
+            <button type="submit" class="action-btn primary">
+                <i class="bi bi-check-lg"></i> Save Challenge
+            </button>
+            <a href="{{ url_for('admin.challenges') }}" class="action-btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleAccordion(topicId) {
+    const body = document.getElementById("body-" + topicId);
+    const arrow = document.getElementById("arrow-" + topicId);
+    
+    if (body.classList.contains("open")) {
+        body.classList.remove("open");
+        arrow.className = "bi bi-chevron-down";
+    } else {
+        body.classList.add("open");
+        arrow.className = "bi bi-chevron-up";
+    }
+}
+</script>
+{% endblock %}

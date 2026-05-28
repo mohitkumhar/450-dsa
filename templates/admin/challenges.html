@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+.admin-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+}
+.admin-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+}
+.table-wrap {
+    overflow-x: auto;
+}
+.challenges-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.challenges-table th,
+.challenges-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+}
+.challenges-table th {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.challenges-table td {
+    font-size: 0.9rem;
+}
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 9px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    text-decoration: none;
+}
+.action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.action-btn.danger {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #f87171;
+}
+.action-btn.danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+.action-btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+.action-btn.primary:hover {
+    background: #e05b00;
+}
+.empty-state {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    padding: 20px 0;
+}
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.58);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    padding: 14px;
+}
+.modal-card {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    padding: 18px;
+}
+.modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.modal-copy {
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    margin-bottom: 14px;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+</style>
+
+<div class="admin-header">
+    <div>
+        <h1 class="admin-title">Manage Weekly Challenges</h1>
+        <p class="admin-subtitle">Create, update, and manage rotating weekly coding challenges.</p>
+    </div>
+    <div>
+        <a href="{{ url_for('admin.edit_challenge') }}" class="action-btn primary">
+            <i class="bi bi-plus-lg"></i> Create Challenge
+        </a>
+    </div>
+</div>
+
+<div class="panel">
+    <div class="table-wrap">
+        <table class="challenges-table" aria-label="Seeded weekly challenges">
+            <thead>
+                <tr>
+                    <th>Week</th>
+                    <th>Title</th>
+                    <th>Questions Count</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if challenges %}
+                    {% for ch in challenges %}
+                    <tr>
+                        <td><strong>Week {{ ch.week_num }}</strong></td>
+                        <td>{{ ch.title }}</td>
+                        <td>{{ ch.question_ids | length }} questions</td>
+                        <td>{{ ch.start_date.strftime('%Y-%m-%d') if ch.start_date else '-' }}</td>
+                        <td>{{ ch.end_date.strftime('%Y-%m-%d') if ch.end_date else '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_challenge', challenge_id=ch._id|string) }}" class="action-btn">
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </a>
+                            <button type="button" class="action-btn danger js-delete-challenge" 
+                                    data-challenge-id="{{ ch._id|string }}" 
+                                    data-challenge-title="{{ ch.title }}">
+                                <i class="bi bi-trash3-fill"></i> Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="empty-state text-center">No challenges found. Click "Create Challenge" to seed one!</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="delete-challenge-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="modal-card">
+        <h3 class="modal-title" id="delete-modal-title">Delete Weekly Challenge</h3>
+        <p class="modal-copy" id="delete-modal-copy">Are you sure you want to delete this challenge? This action cannot be undone.</p>
+        <form id="delete-challenge-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-actions">
+                <button type="button" class="action-btn" id="cancel-delete-btn">Cancel</button>
+                <button type="submit" class="action-btn danger"><i class="bi bi-trash3-fill"></i> Confirm Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const modal = document.getElementById("delete-challenge-modal");
+    if (!modal) return;
+
+    const form = document.getElementById("delete-challenge-form");
+    const modalCopy = document.getElementById("delete-modal-copy");
+    const cancelBtn = document.getElementById("cancel-delete-btn");
+
+    function openModal() {
+        modal.style.display = "flex";
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    document.querySelectorAll(".js-delete-challenge").forEach(button => {
+        button.addEventListener("click", function() {
+            const chId = this.getAttribute("data-challenge-id");
+            const title = this.getAttribute("data-challenge-title") || "this challenge";
+            form.action = "/admin/challenges/" + encodeURIComponent(chId) + "/delete";
+            modalCopy.textContent = "Are you sure you want to delete '" + title + "'? This action is permanent.";
+            openModal();
+        });
+    });
+
+    cancelBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", function(e) {
+        if (e.target === modal) closeModal();
+    });
+})();
+</script>
+{% endblock %}

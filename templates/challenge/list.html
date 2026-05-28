@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.challenges-header {
+    margin-bottom: 30px;
+}
+.challenges-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+}
+.challenges-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+.current-challenge-card {
+    background: linear-gradient(135deg, rgba(255, 107, 0, 0.15), rgba(59, 130, 246, 0.08));
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+}
+.current-challenge-card::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 107, 0, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+}
+.badge-active {
+    background: var(--accent);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-block;
+    margin-bottom: 12px;
+}
+.current-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+.progress-container {
+    margin: 20px 0;
+}
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+.progress-bar-wrap {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    height: 10px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    background: var(--accent);
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.4s ease;
+}
+.challenge-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+@media (max-width: 992px) {
+    .challenge-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.challenge-list-panel, .mini-leaderboard-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+}
+.panel-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.week-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s ease;
+}
+.week-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+.week-info {
+    min-width: 0;
+}
+.week-num {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.week-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 4px 0;
+}
+.week-progress {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+.view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-decoration: none;
+    transition: background 0.2s;
+    border: none;
+    white-space: nowrap;
+}
+.view-btn:hover {
+    background: #e05b00;
+    color: white;
+}
+.leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+}
+.leaderboard-rank {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: var(--border-color);
+}
+.rank-1 { background: #ffd700; color: #111; }
+.rank-2 { background: #c0c0c0; color: #111; }
+.rank-3 { background: #cd7f32; color: #111; }
+.user-avatar-mini {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+.user-name-mini {
+    flex-grow: 1;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.solved-badge-mini {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: rgba(255, 107, 0, 0.1);
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+</style>
+
+<div class="challenges-header">
+    <h1 class="challenges-title">Weekly Coding Challenges</h1>
+    <p class="challenges-subtitle">Compete in curated rotating weekly targets to build consistency and climb the boards.</p>
+</div>
+
+{% if current_challenge %}
+<div class="current-challenge-card">
+    <span class="badge-active">Active Challenge</span>
+    <h2 class="current-title">{{ current_challenge.title }} (Week {{ current_challenge.week_num }})</h2>
+    
+    {% if current_user.is_authenticated %}
+        {% set ch_progress = challenges | selectattr("_id", "equalto", current_challenge._id) | first %}
+        <div class="progress-container">
+            <div class="progress-label">
+                <span>Your Challenge Progress</span>
+                <span>{{ ch_progress.completed_questions }} of {{ ch_progress.total_questions }} solved ({{ ch_progress.progress_percent }}%)</span>
+            </div>
+            <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" style="width: {{ ch_progress.progress_percent }}%;"></div>
+            </div>
+        </div>
+    {% else %}
+        <p class="text-secondary" style="font-size: 0.88rem; margin: 12px 0;">Login to track your completion progress and join the leaderboard!</p>
+    {% endif %}
+
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('challenge.challenge_detail', challenge_id=current_challenge._id|string) }}" class="view-btn">
+            <i class="bi bi-rocket-takeoff-fill"></i> Enter Challenge
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div class="challenge-grid">
+    <!-- Left: List of all challenges -->
+    <div class="challenge-list-panel">
+        <h3 class="panel-title"><i class="bi bi-calendar-week-fill" style="color: var(--accent);"></i> All Challenges</h3>
+        {% if challenges %}
+            {% for ch in challenges %}
+                <div class="week-card">
+                    <div class="week-info">
+                        <span class="week-num">Week {{ ch.week_num }}</span>
+                        <h4 class="week-title">{{ ch.title }}</h4>
+                        {% if current_user.is_authenticated %}
+                            <span class="week-progress">{{ ch.completed_questions }} / {{ ch.total_questions }} Solved ({{ ch.progress_percent }}%)</span>
+                        {% else %}
+                            <span class="week-progress">{{ ch.total_questions }} Questions</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{{ url_for('challenge.challenge_detail', challenge_id=ch._id|string) }}" class="view-btn">
+                            View <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-secondary">No challenges found. Keep an eye out for upcoming weekly challenges!</p>
+        {% endif %}
+    </div>
+
+    <!-- Right: Mini-Leaderboard for active challenge -->
+    <div class="mini-leaderboard-panel">
+        <h3 class="panel-title"><i class="bi bi-trophy-fill" style="color: #ffd700;"></i> Active Leaderboard</h3>
+        <div class="leaderboard-list">
+            {% if current_leaderboard %}
+                {% for entry in current_leaderboard %}
+                    <div class="leaderboard-item">
+                        <span class="leaderboard-rank rank-{{ entry.rank }}">{{ entry.rank }}</span>
+                        {% if entry.profile_photo %}
+                            <img src="{{ entry.profile_photo }}" class="user-avatar-mini" alt="{{ entry.name }}">
+                        {% else %}
+                            <span class="user-avatar-mini">{{ entry.name[0] }}</span>
+                        {% endif %}
+                        <span class="user-name-mini" title="{{ entry.name }}">{{ entry.name }}</span>
+                        <span class="solved-badge-mini">{{ entry.solved_count }} solved</span>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-secondary" style="font-size: 0.88rem; margin: 0;">No submissions yet for the current challenge. Be the first to solve a question!</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
