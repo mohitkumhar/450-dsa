@@ -1,12 +1,15 @@
 import math
 import re
+import threading
+import time
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
+import requests
 from bson import ObjectId
 from bson.errors import InvalidId
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask import session
 from flask_login import current_user, login_required
 
@@ -204,11 +207,6 @@ def delete_user(user_id):
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
 
 
-import threading
-import time
-import requests
-from flask import current_app
-
 def _background_check_links(app):
     """Background worker to check all unique URLs sequentially and cache results."""
     with app.app_context():
@@ -219,7 +217,6 @@ def _background_check_links(app):
             seen_urls = set()
             
             for q in all_questions:
-                problem_name = q.get("problem") or "Unknown Question"
                 # Primary URL
                 u1 = q.get("url", "").strip()
                 if u1 and u1.startswith("http") and u1 not in seen_urls:

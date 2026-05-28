@@ -367,7 +367,7 @@
                         <tr class="link-row" data-question="{{ link.question_name|lower }}" data-url="{{ link.url|lower }}">
                             <td style="font-weight:700">{{ link.question_name }}</td>
                             <td><span class="type-pill">{{ link.link_type|upper }}</span></td>
-                            <td style="max-width:240px;word-break:break-all"><a href="{{ link.url }}" target="_blank" class="link-out" style="color:var(--info);text-decoration:none">{{ link.url }}</a></td>
+                            <td style="max-width:240px;word-break:break-all"><a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="link-out" style="color:var(--info);text-decoration:none">{{ link.url }}</a></td>
                             <td style="font-family:monospace">{{ link.status_code if link.status_code != -1 else 'ERR' }}</td>
                             <td>
                                 <span class="status-badge {{ link.status }}">
@@ -377,7 +377,7 @@
                             </td>
                             <td style="color:var(--text-muted);font-size:0.8rem">{{ link.checked_at.strftime('%Y-%m-%d %H:%M') if link.checked_at else 'Never' }}</td>
                             <td>
-                                <a href="{{ link.url }}" target="_blank" class="action-btn" title="Check Link" style="padding:6px 10px"><i class="bi bi-box-arrow-up-right"></i></a>
+                                <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="action-btn" title="Check Link" style="padding:6px 10px"><i class="bi bi-box-arrow-up-right"></i></a>
                             </td>
                         </tr>
                         {% endfor %}
