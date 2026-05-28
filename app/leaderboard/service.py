@@ -1,3 +1,4 @@
+from flask import current_app
 from app.extensions import db
 from app.utils import compute_c_score
 
@@ -20,11 +21,16 @@ def build_leaderboard_data():
                 "progress": 1,
                 "external_totals": 1,
                 "external_daily_counts": 1,
+                "platform_calendars": 1,
             },
         )
     )
 
-    all_questions = list(db.question.find({}, {"url": 1}))
+    try:
+        pre = current_app.config.get("_PRECOMPUTED")
+    except RuntimeError:
+        pre = None
+    all_questions = pre["all_questions"] if pre else list(db.question.find({}, {"url": 1}))
     entries = []
     for user in users:
         name = user.get("name", "Anonymous")

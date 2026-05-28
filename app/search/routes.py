@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import current_user
 
 from app.extensions import db, limiter
@@ -14,10 +14,14 @@ MAX_SEARCH_LIMIT = 80
 @search_bp.route("/search")
 def search():
     initial_query = request.args.get("q", "").strip()
-    try:
-        topics = list(db.topic.find({}, {"name": 1}).sort("position", 1))
-    except Exception:
-        topics = []
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = [{"name": t["name"], "_id": t["_id"]} for t in pre["topics"]]
+    else:
+        try:
+            topics = list(db.topic.find({}, {"name": 1}).sort("position", 1))
+        except Exception:
+            topics = []
     return render_template("search.html", initial_query=initial_query, topics=topics)
 
 

@@ -37,10 +37,8 @@ def build_sync_platforms_response(platform_status: dict):
 
 
 def clear_profile_caches(cache_backend, user_id):
-    try:
-        cache_backend.delete(f"card_{str(user_id)}")
-    except KeyError:
-        pass
+    from app.profile.card_service import delete_card_cache
+    delete_card_cache(str(user_id))
 
 
 def build_platform_sync_jobs(
@@ -142,7 +140,6 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         codewars_username = data.get("codewars", "").strip()
         update_fields["codewars_username"] = codewars_username
 
-    combined_daily_counts = {}
     platform_totals = {}
     platform_status = {}
 
@@ -151,6 +148,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         if error:
             payload["error"] = error
         platform_status[platform_key] = payload
+
+    # Preserve existing per-platform calendar data across partial syncs
+    existing_calendars = getattr(user, "platform_calendars", {})
+    if not isinstance(existing_calendars, dict):
+        existing_calendars = {}
+    platform_calendars = dict(existing_calendars)
 
     platform_jobs = build_platform_sync_jobs(
         leetcode_username=leetcode_username,
@@ -172,8 +175,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             _mark("leetcode", "failed", "No data returned (username may be invalid or rate-limited).")
         else:
             _mark("leetcode", "synced")
-            for key, value in leetcode_data.get("calendar", {}).items():
-                combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+            platform_calendars["leetcode"] = leetcode_data.get("calendar", {})
             if leetcode_data.get("total") is not None:
                 platform_totals["LeetCode"] = leetcode_data.get("total")
             if leetcode_data.get("difficulty"):
@@ -206,8 +208,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
                 _mark("github", "failed", "GitHub API returned an error. Please try again later.")
         else:
             _mark("github", "synced")
-            for key, value in github_data.get("calendar", {}).items():
-                combined_daily_counts[key] = combined_daily_counts.get(key, 0) + value
+            platform_calendars["github"] = github_data.get("calendar", {})
             if github_data.get("stats"):
                 platform_totals["GitHub_Issues"] = github_data["stats"]["issues"]
                 platform_totals["GitHub_PRs"] = github_data["stats"]["prs"]
@@ -283,7 +284,33 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     else:
         _mark("codewars", "skipped")
 
-    update_fields["external_daily_counts"] = combined_daily_counts
+    # Backfill or remove ``_legacy`` depending on whether the current sync
+    # covered every platform the user has configured.  During the migration
+    # from the old flat ``external_daily_counts`` format to per-platform
+    # calendars, ``_legacy`` preserves dates from platforms not yet re-synced.
+    PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
+                     "codingninjas", "atcoder", "codewars"}
+    requested_platforms = {k for k in data if k in PLATFORM_KEYS}
+    legacy_counts = getattr(user, "external_daily_counts", {})
+    has_legacy = isinstance(legacy_counts, dict) and bool(legacy_counts)
+
+    if has_legacy:
+        user_platforms = set()
+        for attr in ("leetcode_username", "github_username", "gfg_username",
+                     "hackerrank_username", "codingninjas_username",
+                     "atcoder_username", "codewars_username"):
+            if getattr(user, attr, ""):
+                platform_name = attr.replace("_username", "")
+                user_platforms.add(platform_name)
+
+        if user_platforms and requested_platforms and user_platforms.issubset(requested_platforms):
+            # All user platforms were included in this sync → migration done
+            platform_calendars.pop("_legacy", None)
+        else:
+            # Partial sync — preserve legacy data for platforms not yet re-synced
+            platform_calendars["_legacy"] = dict(legacy_counts)
+
+    update_fields["platform_calendars"] = platform_calendars
     update_fields["external_totals"] = platform_totals
     db_handle.user.update_one({"_id": user_id}, {"$set": update_fields})
     user.reload()

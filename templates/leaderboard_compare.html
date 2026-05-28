@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="lb-header">
+  <h1><i class="bi bi-filter-square-fill" style="color:var(--accent)" aria-hidden="true"></i> Compare Users</h1>
+  <p>Head-to-head comparison between you and the selected user.</p>
+</div>
+
+<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:18px;">
+  <div style="flex:1;min-width:280px;border:1px solid var(--border-color);border-radius:12px;padding:16px;background:var(--bg-card)">
+    <h3>Your stats</h3>
+    {% if current_entry %}
+      <p><strong>{{ current_entry.name or 'You' }}</strong></p>
+      <p>C-Score: {{ current_entry.c_score }}</p>
+      <p>Solved: {{ current_entry.total_solved }}</p>
+      <p>LeetCode Rating: {{ current_entry.lc_rating or '—' }}</p>
+    {% else %}
+      <p>You don't have leaderboard data yet.</p>
+    {% endif %}
+  </div>
+
+  <div style="flex:1;min-width:280px;border:1px solid var(--border-color);border-radius:12px;padding:16px;background:var(--bg-card)">
+    <h3>Other user</h3>
+    {% if other %}
+      <p><strong>{{ other.name }}</strong></p>
+      <p>C-Score: {{ other.c_score }}</p>
+      <p>Solved: {{ other.total_solved }}</p>
+      <p>LeetCode Rating: {{ other.lc_rating or '—' }}</p>
+    {% else %}
+      <p>User not found on the leaderboard.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div style="margin-top:18px;">
+  <a href="{{ url_for('leaderboard.leaderboard') }}" class="pagination-btn">← Back to leaderboard</a>
+</div>
+
+{% endblock %}
