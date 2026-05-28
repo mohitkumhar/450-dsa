@@ -1,9 +1,8 @@
 import werkzeug
-from bson import ObjectId
 
 import app.web.routes as public_routes
 import app.profile.routes as profile_routes
-from conftest import build_test_app, login_test_user
+from conftest import build_test_app, login_test_user, csrf_headers
 
 if not hasattr(werkzeug, "__version__"):
     werkzeug.__version__ = "3"
@@ -13,8 +12,6 @@ if not hasattr(werkzeug, "__version__"):
 # ---------------------------------------------------------------------------
 
 _USER_BASE = {
-    "name": "Alice",
-    "email": "alice@example.com",
     "progress": {},
     "external_totals": {},
     "is_deactivated": False,
@@ -22,7 +19,11 @@ _USER_BASE = {
 
 
 def _insert_user(test_db, **overrides):
-    doc = {**_USER_BASE, **overrides}
+    name = overrides.get("name", "Alice")
+    # Generate unique email per user name to satisfy Mongo unique index on email
+    clean_name = "".join(c for c in name if c.isalnum()).lower()
+    email = overrides.pop("email", f"{clean_name}@example.com")
+    doc = {**_USER_BASE, "name": name, "email": email, **overrides}
     return test_db.user.insert_one(doc).inserted_id
 
 
@@ -82,7 +83,7 @@ def test_follow_user_creates_follows_document(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, alice)
-        resp = client.post(f"/u/{bob}/follow")
+        resp = client.post(f"/u/{bob}/follow", headers=csrf_headers(client))
 
     assert resp.status_code == 200
     assert test_db.follows.count_documents(
@@ -99,8 +100,8 @@ def test_follow_is_idempotent(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, alice)
-        client.post(f"/u/{bob}/follow")
-        resp = client.post(f"/u/{bob}/follow")  # second follow – must not error
+        client.post(f"/u/{bob}/follow", headers=csrf_headers(client))
+        resp = client.post(f"/u/{bob}/follow", headers=csrf_headers(client))  # second follow – must not error
 
     assert resp.status_code == 200
     assert test_db.follows.count_documents(
@@ -120,7 +121,7 @@ def test_unfollow_removes_follows_document(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, alice)
-        resp = client.post(f"/u/{bob}/unfollow")
+        resp = client.post(f"/u/{bob}/unfollow", headers=csrf_headers(client))
 
     assert resp.status_code == 200
     assert test_db.follows.count_documents(
@@ -136,7 +137,7 @@ def test_cannot_follow_yourself(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, alice)
-        resp = client.post(f"/u/{alice}/follow")
+        resp = client.post(f"/u/{alice}/follow", headers=csrf_headers(client))
 
     assert resp.status_code == 400
 
@@ -150,7 +151,7 @@ def test_cannot_follow_private_profile(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, alice)
-        resp = client.post(f"/u/{bob}/follow")
+        resp = client.post(f"/u/{bob}/follow", headers=csrf_headers(client))
 
     assert resp.status_code == 403
 
@@ -162,7 +163,7 @@ def test_follow_requires_login(monkeypatch):
     bob = _insert_user(test_db, name="Bob", is_public=True)
 
     with flask_app.test_client() as client:
-        resp = client.post(f"/u/{bob}/follow")
+        resp = client.post(f"/u/{bob}/follow", headers=csrf_headers(client))
 
     # flask-login redirects unauthenticated requests.
     assert resp.status_code in (302, 401)
