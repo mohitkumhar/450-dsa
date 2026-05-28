@@ -4,6 +4,23 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
 {% block content %}
+  {% if user.sync_notifications and user.last_auto_sync_status == 'failed' %}
+  <div class="flash-alert danger" role="alert" style="margin-bottom:20px;border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;background:rgba(255,55,95,0.08);border:1px solid rgba(255,55,95,0.2)">
+    <div style="display:flex;align-items:center;gap:12px">
+      <i class="bi bi-exclamation-triangle-fill" style="color:#ff375f;font-size:1.2rem" aria-hidden="true"></i>
+      <span style="font-size:0.85rem;color:var(--text-primary);line-height:1.4">
+        The last scheduled automatic platform sync failed: <strong style="color:#ff375f">{{ user.last_auto_sync_error or 'Unknown error' }}</strong> 
+        {% if user.last_auto_sync_attempt %}
+          <span style="color:var(--text-muted);font-size:0.75rem;margin-left:4px">({{ user.last_auto_sync_attempt.strftime('%Y-%m-%d %H:%M') }} UTC)</span>
+        {% endif %}
+      </span>
+    </div>
+    <button onclick="handleQuickSync(this)" class="ui-btn ui-btn-secondary" style="font-size:0.75rem;padding:6px 12px;white-space:nowrap;margin-left:auto;border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.05)" aria-label="Retry platform sync now">
+      <i class="bi bi-arrow-clockwise" style="margin-right:4px"></i> Retry Now
+    </button>
+  </div>
+  {% endif %}
+
 <div class="prof-layout">
 
 <!-- ── LEFT SIDEBAR ── -->
@@ -393,6 +410,45 @@
     <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
     <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
     <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
+    
+    <hr style="border-color:var(--border-color);margin:18px 0 14px 0">
+    <div style="font-size:0.8rem;font-weight:700;color:var(--text-primary);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+      <i class="bi bi-clock-history" style="color:var(--accent)"></i> Automatic Sync Settings
+    </div>
+    
+    <div style="margin-bottom:12px">
+      <label class="m-lbl" style="margin-bottom:4px">Sync Schedule</label>
+      <select class="m-inp" id="sync_interval" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;padding:8px;font-size:0.8rem;width:100%;font-family:inherit;outline:none;cursor:pointer">
+        <option value="none" {% if user.sync_interval == 'none' %}selected{% endif %}>None (Manual only)</option>
+        <option value="daily" {% if user.sync_interval == 'daily' %}selected{% endif %}>Daily Automatic Sync</option>
+        <option value="weekly" {% if user.sync_interval == 'weekly' %}selected{% endif %}>Weekly Automatic Sync</option>
+      </select>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <input type="checkbox" id="sync_notifications" {% if user.sync_notifications %}checked{% endif %} style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer">
+      <label for="sync_notifications" style="font-size:0.75rem;color:var(--text-secondary);cursor:pointer;user-select:none">Show failure warnings on profile page</label>
+    </div>
+
+    {% if user.last_auto_sync_attempt %}
+    <div style="font-size:0.72rem;color:var(--text-secondary);background:rgba(255,255,255,0.02);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.4">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span>Last Automatic Sync:</span>
+        <span style="font-weight:700;color:{% if user.last_auto_sync_status == 'success' %}var(--success){% else %}var(--danger){% endif %}">
+          {{ user.last_auto_sync_status|upper if user.last_auto_sync_status else 'UNKNOWN' }}
+        </span>
+      </div>
+      <div style="color:var(--text-muted);font-size:0.68rem">
+        Attempted: {{ user.last_auto_sync_attempt.strftime('%Y-%m-%d %H:%M') }} UTC
+      </div>
+      {% if user.last_auto_sync_error %}
+      <div style="color:#ff375f;font-size:0.68rem;margin-top:2px;word-break:break-word">
+        Error: {{ user.last_auto_sync_error }}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
@@ -640,6 +696,8 @@ window.handleSyncProfile = function(btn){
   const cn=document.getElementById('cn_username').value.trim();
   const ac=document.getElementById('ac_username').value.trim();
   const cw=document.getElementById('cw_username').value.trim();
+  const sync_interval=document.getElementById('sync_interval').value;
+  const sync_notifications=document.getElementById('sync_notifications').checked;
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
@@ -686,7 +744,7 @@ window.handleSyncProfile = function(btn){
   fetch(endpointConfig.syncPlatforms,{
     method:'POST',
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw}),
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw,sync_interval:sync_interval,sync_notifications:sync_notifications}),
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
