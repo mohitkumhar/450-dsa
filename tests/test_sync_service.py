@@ -280,8 +280,8 @@ def test_get_merged_daily_counts_uses_max_for_overlapping_legacy_dates():
 
 
 def test_get_merged_daily_counts_no_max_for_legacy_after_full_migration():
-    """Once _legacy is removed, legacy external_daily_counts only fills in
-    missing dates — no max() — so platform_calendars is authoritative."""
+    """Once _legacy is removed, external_daily_counts is still merged using max()
+    so established users don't lose older/higher cumulative history."""
     user = FakeUser(
         platform_calendars={
             "leetcode": {"2026-05-25": 2, "2026-05-26": 1},
@@ -290,8 +290,8 @@ def test_get_merged_daily_counts_no_max_for_legacy_after_full_migration():
         external_daily_counts={"2026-05-25": 99, "2026-05-28": 5},
     )
     merged = get_merged_daily_counts(user)
-    # 2026-05-25: platform sum = 3, legacy = 99 → no max, use 3
-    assert merged["2026-05-25"] == 3
+    # 2026-05-25: platform sum = 3, legacy = 99 → keep max = 99
+    assert merged["2026-05-25"] == 99
     # 2026-05-26, 2026-05-27: from platforms
     assert merged["2026-05-26"] == 1
     assert merged["2026-05-27"] == 3

@@ -228,8 +228,8 @@ def get_merged_daily_counts(user_doc):
     A special ``_legacy`` key stores the old combined totals during the migration period;
     for dates that overlap with real per-platform data the higher of the two values is kept
     (so non-migrated platform contributions are not lost).  Dates from the legacy
-    ``external_daily_counts`` field are used as a second fallback for dates not yet covered
-    by any per-platform data.
+    ``external_daily_counts`` field are merged using ``max()`` so older cumulative history
+    is not lost when per-platform calendars have partial coverage (e.g. limited API windows).
 
     Falls back entirely to ``external_daily_counts`` when no per-platform data exists.
     """
@@ -255,15 +255,11 @@ def get_merged_daily_counts(user_doc):
                 merged[date] = max(merged.get(date, 0), count)
 
         if merged:
-            has_legacy_fallback = bool(legacy_fallback)
             legacy = _get_field(user_doc, "external_daily_counts", {})
             if isinstance(legacy, dict):
                 for date, count in legacy.items():
                     if coerce_non_negative_number(count) > 0:
-                        if has_legacy_fallback:
-                            merged[date] = max(merged.get(date, 0), count)
-                        elif date not in merged:
-                            merged[date] = count
+                        merged[date] = max(merged.get(date, 0), count)
             return merged
     return _get_field(user_doc, "external_daily_counts", {})
 
