@@ -336,6 +336,8 @@ def create_app(config_class=None):
         response.mimetype = "application/javascript"
         return response
 
+    from app.tracker import tracker_bp
+    from app.badges.routes import badges_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(faq_bp)  
     app.register_blueprint(tracker_bp)
@@ -345,6 +347,7 @@ def create_app(config_class=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(cohort_bp)
+    app.register_blueprint(badges_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):

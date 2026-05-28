@@ -4,6 +4,7 @@ from flask import Blueprint, Response, current_app, jsonify, render_template, re
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.badges.service import evaluate_and_award_badges
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.card_service import warm_public_card_cache
 from app.utils import (
@@ -319,7 +320,15 @@ def update_question(question_id):
                            else db.question.count_documents({}))
         update_computed_stats(user_id, current_user.progress, db, total_questions)
         invalidate_leaderboard_cache()
+        
         warm_public_card_cache(user_id, db_handle=db)
+
+        # Trigger badge check when a question is marked done
+        if data.get("done"):
+            new_badges = evaluate_and_award_badges(current_user)
+            if new_badges:
+                message += " 🏅 New badge: " + ", ".join(new_badges)
+
         return json_success(message=message)
 
     return json_success(message="No changes made")
