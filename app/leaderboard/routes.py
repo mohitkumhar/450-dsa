@@ -38,6 +38,8 @@ def leaderboard():
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
     current_user_rank = get_user_rank_by_c_score(current_user_id, by_cscore)
     
+    colleges = sorted(list({e.get("college", "").strip() for e in entries if e.get("college", "").strip()}))
+
     return render_template(
         "leaderboard.html",
         by_cscore=by_cscore,
@@ -46,6 +48,7 @@ def leaderboard():
         by_college=by_college,
         current_user_id=current_user_id,
         current_user_rank=current_user_rank,
+        colleges=colleges,
     )
 
 
@@ -133,8 +136,25 @@ def api_leaderboard():
     mode = request.args.get("mode", "cscore")
     page = int(request.args.get("page", 1))
     per_page = min(int(request.args.get("per_page", 20)), 100)
+    college = request.args.get("college")
+    platform = request.args.get("platform")
+    time_range = request.args.get("time_range", "all_time")
     
-    entries = build_leaderboard_data()
+    entries = build_leaderboard_data(time_range=time_range)
+
+    if college:
+        entries = [e for e in entries if e.get("college", "").strip().lower() == college.strip().lower()]
+
+    if platform:
+        p_lower = platform.lower()
+        if p_lower == "leetcode":
+            entries = [e for e in entries if e.get("lc_total", 0) > 0]
+        elif p_lower == "gfg":
+            entries = [e for e in entries if e.get("gfg_total", 0) > 0]
+        elif p_lower in ("codingninjas", "coding ninjas"):
+            entries = [e for e in entries if e.get("cn_total", 0) > 0]
+        elif p_lower == "hackerrank":
+            entries = [e for e in entries if e.get("hr_total", 0) > 0]
 
     if mode == "questions":
         entries.sort(key=lambda item: item["total_solved"], reverse=True)

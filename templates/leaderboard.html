@@ -218,6 +218,47 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.lb-filters-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 150px;
+}
+.filter-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.filter-select {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.filter-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.15);
+}
 </style>
 
 <div class="lb-header">
@@ -238,6 +279,38 @@
   <button class="lb-tab" data-mode="college" id="tab-college" role="tab" aria-selected="false" aria-label="College Ranking">
     <i class="bi bi-mortarboard-fill" aria-hidden="true"></i> College Ranking
   </button>
+</div>
+
+<div class="lb-filters-container">
+  <div class="filter-group" id="college-filter-group">
+    <label for="college-select">College</label>
+    <select id="college-select" class="filter-select">
+      <option value="">All Colleges</option>
+      {% for college in colleges %}
+        <option value="{{ college }}">{{ college }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label for="platform-select">Platform</label>
+    <select id="platform-select" class="filter-select">
+      <option value="">All Platforms</option>
+      <option value="leetcode">LeetCode</option>
+      <option value="gfg">GFG</option>
+      <option value="codingninjas">Coding Ninjas</option>
+      <option value="hackerrank">HackerRank</option>
+    </select>
+  </div>
+
+  <div class="filter-group">
+    <label for="time-select">Time Range</label>
+    <select id="time-select" class="filter-select">
+      <option value="all_time">All-Time</option>
+      <option value="monthly">Monthly</option>
+      <option value="weekly">Weekly</option>
+    </select>
+  </div>
 </div>
 
 <div class="lb-table-wrap">
@@ -326,6 +399,11 @@ function renderLeaderboardError(error) {
   renderPagination();
 }
 
+function updateFilterVisibility(m) {
+  const el = document.getElementById('college-filter-group');
+  if (el) el.style.display = m === 'college' ? 'none' : 'flex';
+}
+
 async function loadLeaderboard(page = 1) {
   if (leaderboardController) leaderboardController.abort();
 
@@ -335,8 +413,18 @@ async function loadLeaderboard(page = 1) {
   
   document.getElementById('lbBody').innerHTML = '<tr><td colspan="5" class="loading" aria-label="Loading leaderboard data">Loading...</td><tr>';
   
+  updateFilterVisibility(activeMode);
+
   try {
-    const url = `/api/leaderboard?mode=${activeMode}&page=${page}&per_page=20&current_user_id=${CURRENT_USER_ID || ''}`;
+    const c = document.getElementById('college-select').value;
+    const p = document.getElementById('platform-select').value;
+    const t = document.getElementById('time-select').value;
+    
+    let url = `/api/leaderboard?mode=${activeMode}&page=${page}&per_page=20&current_user_id=${CURRENT_USER_ID || ''}`;
+    if (c) url += `&college=${encodeURIComponent(c)}`;
+    if (p) url += `&platform=${encodeURIComponent(p)}`;
+    if (t) url += `&time_range=${encodeURIComponent(t)}`;
+
     const response = await fetch(url, { signal: controller.signal });
     const data = await response.json();
 
@@ -486,6 +574,13 @@ document.getElementById('nextBtn').addEventListener('click', () => {
 document.querySelectorAll('.lb-tab').forEach(tab => {
   tab.addEventListener('click', function() {
     switchTab(this.dataset.mode);
+  });
+});
+
+['college-select', 'platform-select', 'time-select'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    currentPage = 1;
+    loadLeaderboard(1);
   });
 });
 

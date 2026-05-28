@@ -164,3 +164,40 @@ def test_get_user_rank_by_c_score_uses_sorted_c_score_order():
     assert get_user_rank_by_c_score("u3", entries) == 2
     assert get_user_rank_by_c_score("u1", entries) == 3
     assert get_user_rank_by_c_score("missing", entries) is None
+
+
+def test_build_leaderboard_data_with_weekly_time_range(monkeypatch):
+    from datetime import datetime, timezone, timedelta
+    now_dt = datetime.now(timezone.utc)
+    one_day_ago = (now_dt - timedelta(days=1)).date().isoformat()
+    ten_days_ago = (now_dt - timedelta(days=10)).date().isoformat()
+
+    users = [
+        {
+            "_id": ObjectId(),
+            "name": "Alice",
+            "college": "Alpha College",
+            "progress": {
+                "q1": {"done": True, "timestamp": now_dt - timedelta(days=1)},
+                "q2": {"done": True, "timestamp": now_dt - timedelta(days=10)},
+            },
+            "platform_calendars": {
+                "leetcode": {
+                    one_day_ago: 3,
+                    ten_days_ago: 5,
+                }
+            }
+        }
+    ]
+    fake_db = FakeDB(users, [])
+    monkeypatch.setattr("app.leaderboard.service.db", fake_db)
+
+    # Test all-time (default)
+    entries_all = build_leaderboard_data(time_range="all_time")
+    assert len(entries_all) == 1
+
+    # Test weekly
+    entries_weekly = build_leaderboard_data(time_range="weekly")
+    assert len(entries_weekly) == 1
+    assert entries_weekly[0]["dsa_done"] == 1
+    assert entries_weekly[0]["lc_total"] == 3
