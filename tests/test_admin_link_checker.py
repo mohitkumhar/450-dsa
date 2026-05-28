@@ -1,9 +1,5 @@
-from datetime import datetime, timezone, timedelta
-from bson import ObjectId
-import mongomock
+from datetime import datetime, timezone
 
-import app as app_module
-import app.admin.routes as admin_routes
 from tests.test_admin_routes import create_test_app, login_as, set_csrf_token
 
 

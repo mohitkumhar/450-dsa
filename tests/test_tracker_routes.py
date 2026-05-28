@@ -373,11 +373,11 @@ def test_index_aggregation_and_empty_topics(monkeypatch):
     # 2. Insert test topics (one with questions, one completely empty)
     topic_arr_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
     topic_str_id = test_db.topic.insert_one({"name": "Strings", "position": 2}).inserted_id
-    topic_empty_id = test_db.topic.insert_one({"name": "Empty Topic", "position": 3}).inserted_id
+    test_db.topic.insert_one({"name": "Empty Topic", "position": 3})
     
     # 3. Insert questions into arrays and strings, leaving empty topic alone
     q1 = test_db.question.insert_one({"topic": topic_arr_id, "problem": "Two Sum", "difficulty": "Easy"}).inserted_id
-    q2 = test_db.question.insert_one({"topic": topic_arr_id, "problem": "Container", "difficulty": "Medium"}).inserted_id
+    test_db.question.insert_one({"topic": topic_arr_id, "problem": "Container", "difficulty": "Medium"})
     q3 = test_db.question.insert_one({"topic": topic_str_id, "problem": "Reverse String", "difficulty": "Easy"}).inserted_id
     
     # 4. Request the index page as an unauthenticated user
