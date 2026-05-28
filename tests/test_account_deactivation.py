@@ -51,6 +51,18 @@ def test_deactivate_account_marks_user_and_logs_out(monkeypatch):
         }
     ).inserted_id
 
+    invalidated = {"leaderboard": 0, "profile": 0}
+    monkeypatch.setattr(
+        auth_routes,
+        "invalidate_leaderboard_cache",
+        lambda: invalidated.__setitem__("leaderboard", invalidated["leaderboard"] + 1),
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "clear_profile_caches",
+        lambda _cache, _user_id: invalidated.__setitem__("profile", invalidated["profile"] + 1),
+    )
+
     with flask_app.test_client() as client:
         login_as(client, user_id)
         with client.session_transaction() as session:
@@ -66,6 +78,8 @@ def test_deactivate_account_marks_user_and_logs_out(monkeypatch):
     assert "/login" in response.headers["Location"]
     assert user_doc["is_deactivated"] is True
     assert user_doc.get("deactivated_at") is not None
+    assert invalidated["leaderboard"] == 1
+    assert invalidated["profile"] == 1
 
 
 def test_login_reactivates_deactivated_password_user(monkeypatch):
