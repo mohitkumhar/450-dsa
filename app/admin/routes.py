@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
 from flask import session
 from flask_login import current_user, login_required
@@ -524,3 +525,57 @@ def clear_link_checker_cache():
         upsert=True
     )
     return jsonify({"success": True})
+
+
+@admin_bp.route("/reports", methods=["GET"])
+@login_required
+@admin_required
+def reports_dashboard():
+    reports = list(db.reports.find().sort("created_at", -1))
+    
+    # Batch query question details for URLs
+    q_ids = list(set(report["question_id"] for report in reports if "question_id" in report))
+    questions = {q["_id"]: q for q in db.question.find({"_id": {"$in": q_ids}})}
+    
+    for r in reports:
+        q = questions.get(r.get("question_id"))
+        if q:
+            r["question_url"] = q.get("url")
+            r["question_url2"] = q.get("url2")
+            
+    # Metrics
+    total_count = len(reports)
+    pending_count = sum(1 for r in reports if r.get("status") == "pending")
+    reviewed_count = sum(1 for r in reports if r.get("status") == "reviewed")
+    resolved_count = sum(1 for r in reports if r.get("status") == "resolved")
+    
+    metrics = {
+        "total": total_count,
+        "pending": pending_count,
+        "reviewed": reviewed_count,
+        "resolved": resolved_count
+    }
+    
+    return render_template("admin/reports.html", reports=reports, metrics=metrics)
+
+
+@admin_bp.route("/reports/<report_id>/status", methods=["POST"])
+@login_required
+@admin_required
+def update_report_status(report_id):
+    try:
+        rep_id = ObjectId(report_id)
+    except InvalidId:
+        return jsonify({"success": False, "error": "Invalid report ID"}), 400
+
+    report = db.reports.find_one({"_id": rep_id})
+    if not report:
+        return jsonify({"success": False, "error": "Report not found"}), 404
+
+    data = request.get_json(silent=True) or {}
+    status = data.get("status")
+    if status not in ["pending", "reviewed", "resolved"]:
+        return jsonify({"success": False, "error": "Invalid status"}), 400
+
+    db.reports.update_one({"_id": rep_id}, {"$set": {"status": status}})
+    return jsonify({"success": True, "message": f"Report status updated to {status}."})

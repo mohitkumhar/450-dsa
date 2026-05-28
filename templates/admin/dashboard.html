@@ -309,6 +309,9 @@
         <p class="admin-subtitle">Manage users, monitor activity, and review recent server errors.</p>
     </div>
     <div style="display:flex;gap:10px">
+        <a class="action-btn" href="{{ url_for('admin.reports_dashboard') }}" style="background:var(--info, #3b82f6);color:#fff;border-color:var(--info, #3b82f6);padding:10px 16px;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px">
+            <i class="bi bi-flag" style="font-size:1rem"></i> Review Reports
+        </a>
         <a class="action-btn" href="{{ url_for('admin.link_checker_dashboard') }}" style="background:var(--accent);color:#fff;border-color:var(--accent);padding:10px 16px;font-size:0.85rem;display:inline-flex;align-items:center;gap:6px">
             <i class="bi bi-link-45deg" style="font-size:1.1rem"></i> Link Checker
         </a>

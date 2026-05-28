@@ -603,3 +603,47 @@ def import_commit():
     warm_public_card_cache(user_id, db_handle=db)
 
     return jsonify({"success": True, "message": "Progress imported successfully!"})
+
+
+@tracker_bp.route("/report_question", methods=["POST"])
+@login_required
+def report_question():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object"}), 400
+
+    q_id_str = data.get("question_id")
+    report_type = data.get("report_type")
+    description = data.get("description")
+
+    if not q_id_str or not report_type or not description:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    if report_type not in ["broken_link", "typo", "wrong_difficulty", "duplicate", "other"]:
+        return jsonify({"success": False, "error": "Invalid report type"}), 400
+
+    if not isinstance(description, str) or not description.strip():
+        return jsonify({"success": False, "error": "Description cannot be empty"}), 400
+
+    try:
+        q_id = ObjectId(q_id_str)
+    except InvalidId:
+        return jsonify({"success": False, "error": "Invalid question ID"}), 400
+
+    question = db.question.find_one({"_id": q_id})
+    if not question:
+        return jsonify({"success": False, "error": "Question not found"}), 404
+
+    report_doc = {
+        "question_id": q_id,
+        "question_name": question.get("problem", "Unknown Question"),
+        "report_type": report_type,
+        "description": description.strip(),
+        "reporter_id": current_user.id,
+        "reporter_name": current_user.name or current_user.email or "Anonymous",
+        "created_at": utc_now(),
+        "status": "pending"
+    }
+
+    db.reports.insert_one(report_doc)
+    return jsonify({"success": True, "message": "Report submitted successfully!"})
