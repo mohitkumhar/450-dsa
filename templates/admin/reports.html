@@ -402,12 +402,12 @@
                                 <div style="font-weight:700;margin-bottom:4px;color:var(--text-primary)">{{ r.question_name }}</div>
                                 <div style="display:flex;gap:8px;font-size:0.75rem">
                                     {% if r.question_url %}
-                                    <a href="{{ r.question_url }}" target="_blank" style="color:var(--info);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
+                                    <a href="{{ r.question_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--info);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
                                         <i class="bi bi-box-arrow-up-right"></i> Link 1
                                     </a>
                                     {% endif %}
                                     {% if r.question_url2 %}
-                                    <a href="{{ r.question_url2 }}" target="_blank" style="color:var(--info);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
+                                    <a href="{{ r.question_url2 }}" target="_blank" rel="noopener noreferrer" style="color:var(--info);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
                                         <i class="bi bi-box-arrow-up-right"></i> Link 2
                                     </a>
                                     {% endif %}

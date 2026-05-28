@@ -1,13 +1,12 @@
 from datetime import datetime, timezone
 import mongomock
 from bson import ObjectId
-import pytest
 
 import app as app_module
 import app.tracker.routes as tracker_routes
 import app.admin.routes as admin_routes
 import app.auth.routes as auth_routes
-from conftest import build_test_app, csrf_headers, login_test_user, set_csrf_token
+from conftest import csrf_headers, login_test_user, set_csrf_token
 
 
 def create_test_app(monkeypatch):
@@ -93,7 +92,7 @@ def test_submit_report_validation(monkeypatch):
     question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
 
     with flask_app.test_client() as client:
-        user_id = login_test_user(client, test_db)
+        login_test_user(client, test_db)
 
         # 1. Invalid report type
         response = client.post(
