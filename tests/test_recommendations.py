@@ -1,4 +1,4 @@
-from datetime import timezone, timedelta
+from datetime import timedelta
 from app.tracker.recommendation import get_next_recommendation
 from app.utils import utc_now
 
