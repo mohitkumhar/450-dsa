@@ -6,6 +6,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.card_service import warm_public_card_cache
+from app.tracker.recommendation import get_next_recommendation
 from app.utils import (
     compute_in_sheet_platform_counts,
     json_error,
@@ -94,12 +95,15 @@ def index():
             topic_done = 0
         topic_progress[topic_id] = {"done": topic_done, "total": len(topic_question_ids)}
 
+    recommendation = get_next_recommendation(current_user, db, pre)
+
     return render_template(
         "index.html",
         topics=topics,
         total_questions=total_questions,
         done_questions=done_questions,
         topic_progress=topic_progress,
+        recommendation=recommendation,
     )
 
 

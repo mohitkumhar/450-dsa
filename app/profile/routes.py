@@ -14,6 +14,7 @@ from app.profile.sync_service import (
     clear_profile_caches,
     sync_user_platforms,
 )
+from app.tracker.recommendation import get_next_recommendation
 from app.utils import (
     compute_in_sheet_platform_counts,
     get_merged_daily_counts,
@@ -459,6 +460,7 @@ def profile():
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
     update_computed_stats(user.id, user.progress, db, total_questions)
+    recommendation = get_next_recommendation(user, db, pre)
 
     return render_template(
         "profile.html",
@@ -488,4 +490,5 @@ def profile():
         profile_leaderboard_rank=profile_leaderboard_rank,
         current_streak=current_streak,
         longest_streak=longest_streak,
+        recommendation=recommendation,
     )

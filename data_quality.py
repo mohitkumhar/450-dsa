@@ -51,7 +51,7 @@ ALLOWED_DUPLICATE_URL2S = {
 
 
 def load_data(path=DATA_PATH):
-    with open(path) as data_file:
+    with open(path, encoding="utf-8") as data_file:
         return json.load(data_file)
 
 

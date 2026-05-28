@@ -164,6 +164,49 @@
 <!-- ── MIDDLE / MAIN ── -->
 <div class="prof-main">
 
+  <!-- Recommended Next Problem Widget -->
+  {% if recommendation %}
+    <div class="rec-widget card" id="rec-widget" role="region" aria-label="Next problem recommendation" style="margin-bottom: 16px;">
+        <div class="rec-header">
+            <span class="rec-badge {{ recommendation.reason | lower | replace(' ', '-') }}">
+                <i class="bi {% if recommendation.reason == 'Due Revision' %}bi-arrow-repeat{% elif recommendation.reason == 'Needs Practice' %}bi-exclamation-triangle{% elif recommendation.reason == 'Goal Progress' %}bi-trophy{% else %}bi-arrow-right-circle{% endif %}" aria-hidden="true"></i>
+                {{ recommendation.reason }}
+            </span>
+            <span class="rec-desc">{{ recommendation.message }}</span>
+        </div>
+        <div class="rec-body">
+            <div class="rec-info">
+                <h3 class="rec-title">{{ recommendation.question.problem }}</h3>
+                <div class="rec-meta">
+                    <span class="difficulty-badge {{ recommendation.question.difficulty | lower }}">{{ recommendation.question.difficulty }}</span>
+                    {% set q_platform = recommendation.question.url | platform_name %}
+                    <span class="platform-badge" style="color: {{ q_platform | platform_color }}">{{ q_platform }}</span>
+                </div>
+            </div>
+            <div class="rec-actions">
+                <a href="{{ recommendation.question.url | safe_url }}" target="_blank" rel="noopener noreferrer" class="ui-btn ui-btn-primary" aria-label="Solve {{ recommendation.question.problem }} (opens in new tab)">
+                    <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Solve
+                </a>
+                {% if recommendation.question.url2 %}
+                    <a href="{{ recommendation.question.url2 | safe_url }}" target="_blank" rel="noopener noreferrer" class="ui-btn ui-btn-secondary" aria-label="Alternative link (opens in new tab)">
+                        Alternative
+                    </a>
+                {% endif %}
+                <button class="ui-btn ui-btn-success" id="btn-rec-done" onclick="markRecQuestionDone('{{ recommendation.question._id }}')" aria-label="Mark {{ recommendation.question.problem }} as complete">
+                    <span id="rec-done-content"><i class="bi bi-check-lg" aria-hidden="true"></i> Complete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+  {% else %}
+    <div class="rec-widget card completed-all" id="rec-widget" role="region" aria-label="Next problem recommendation" style="margin-bottom: 16px;">
+        <div class="rec-body" style="justify-content: center; text-align: center; flex-direction: column; gap: 8px;">
+            <h3 class="rec-title" style="color: var(--success); font-size: 1.2rem;">🎓 You've completed all 450 DSA questions! 🎉</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">Outstanding job! You've mastered the entire sheet. Keep learning and practicing!</p>
+        </div>
+    </div>
+  {% endif %}
+
   <!-- Stat cards + Heatmap -->
   <div class="stat-row">
     <div class="stat-card">
@@ -850,6 +893,50 @@ function handlePhotoUpload(e){
     if(!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display='none';
   });
 })();
+</script>
+<script>
+function markRecQuestionDone(questionId) {
+    const btn = document.getElementById('btn-rec-done');
+    const content = document.getElementById('rec-done-content');
+    if (!btn || btn.disabled) return;
+    
+    btn.disabled = true;
+    if (content) {
+        content.innerHTML = '<i class="bi bi-arrow-repeat spin" style="display:inline-block"></i> Updating...';
+    }
+    
+    fetch(`/update_question/${questionId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ done: true })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            if (content) content.innerHTML = '<i class="bi bi-check-lg"></i> Complete!';
+            if (typeof showToast === 'function') {
+                showToast('✅ Question marked complete!');
+            }
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            if (typeof showToast === 'function') {
+                showToast('❌ Error: ' + (res.error || 'unknown'));
+            }
+            btn.disabled = false;
+            if (content) content.innerHTML = '<i class="bi bi-check-lg"></i> Complete';
+        }
+    })
+    .catch(err => {
+        if (typeof showToast === 'function') {
+            showToast('❌ Network error.');
+        }
+        btn.disabled = false;
+        if (content) content.innerHTML = '<i class="bi bi-check-lg"></i> Complete';
+    });
+}
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
 {% endblock %}

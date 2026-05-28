@@ -340,6 +340,61 @@
     </div>
 </div>
 
+<!-- Recommended Next Problem Widget -->
+{% if current_user.is_authenticated %}
+    {% if recommendation %}
+        <div class="rec-widget card" id="rec-widget" role="region" aria-label="Next problem recommendation">
+            <div class="rec-header">
+                <span class="rec-badge {{ recommendation.reason | lower | replace(' ', '-') }}">
+                    <i class="bi {% if recommendation.reason == 'Due Revision' %}bi-arrow-repeat{% elif recommendation.reason == 'Needs Practice' %}bi-exclamation-triangle{% elif recommendation.reason == 'Goal Progress' %}bi-trophy{% else %}bi-arrow-right-circle{% endif %}" aria-hidden="true"></i>
+                    {{ recommendation.reason }}
+                </span>
+                <span class="rec-desc">{{ recommendation.message }}</span>
+            </div>
+            <div class="rec-body">
+                <div class="rec-info">
+                    <h3 class="rec-title">{{ recommendation.question.problem }}</h3>
+                    <div class="rec-meta">
+                        <span class="difficulty-badge {{ recommendation.question.difficulty | lower }}">{{ recommendation.question.difficulty }}</span>
+                        {% set q_platform = recommendation.question.url | platform_name %}
+                        <span class="platform-badge" style="color: {{ q_platform | platform_color }}">{{ q_platform }}</span>
+                    </div>
+                </div>
+                <div class="rec-actions">
+                    <a href="{{ recommendation.question.url | safe_url }}" target="_blank" rel="noopener noreferrer" class="ui-btn ui-btn-primary" aria-label="Solve {{ recommendation.question.problem }} (opens in new tab)">
+                        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Solve
+                    </a>
+                    {% if recommendation.question.url2 %}
+                        <a href="{{ recommendation.question.url2 | safe_url }}" target="_blank" rel="noopener noreferrer" class="ui-btn ui-btn-secondary" aria-label="Alternative link (opens in new tab)">
+                            Alternative
+                        </a>
+                    {% endif %}
+                    <button class="ui-btn ui-btn-success" id="btn-rec-done" onclick="markRecQuestionDone('{{ recommendation.question._id }}')" aria-label="Mark {{ recommendation.question.problem }} as complete">
+                        <span id="rec-done-content"><i class="bi bi-check-lg" aria-hidden="true"></i> Complete</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="rec-widget card completed-all" id="rec-widget" role="region" aria-label="Next problem recommendation">
+            <div class="rec-body" style="justify-content: center; text-align: center; flex-direction: column; gap: 8px;">
+                <h3 class="rec-title" style="color: var(--success); font-size: 1.2rem;">🎓 You've completed all 450 DSA questions! 🎉</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem;">Outstanding job! You've mastered the entire sheet. Keep learning and practicing!</p>
+            </div>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="rec-widget card anon-prompt" role="region" aria-label="Next problem recommendation promo">
+        <div class="rec-body" style="align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+                <h3 class="rec-title" style="font-size: 1.05rem; margin-bottom: 4px;">Unlock Personalized Recommendations</h3>
+                <p style="color: var(--text-secondary); font-size: 0.82rem;">Log in to track your progress, get spaced repetition reviews, and see what to solve next.</p>
+            </div>
+            <a href="{{ url_for('auth.login') }}" class="ui-btn ui-btn-primary" style="white-space: nowrap;">Log In / Register</a>
+        </div>
+    </div>
+{% endif %}
+
 <div class="topics-grid" id="topics-grid" role="list" aria-label="DSA topics list">
     {% for topic in topics %}
     {% set t_id_str = topic._id | string %}
@@ -399,6 +454,33 @@
 
 {% block scripts %}
 <script>
+const csrfToken = {{ csrf_token()|tojson if current_user.is_authenticated else '""' }};
 const K='pinnedTopics:{{ current_user.get_id() if current_user.is_authenticated else "anonymous" }}',C=[...document.querySelectorAll('.topic-card-shell')],G=()=>{try{return JSON.parse(localStorage[K]||'[]').filter(x=>C.some(c=>c.dataset.topicId==x))}catch{return[]}},S=a=>{try{localStorage[K]=JSON.stringify(a)}catch{}},R=()=>{let p=G();S(p);C.forEach((c,i)=>{let x=c.dataset.topicId,o=p.includes(x);c.classList.toggle('is-pinned',o);c.style.order=o?p.indexOf(x):C.length+i;c.querySelector('.pin-btn').setAttribute('aria-pressed',o)})};document.querySelectorAll('.pin-btn').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();let p=G(),x=b.dataset.topicId,i=p.indexOf(x);i<0?p.unshift(x):p.splice(i,1);S(p);R()});R();
+
+function markRecQuestionDone(id){
+  let b=document.getElementById('btn-rec-done'),c=document.getElementById('rec-done-content');
+  if(b)b.disabled=true;
+  if(c)c.innerHTML='<i class="bi bi-arrow-repeat spin" style="display:inline-block"></i>';
+  fetch(`/update_question/${id}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
+    body:JSON.stringify({done:true})
+  })
+  .then(r=>r.json())
+  .then(res=>{
+    if(res.success){
+      if(window.showToast)showToast('✅ Question marked complete!');
+      setTimeout(()=>location.reload(),600);
+    }else{
+      if(window.showToast)showToast('❌ '+(res.error||'Error'));
+      if(b)b.disabled=false;
+      if(c)c.innerHTML='Complete';
+    }
+  }).catch(()=>{
+    if(window.showToast)showToast('❌ Network error');
+    if(b)b.disabled=false;
+    if(c)c.innerHTML='Complete';
+  });
+}
 </script>
 {% endblock %}
