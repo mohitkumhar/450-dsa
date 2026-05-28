@@ -1,4 +1,4 @@
-import os
+# ruff: noqa: E402
 import mongomock
 
 # 1. Create in-memory mock MongoDB database
