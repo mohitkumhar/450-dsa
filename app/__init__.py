@@ -304,9 +304,6 @@ def create_app(config_class=None):
         if request.method not in CSRF_PROTECTED_METHODS:
             return None
 
-        if request.is_json and request.endpoint == "auth.update_theme_preferences":
-            return None
-
         if validate_csrf_request():
             return None
 

@@ -1839,6 +1839,7 @@
         } | tojson }}{% else %}null{% endif %};
         const themePrefsStorageKey = 'theme_prefs';
         const themePrefsUrl = "{{ url_for('auth.get_theme_preferences') }}";
+        const themeCsrfToken = {{ csrf_token()|tojson }};
         const themeUserAuthenticated = document.body.dataset.authenticated === '1';
         const themeSettingsBtn = document.getElementById('theme-settings-btn');
         const themeSettingsModal = document.getElementById('theme-settings-modal');
@@ -2055,7 +2056,10 @@
             try {
                 const response = await fetch(themePrefsUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': themeCsrfToken,
+                    },
                     body: JSON.stringify(payload),
                 });
                 const result = await response.json();
