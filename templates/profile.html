@@ -2,6 +2,11 @@
 {% from "_macros.html" import modal_shell %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<style>
+#ep_is_public:checked + span{background:var(--accent)!important}
+#ep_is_public:checked + span::after{transform:translateX(20px)}
+#ep_is_public + span::after{content:'';position:absolute;left:4px;top:4px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.3s}
+</style>
 {% endblock %}
 {% block content %}
 <div class="prof-layout">
@@ -93,6 +98,24 @@
     <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
     <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
+
+  {% if following_users %}
+  <div class="card">
+    <div class="sec-title">Following</div>
+    <div id="following-list" style="display:flex;flex-direction:column;gap:10px">
+      {% for fu in following_users %}
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden">
+          {% if fu.profile_photo %}<img src="{{ fu.profile_photo }}" width="36" height="36" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ fu.name }}">{% else %}{{ (fu.name or 'U')[0]|upper }}{% endif %}
+        </div>
+        <div style="min-width:0">
+          <a href="/u/{{ fu.user_id }}" style="color:var(--text-primary);font-weight:600;font-size:.85rem;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ fu.name }}</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   <div class="card">
     <div class="sec-title">About</div>
@@ -452,6 +475,17 @@
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
+    <!-- Privacy Toggle -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border-color);margin-top:4px">
+      <div>
+        <div style="font-size:.85rem;font-weight:600;color:var(--text-primary)"><i class="bi bi-shield-lock" style="color:var(--accent)"></i> Public Profile</div>
+        <div style="font-size:.72rem;color:var(--text-muted)">Allow others to view your profile and appear in leaderboard</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0" title="Toggle profile visibility">
+        <input type="checkbox" id="ep_is_public" style="opacity:0;width:0;height:0" {% if user.is_public is not false %}checked{% endif %}>
+        <span style="position:absolute;cursor:pointer;inset:0;background:var(--border-color);border-radius:24px;transition:.3s" id="toggleThumb"></span>
+      </label>
+    </div>
     </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
       <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
@@ -568,6 +602,7 @@ window.handleSaveProfile = function(btn){
     twitter_url: document.getElementById('ep_twitter').value,
     website_url: document.getElementById('ep_website').value,
     resume_url: document.getElementById('ep_resume').value,
+    is_public: document.getElementById('ep_is_public')?.checked !== false,
   };
   window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
   fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})

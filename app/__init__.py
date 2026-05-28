@@ -165,7 +165,7 @@ def create_app(config_class=None):
         db.cohort.create_index("join_code", unique=True)
         db.cohort_membership.create_index([("cohort_id", 1), ("user_id", 1)], unique=True)
         db.cohort_membership.create_index("user_id")
-        
+        db.follows.create_index([("follower_id", 1), ("followed_id", 1)], unique=True)
         # Lightweight schema backfill for legacy user documents.
         db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
     except Exception as exc:

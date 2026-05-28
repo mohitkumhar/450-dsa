@@ -52,4 +52,10 @@ def build_profile_updates(data):
             value = url_val
 
         update_fields[field] = value
+    # Boolean field handled separately.
+    if "is_public" in data:
+        val = data["is_public"]
+        if not isinstance(val, bool):
+            return None, "is_public must be a boolean"
+        update_fields["is_public"] = val
     return update_fields, None

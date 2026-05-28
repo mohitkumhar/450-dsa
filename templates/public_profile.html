@@ -26,6 +26,10 @@
 .stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
 .stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
 @media(max-width:520px){.stat-row{grid-template-columns:1fr}}
+.follow-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 22px;border-radius:8px;border:none;font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .2s,transform .1s}
+.follow-btn:active{transform:scale(.97)}
+.follow-btn.following{background:var(--bg-card);border:1px solid var(--border-color);color:var(--text-secondary)}
+.follow-btn.not-following{background:var(--accent);color:#fff}
 </style>
 
 <div class="prof-layout">
@@ -40,6 +44,18 @@
       </div>
       <div class="prof-name">{{ user.username }}</div>
       <div class="prof-handle">Public DSA Profile</div>
+      {% if not is_own_profile %}
+        {% if current_user.is_authenticated %}
+          <button id="follow-btn"
+                  class="follow-btn {{ 'following' if is_following else 'not-following' }}"
+                  data-user-id="{{ target_user_id }}"
+                  data-following="{{ 'true' if is_following else 'false' }}">
+            {% if is_following %}✓ Following{% else %}+ Follow{% endif %}
+          </button>
+        {% else %}
+          <a href="/auth/login" class="follow-btn not-following" style="text-decoration:none">+ Follow</a>
+        {% endif %}
+      {% endif %}
       <div class="sec-title" style="margin-top:18px">C-Score</div>
       <div class="big-num" style="color:var(--accent)">{{ stats.c_score or 0 }}</div>
       <div class="sub-label">Composite public score</div>
@@ -114,4 +130,41 @@
 </div>
 {% endblock %}
 
-{% block scripts %}{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const btn = document.getElementById('follow-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async function () {
+    const userId = btn.dataset.userId;
+    const isFollowing = btn.dataset.following === 'true';
+    const action = isFollowing ? 'unfollow' : 'follow';
+    btn.disabled = true;
+    try {
+      const resp = await fetch(`/u/${userId}/${action}`, {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+      });
+      if (resp.ok) {
+        const nowFollowing = !isFollowing;
+        btn.dataset.following = nowFollowing ? 'true' : 'false';
+        btn.textContent = nowFollowing ? '\u2713 Following' : '+ Follow';
+        btn.className = 'follow-btn ' + (nowFollowing ? 'following' : 'not-following');
+        if (typeof showToast === 'function') {
+          showToast(nowFollowing ? 'Now following!' : 'Unfollowed.', 'success');
+        }
+      } else {
+        const data = await resp.json().catch(() => ({}));
+        if (typeof showToast === 'function') {
+          showToast(data.error || 'Something went wrong.', 'error');
+        }
+      }
+    } catch (err) {
+      if (typeof showToast === 'function') showToast('Network error.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+{% endblock %}

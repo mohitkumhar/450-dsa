@@ -1,6 +1,7 @@
 import json
 from datetime import timedelta
 
+from bson.objectid import ObjectId
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
@@ -202,19 +203,23 @@ def edit_profile():
 
 @profile_bp.route("/u/<user_id>/card.png")
 def public_card(user_id):
-    from bson.objectid import ObjectId
     try:
         object_id = ObjectId(user_id)
     except Exception:
         return "Invalid User ID", 400
 
     try:
-        user_doc = db.user.find_one({"_id": object_id}, {"is_deactivated": 1})
+        user_doc = db.user.find_one({"_id": object_id}, {"is_deactivated": 1, "is_public": 1})
     except TypeError:
         # Some lightweight test doubles implement a simpler find_one(query) API.
         user_doc = db.user.find_one({"_id": object_id})
     if not user_doc or user_doc.get("is_deactivated"):
         return "User not found", 404
+    # Only expose the card if the profile is public, or the viewer is the owner.
+    if user_doc.get("is_public") is False:
+        viewer_id = current_user.id if current_user.is_authenticated else None
+        if viewer_id != object_id:
+            return "User not found", 404
 
     try:
         img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
@@ -236,6 +241,46 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
+
+
+@profile_bp.route("/u/<user_id>/follow", methods=["POST"])
+@login_required
+@limiter.limit("30 per minute")
+def follow_user(user_id):
+    """Follow a public learner profile."""
+    try:
+        target_oid = ObjectId(user_id)
+    except Exception:
+        return json_error("Invalid user ID.", status_code=400)
+
+    if target_oid == current_user.id:
+        return json_error("You cannot follow yourself.", status_code=400)
+
+    target = db.user.find_one({"_id": target_oid}, {"is_deactivated": 1, "is_public": 1})
+    if not target or target.get("is_deactivated"):
+        return json_error("User not found.", status_code=404)
+    if target.get("is_public") is False:
+        return json_error("This profile is private.", status_code=403)
+
+    db.follows.update_one(
+        {"follower_id": current_user.id, "followed_id": target_oid},
+        {"$setOnInsert": {"follower_id": current_user.id, "followed_id": target_oid, "created_at": utc_now()}},
+        upsert=True,
+    )
+    return json_success()
+
+
+@profile_bp.route("/u/<user_id>/unfollow", methods=["POST"])
+@login_required
+def unfollow_user(user_id):
+    """Unfollow a learner profile."""
+    try:
+        target_oid = ObjectId(user_id)
+    except Exception:
+        return json_error("Invalid user ID.", status_code=400)
+
+    db.follows.delete_one({"follower_id": current_user.id, "followed_id": target_oid})
+    return json_success()
 
 
 @profile_bp.route("/search_universities")
@@ -477,6 +522,21 @@ def profile():
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
+    # Build the list of users that the current user is following.
+    follow_docs = list(db.follows.find({"follower_id": user.id}, {"followed_id": 1}))
+    followed_ids = [doc["followed_id"] for doc in follow_docs]
+    following_users = []
+    if followed_ids:
+        for u_doc in db.user.find(
+            {"_id": {"$in": followed_ids}, "is_deactivated": {"$ne": True}},
+            {"name": 1, "profile_photo": 1},
+        ):
+            following_users.append({
+                "user_id": str(u_doc["_id"]),
+                "name": u_doc.get("name", "Unknown"),
+                "profile_photo": u_doc.get("profile_photo", ""),
+            })
+
     update_computed_stats(user.id, user.progress, db, total_questions)
 
     return render_template(
@@ -507,4 +567,5 @@ def profile():
         profile_leaderboard_rank=profile_leaderboard_rank,
         current_streak=current_streak,
         longest_streak=longest_streak,
+        following_users=following_users,
     )

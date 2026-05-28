@@ -7,7 +7,7 @@ def build_leaderboard_data():
     """Query all users and compute leaderboard rankings."""
     users = list(
         db.user.find(
-            {"is_deactivated": {"$ne": True}},
+            {"is_deactivated": {"$ne": True}, "is_public": {"$ne": False}},
             {
                 "name": 1,
                 "email": 1,
