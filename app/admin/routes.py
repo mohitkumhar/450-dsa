@@ -1,11 +1,18 @@
+import ipaddress
 import math
 import re
+import socket
+import threading
+import time
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
+import click
+import requests
 from bson import ObjectId
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask import session
 from flask_login import current_user, login_required
 
@@ -203,22 +210,87 @@ def delete_user(user_id):
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
 
 
-import threading
-import time
-import requests
-from flask import current_app
+TRUSTED_DOMAINS = {
+    "leetcode.com",
+    "geeksforgeeks.org",
+    "codingninjas.com",
+    "naukri.com",
+    "hackerrank.com",
+    "atcoder.jp",
+    "youtube.com",
+    "github.com",
+    "github.io"
+}
 
-def _background_check_links(app):
-    """Background worker to check all unique URLs sequentially and cache results."""
+def is_safe_url(url):
+    try:
+        parsed = urlparse(url)
+        if not parsed.scheme or parsed.scheme.lower() not in ("http", "https"):
+            return False
+            
+        hostname = (parsed.hostname or "").lower()
+        if not hostname:
+            return False
+            
+        # 1. Allowlist Domain Check
+        is_trusted = False
+        for domain in TRUSTED_DOMAINS:
+            if hostname == domain or hostname.endswith("." + domain):
+                is_trusted = True
+                break
+                
+        if not is_trusted:
+            return False
+            
+        # 2. Block Loopback/Private IPs (SSRF)
+        try:
+            ip_addr = socket.gethostbyname(hostname)
+            ip_obj = ipaddress.ip_address(ip_addr)
+            if ip_obj.is_loopback or ip_obj.is_private or ip_obj.is_link_local:
+                return False
+        except Exception:
+            return False
+            
+        return True
+    except Exception:
+        return False
+
+
+def run_link_scanner_sync(app, lock_already_claimed=False):
+    """Run synchronous link checking, ensuring atomic running claim and SSRF prevention."""
     with app.app_context():
         try:
-            # 1. Gather all questions and build list of unique URLs
+            # Atomic lock check and acquisition
+            if not lock_already_claimed:
+                # Initialize status doc if not present
+                db.link_checker_status.update_one(
+                    {"_id": "status"},
+                    {"$setOnInsert": {"is_running": False, "total_links": 0, "completed_links": 0, "summary": "No scan run yet."}},
+                    upsert=True
+                )
+                
+                # Atomic claim
+                claimed = db.link_checker_status.find_one_and_update(
+                    {"_id": "status", "is_running": False},
+                    {
+                        "$set": {
+                            "is_running": True,
+                            "started_at": datetime.now(timezone.utc),
+                            "finished_at": None,
+                            "summary": "Scan in progress..."
+                        }
+                    }
+                )
+                if not claimed:
+                    # Locked or already running
+                    return
+            
+            # Gather all questions and build list of unique URLs
             all_questions = list(db.question.find())
             url_records = []
             seen_urls = set()
             
             for q in all_questions:
-                problem_name = q.get("problem") or "Unknown Question"
                 # Primary URL
                 u1 = q.get("url", "").strip()
                 if u1 and u1.startswith("http") and u1 not in seen_urls:
@@ -243,7 +315,7 @@ def _background_check_links(app):
             unique_urls = url_records
             total_count = len(unique_urls)
             
-            # Update status to running
+            # Update total link counts
             db.link_checker_status.update_one(
                 {"_id": "status"},
                 {
@@ -251,12 +323,8 @@ def _background_check_links(app):
                         "is_running": True,
                         "total_links": total_count,
                         "completed_links": 0,
-                        "started_at": datetime.now(timezone.utc),
-                        "finished_at": None,
-                        "summary": "Scan in progress..."
                     }
-                },
-                upsert=True
+                }
             )
             
             completed = 0
@@ -264,6 +332,30 @@ def _background_check_links(app):
             redirect_count = 0
             
             for url in unique_urls:
+                # SSRF Protection: Validate target URL safety
+                if not is_safe_url(url):
+                    completed += 1
+                    # Record SSRF-blocked URL as broken/error
+                    db.link_checks.update_one(
+                        {"_id": url},
+                        {
+                            "$set": {
+                                "status_code": -1,
+                                "status": "broken",
+                                "checked_at": datetime.now(timezone.utc),
+                                "redirect_url": None,
+                                "error_message": "SSRF Prevention: Blocked non-allowlisted or loopback/private target URL."
+                            }
+                        },
+                        upsert=True
+                    )
+                    broken_count += 1
+                    db.link_checker_status.update_one(
+                        {"_id": "status"},
+                        {"$set": {"completed_links": completed}}
+                    )
+                    continue
+
                 # Check cache first (valid for 24 hours)
                 cached = db.link_checks.find_one({"_id": url})
                 if cached:
@@ -335,7 +427,7 @@ def _background_check_links(app):
                     {"_id": "status"},
                     {"$set": {"completed_links": completed}}
                 )
-
+            
             # Update final status
             summary = f"Completed. Found {broken_count} broken links and {redirect_count} redirects."
             db.link_checker_status.update_one(
@@ -350,7 +442,7 @@ def _background_check_links(app):
                 }
             )
         except Exception as thread_exc:
-            app.logger.error(f"Error in background link checker thread: {thread_exc}")
+            app.logger.error(f"Error in synchronous link checker: {thread_exc}")
             db.link_checker_status.update_one(
                 {"_id": "status"},
                 {
@@ -360,6 +452,46 @@ def _background_check_links(app):
                     }
                 }
             )
+
+
+def _background_check_links(app, lock_already_claimed=False):
+    """Trigger background check scanner wrapper."""
+    run_link_scanner_sync(app, lock_already_claimed=lock_already_claimed)
+
+
+@admin_bp.cli.command("check-stale-links")
+def check_stale_links_command():
+    """Sync/Cron command line execution to check all question links safely."""
+    # Obtain Flask app context
+    app = current_app._get_current_object()
+    click.echo("Acquiring atomic running claim...")
+    
+    # Initialize status doc if not present
+    db.link_checker_status.update_one(
+        {"_id": "status"},
+        {"$setOnInsert": {"is_running": False, "total_links": 0, "completed_links": 0, "summary": "No scan run yet."}},
+        upsert=True
+    )
+    
+    # Atomic claim
+    claimed = db.link_checker_status.find_one_and_update(
+        {"_id": "status", "is_running": False},
+        {
+            "$set": {
+                "is_running": True,
+                "started_at": datetime.now(timezone.utc),
+                "finished_at": None,
+                "summary": "Scan in progress..."
+            }
+        }
+    )
+    if not claimed:
+        click.echo("Error: Link checker scanner is already running atomically in another process.")
+        return
+        
+    click.echo("Atomic lock claimed! Starting synchronous link check scan...")
+    run_link_scanner_sync(app, lock_already_claimed=True)
+    click.echo("Link checker completed successfully!")
 
 
 @admin_bp.route("/link-checker", methods=["GET"])
@@ -470,12 +602,30 @@ def link_checker_dashboard():
 @login_required
 @admin_required
 def start_link_checker():
-    status_doc = db.link_checker_status.find_one({"_id": "status"})
-    if status_doc and status_doc.get("is_running"):
+    # Initialize status doc if not present
+    db.link_checker_status.update_one(
+        {"_id": "status"},
+        {"$setOnInsert": {"is_running": False, "total_links": 0, "completed_links": 0, "summary": "No scan run yet."}},
+        upsert=True
+    )
+    
+    # Atomic claim
+    claimed = db.link_checker_status.find_one_and_update(
+        {"_id": "status", "is_running": False},
+        {
+            "$set": {
+                "is_running": True,
+                "started_at": datetime.now(timezone.utc),
+                "finished_at": None,
+                "summary": "Scan in progress..."
+            }
+        }
+    )
+    if not claimed:
         return jsonify({"success": False, "error": "Link Checker scanner is already running."}), 400
         
     flask_app = current_app._get_current_object()
-    thread = threading.Thread(target=_background_check_links, args=(flask_app,), daemon=True)
+    thread = threading.Thread(target=_background_check_links, args=(flask_app, True), daemon=True)
     thread.start()
     
     return jsonify({"success": True})
