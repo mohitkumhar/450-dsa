@@ -361,3 +361,51 @@ def test_offline_queue_last_write_wins_conflict(monkeypatch):
     assert response.get_json()["success"] is True
     user = test_db.user.find_one({"_id": user_id})
     assert user["progress"][str(question_id)]["done"] is False
+
+
+def test_index_aggregation_and_empty_topics(monkeypatch):
+    """Test dashboard index page handles database-backed aggregation and empty topics gracefully."""
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    
+    # 1. Clear any precomputed static data cache to force database-backed execution
+    flask_app.config.pop("_PRECOMPUTED", None)
+    
+    # 2. Insert test topics (one with questions, one completely empty)
+    topic_arr_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    topic_str_id = test_db.topic.insert_one({"name": "Strings", "position": 2}).inserted_id
+    topic_empty_id = test_db.topic.insert_one({"name": "Empty Topic", "position": 3}).inserted_id
+    
+    # 3. Insert questions into arrays and strings, leaving empty topic alone
+    q1 = test_db.question.insert_one({"topic": topic_arr_id, "problem": "Two Sum", "difficulty": "Easy"}).inserted_id
+    q2 = test_db.question.insert_one({"topic": topic_arr_id, "problem": "Container", "difficulty": "Medium"}).inserted_id
+    q3 = test_db.question.insert_one({"topic": topic_str_id, "problem": "Reverse String", "difficulty": "Easy"}).inserted_id
+    
+    # 4. Request the index page as an unauthenticated user
+    with flask_app.test_client() as client:
+        response = client.get("/")
+    
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    
+    # Verify both populated and empty topics render
+    assert "Arrays" in html
+    assert "Strings" in html
+    assert "Empty Topic" in html
+    
+    # Let's log in a user and mark some questions as done to test completed count calculation
+    progress = {
+        str(q1): {"done": True},
+        str(q3): {"done": True}
+    }
+    user_id = test_db.user.insert_one({"email": "user@example.com", "progress": progress, "is_admin": False}).inserted_id
+    
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get("/")
+        
+    assert response.status_code == 200
+    html_auth = response.data.decode("utf-8")
+    
+    assert "Arrays" in html_auth
+    assert "Strings" in html_auth
+    assert "Empty Topic" in html_auth

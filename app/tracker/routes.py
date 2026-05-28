@@ -71,11 +71,21 @@ def index():
     else:
         topics = list(db.topic.find().sort("position", 1))
         total_questions = db.question.count_documents({})
-        all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
+        
+        # Use MongoDB aggregation pipeline to count and group questions by topic
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$topic",
+                    "question_ids": {"$push": "$_id"}
+                }
+            }
+        ]
+        results = list(db.question.aggregate(pipeline))
         topic_question_count = {}
-        for question in all_questions:
-            topic_id = str(question["topic"])
-            topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
+        for row in results:
+            if row["_id"]:
+                topic_question_count[str(row["_id"])] = [str(qid) for qid in row["question_ids"]]
 
     if current_user.is_authenticated:
         progress = current_user.progress
