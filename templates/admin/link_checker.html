@@ -1,0 +1,566 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.admin-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.admin-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(150deg, rgba(255, 107, 0, 0.08), rgba(59, 130, 246, 0.04));
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 0, 0.12);
+}
+
+.stat-label {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.admin-panels {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.panel-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.panel-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.panel-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    margin-top: 2px;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 9px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.action-btn.primary:hover:not(:disabled) {
+    background: #ff5500;
+    border-color: #ff5500;
+    color: #fff;
+}
+
+.action-btn.danger {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #f87171;
+}
+
+.action-btn.danger:hover:not(:disabled) {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+.search-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 9px;
+    padding: 9px 12px;
+    width: 100%;
+    max-width: 320px;
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.progress-container {
+    width: 100%;
+    height: 14px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+    border: 1px solid var(--border-color);
+    display: none;
+    position: relative;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), #3b82f6);
+    box-shadow: 0 0 10px var(--accent);
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    margin-top: 14px;
+}
+
+.links-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.links-table th,
+.links-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+}
+
+.links-table th {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.links-table td {
+    font-size: 0.88rem;
+    vertical-align: middle;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    text-transform: uppercase;
+}
+
+.status-badge.broken {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.status-badge.redirected {
+    color: #ffb800;
+    border-color: rgba(255, 184, 0, 0.3);
+    background: rgba(255, 184, 0, 0.05);
+}
+
+.status-badge.error {
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.05);
+}
+
+.type-pill {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.empty-state {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    text-align: center;
+    padding: 40px 0;
+}
+
+@media (max-width: 980px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<section class="admin-header">
+    <div>
+        <h1 class="admin-title"><i class="bi bi-link-45deg" style="color:var(--accent)"></i> Broken-Link Checker</h1>
+        <p class="admin-subtitle">Scan coding platforms and editorial URLs to detect stale or redirected question links.</p>
+    </div>
+    <a class="action-btn" href="{{ url_for('admin.dashboard') }}">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <p class="stat-label">Total Links Scan</p>
+        <p class="stat-value" id="stat-total">{{ total_links }}</p>
+    </article>
+    <article class="stat-card" style="border-color:rgba(239, 68, 68, 0.2)">
+        <p class="stat-label" style="color:#f87171">Flagged Broken</p>
+        <p class="stat-value" id="stat-broken" style="color:#ef4444">{{ flagged_broken }}</p>
+    </article>
+    <article class="stat-card" style="border-color:rgba(255, 184, 0, 0.2)">
+        <p class="stat-label" style="color:#ffc01e">Flagged Redirects</p>
+        <p class="stat-value" id="stat-redirected" style="color:#ffb800">{{ flagged_redirects }}</p>
+    </article>
+    <article class="stat-card">
+        <p class="stat-label">Cache Coverage</p>
+        <p class="stat-value" id="stat-cache">{{ "%.1f"|format(cache_coverage * 100) }}%</p>
+    </article>
+</section>
+
+<section class="admin-panels">
+    <article class="panel">
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">Link Scanner Job</h2>
+                <p class="panel-subtitle" id="scanner-summary">
+                    {% if job_status.is_running %}
+                        Scanning links...
+                    {% elif job_status.finished_at %}
+                        Last scan: {{ job_status.summary or 'Completed successfully.' }}
+                    {% else %}
+                        No scan has been run yet.
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <button class="action-btn primary" id="btn-run" onclick="startScannerJob()" {% if job_status.is_running %}disabled{% endif %}>
+                    <i class="bi bi-play-fill"></i> Run Scanner
+                </button>
+                <button class="action-btn danger" id="btn-clear" onclick="clearScannerCache()" {% if job_status.is_running %}disabled{% endif %}>
+                    <i class="bi bi-trash"></i> Clear Cache
+                </button>
+            </div>
+        </div>
+
+        <!-- Animated glowing progress bar -->
+        <div class="progress-container" id="scanner-progress-container" {% if job_status.is_running %}style="display:block"{% endif %}>
+            <div class="progress-bar-fill" id="scanner-progress-fill" style="width: {{ (job_status.completed_links / (job_status.total_links or 1) * 100)|round }}%"></div>
+        </div>
+        <div class="progress-text" id="scanner-progress-text" {% if job_status.is_running %}style="display:flex"{% endif %}>
+            <span id="progress-counts">0 / 0 scanned</span>
+            <span id="progress-percent">0%</span>
+        </div>
+
+        <hr style="border-color:var(--border-color);margin:24px 0 20px 0">
+
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">Flagged Stale Links</h2>
+                <p class="panel-subtitle" id="table-subtitle">Showing {{ flagged_links|length }} flagged links</p>
+            </div>
+            <input type="text" id="link-search" class="search-input" placeholder="Search by question name or URL..." oninput="filterFlaggedLinks()">
+        </div>
+
+        <div class="table-wrap">
+            <table class="links-table" id="flagged-links-table">
+                <thead>
+                    <tr>
+                        <th>Question Name</th>
+                        <th>Link Type</th>
+                        <th>Destination URL</th>
+                        <th>Status Code</th>
+                        <th>Flag</th>
+                        <th>Last Checked</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="links-tbody">
+                    {% if flagged_links %}
+                        {% for link in flagged_links %}
+                        <tr class="link-row" data-question="{{ link.question_name|lower }}" data-url="{{ link.url|lower }}">
+                            <td style="font-weight:700">{{ link.question_name }}</td>
+                            <td><span class="type-pill">{{ link.link_type|upper }}</span></td>
+                            <td style="max-width:240px;word-break:break-all"><a href="{{ link.url }}" target="_blank" class="link-out" style="color:var(--info);text-decoration:none">{{ link.url }}</a></td>
+                            <td style="font-family:monospace">{{ link.status_code if link.status_code != -1 else 'ERR' }}</td>
+                            <td>
+                                <span class="status-badge {{ link.status }}">
+                                    <i class="bi bi-{% if link.status == 'broken' %}x-circle{% elif link.status == 'redirected' %}arrow-right-short{% else %}exclamation-triangle{% endif %}"></i>
+                                    {{ link.status }}
+                                </span>
+                            </td>
+                            <td style="color:var(--text-muted);font-size:0.8rem">{{ link.checked_at.strftime('%Y-%m-%d %H:%M') if link.checked_at else 'Never' }}</td>
+                            <td>
+                                <a href="{{ link.url }}" target="_blank" class="action-btn" title="Check Link" style="padding:6px 10px"><i class="bi bi-box-arrow-up-right"></i></a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr id="empty-row">
+                            <td colspan="7" class="empty-state">
+                                <i class="bi bi-check2-circle" style="color:var(--success);font-size:2.5rem;display:block;margin-bottom:8px"></i>
+                                No flagged broken or redirected links! All question URLs are healthy.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const endpointConfig = {
+    start: "{{ url_for('admin.start_link_checker') }}",
+    status: "{{ url_for('admin.get_link_checker_status') }}",
+    clear: "{{ url_for('admin.clear_link_checker_cache') }}",
+    csrfToken: "{{ csrf_token() }}"
+};
+
+let pollingInterval = null;
+
+function filterFlaggedLinks() {
+    const searchVal = document.getElementById('link-search').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.link-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const question = row.getAttribute('data-question');
+        const url = row.getAttribute('data-url');
+        if (question.includes(searchVal) || url.includes(searchVal)) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    document.getElementById('table-subtitle').textContent = `Showing ${visibleCount} flagged links`;
+    
+    // Manage empty state
+    const emptyRow = document.getElementById('empty-row');
+    if (visibleCount === 0 && rows.length > 0) {
+        if (!emptyRow) {
+            const tbody = document.getElementById('links-tbody');
+            const tr = document.createElement('tr');
+            tr.id = 'empty-row';
+            tr.innerHTML = `<td colspan="7" class="empty-state">No matching flagged links found for "${searchVal}".</td>`;
+            tbody.appendChild(tr);
+        }
+    } else if (emptyRow && rows.length > 0) {
+        emptyRow.remove();
+    }
+}
+
+function startScannerJob() {
+    const btnRun = document.getElementById('btn-run');
+    const btnClear = document.getElementById('btn-clear');
+    btnRun.disabled = true;
+    btnClear.disabled = true;
+    
+    showToast('⏳ Starting Link Checker Job...');
+    
+    fetch(endpointConfig.start, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': endpointConfig.csrfToken
+        }
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            document.getElementById('scanner-progress-container').style.display = 'block';
+            document.getElementById('scanner-progress-text').style.display = 'flex';
+            document.getElementById('scanner-summary').textContent = 'Scanning links...';
+            startPollingStatus();
+        } else {
+            showToast('❌ Error: ' + res.error);
+            btnRun.disabled = false;
+            btnClear.disabled = false;
+        }
+    })
+    .catch(e => {
+        showToast('❌ Network error.');
+        btnRun.disabled = false;
+        btnClear.disabled = false;
+    });
+}
+
+function clearScannerCache() {
+    if (!confirm('Are you sure you want to clear the checked link cache? This will force the next scan to check all URLs from scratch.')) {
+        return;
+    }
+    
+    const btnRun = document.getElementById('btn-run');
+    const btnClear = document.getElementById('btn-clear');
+    btnRun.disabled = true;
+    btnClear.disabled = true;
+    
+    showToast('⏳ Clearing Cache...');
+    
+    fetch(endpointConfig.clear, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': endpointConfig.csrfToken
+        }
+    })
+    .then(r => r.json())
+    .then(res => {
+        btnRun.disabled = false;
+        btnClear.disabled = false;
+        if (res.success) {
+            showToast('✅ Checked links cache cleared successfully!');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('❌ Error: ' + res.error);
+        }
+    })
+    .catch(e => {
+        showToast('❌ Network error.');
+        btnRun.disabled = false;
+        btnClear.disabled = false;
+    });
+}
+
+function startPollingStatus() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    
+    pollingInterval = setInterval(() => {
+        fetch(endpointConfig.status)
+        .then(r => r.json())
+        .then(res => {
+            const progressContainer = document.getElementById('scanner-progress-container');
+            const progressFill = document.getElementById('scanner-progress-fill');
+            const progressCounts = document.getElementById('progress-counts');
+            const progressPercent = document.getElementById('progress-percent');
+            const summary = document.getElementById('scanner-summary');
+            
+            const total = res.total_links || 0;
+            const completed = res.completed_links || 0;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            progressFill.style.width = percent + '%';
+            progressCounts.textContent = `${completed} / ${total} scanned`;
+            progressPercent.textContent = percent + '%';
+            
+            if (!res.is_running) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                progressContainer.style.display = 'none';
+                document.getElementById('scanner-progress-text').style.display = 'none';
+                
+                document.getElementById('btn-run').disabled = false;
+                document.getElementById('btn-clear').disabled = false;
+                
+                summary.textContent = 'Last scan: ' + (res.summary || 'Scan completed.');
+                showToast('✅ Link Checker scan completed! Reloading...');
+                setTimeout(() => window.location.reload(), 1200);
+            }
+        })
+        .catch(e => {
+            console.error('Polling error:', e);
+        });
+    }, 2000);
+}
+
+// Automatically start polling if the backend says the scanner is already running on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const isRunning = {% if job_status.is_running %}true{% else %}false{% endif %};
+    if (isRunning) {
+        document.getElementById('btn-run').disabled = true;
+        document.getElementById('btn-clear').disabled = true;
+        startPollingStatus();
+    }
+});
+</script>
+{% endblock %}
