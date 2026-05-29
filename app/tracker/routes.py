@@ -569,8 +569,12 @@ def import_commit():
                 "timestamp": timestamp
             }
     else:
+        # Replace mode should overwrite only the mapped/imported questions while
+        # preserving any existing progress entries that were not present (or not matched)
+        # in the import file.
+        new_progress = dict(current_db_progress)
         for q_id, imp_val in mapped_progress.items():
-            existing = current_db_progress.get(q_id, {})
+            existing = new_progress.get(q_id, {})
             timestamp = existing.get("timestamp")
             if imp_val["done"] and not existing.get("done"):
                 timestamp = utc_now()

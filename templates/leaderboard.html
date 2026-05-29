@@ -270,6 +270,7 @@
 const CURRENT_USER_ID = {{ current_user_id | tojson }};
 const endpointConfig = {{ {
   "publicProfileBase": url_for('public.public_profile', user_id='__USER_ID__'),
+  "compareBase": url_for('leaderboard.compare', user_id='__USER_ID__'),
 }|tojson }};
 let activeMode = 'cscore';
 let currentPage = 1;
@@ -403,6 +404,10 @@ function renderTable(entries, mode) {
     
     const dsaHTML = `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
     
+    const compareHTML = (CURRENT_USER_ID && !isMe && e.user_id)
+      ? `<a class="pagination-btn" style="margin-left:8px" href="${endpointConfig.compareBase.replace('__USER_ID__', encodeURIComponent(e.user_id))}" aria-label="Compare with ${escapeHTML(e.name)}">Compare</a>`
+      : '';
+
     const platformHTML = isCollegeMode
       ? `<span class="stat-badge lc">Solved ${e.total_solved}</span>`
       : `${e.lc_total ? `<span class="stat-badge lc" aria-label="LeetCode: ${e.lc_total} solved">LC ${e.lc_total}</span> ` : ''}
@@ -424,7 +429,7 @@ function renderTable(entries, mode) {
         </td>
         <td class="score-cell ${getScoreClass(mode)}" aria-label="${getScoreLabel(mode)}: ${score}">${score}</td>
         <td>${dsaHTML}</td>
-        <td>${platformHTML}</td>
+        <td>${platformHTML} ${compareHTML}</td>
       </tr>`;
   });
   

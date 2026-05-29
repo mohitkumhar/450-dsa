@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, render_template, request
-from flask_login import current_user
+from flask_login import current_user, login_required
 
 from app.extensions import limiter, cache
 from app.leaderboard.cache import LEADERBOARD_CACHE_TIMEOUT, api_leaderboard_cache_key, leaderboard_page_cache_key
@@ -172,3 +172,22 @@ def api_leaderboard():
         "total_pages": (total + per_page - 1) // per_page,
         "current_user_rank": current_user_rank
     })
+
+
+@leaderboard_bp.route("/leaderboard/compare/<user_id>")
+@login_required
+def compare(user_id):
+    """Show a head-to-head comparison between the current user and another public user."""
+    entries = build_leaderboard_data()
+    other = next((e for e in entries if e.get("user_id") == user_id), None)
+    current_user_id = str(current_user.id) if current_user.is_authenticated else None
+    current_entry = next((e for e in entries if e.get("user_id") == current_user_id), None)
+
+    status_code = 404 if other is None else 200
+    return render_template(
+        "leaderboard_compare.html",
+        other=other,
+        current_entry=current_entry,
+        other_user_id=user_id,
+        current_user_id=current_user_id,
+    ), status_code

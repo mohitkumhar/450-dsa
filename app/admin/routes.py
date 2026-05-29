@@ -10,7 +10,9 @@ from flask import session
 from flask_login import current_user, login_required
 
 from app.decorators import admin_required
-from app.extensions import db
+from app.extensions import cache, db
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.profile.sync_service import clear_profile_caches
 from app.utils import get_merged_daily_counts
 
 
@@ -197,6 +199,9 @@ def delete_user(user_id):
     result = db.user.delete_one({"_id": target_id})
     if result.deleted_count != 1:
         abort(500)
+
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, target_id)
 
     display_name = target_user.get("name") or target_user.get("email") or "user"
     flash(f"Deleted account for {display_name}.", "success")

@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.cohort-detail-header {
+  margin-bottom: 24px;
+}
+.cohort-detail-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.cohort-detail-header h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.cohort-detail-meta {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.cohort-join-badge {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.cohort-join-badge:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+.cohort-join-badge-code {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.lb-table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  overflow-x: auto;
+  margin-top: 16px;
+}
+.lb-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.lb-table thead th {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+.lb-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+.lb-table tbody tr:last-child { border-bottom: none; }
+.lb-table tbody tr:hover { background: var(--bg-secondary); }
+.lb-table tbody tr.me-row {
+  background: rgba(255,107,0,0.06);
+  border-left: 3px solid var(--accent);
+}
+.lb-table tbody tr.me-row:hover { background: rgba(255,107,0,0.1); }
+.lb-table tbody td { padding: 12px 16px; font-size: 0.85rem; vertical-align: middle; }
+
+.rank-cell { font-weight: 800; color: var(--text-muted); font-size: 0.9rem; min-width: 44px; }
+.rank-cell.top-1 { color: #ffd700; }
+.rank-cell.top-2 { color: #c0c0c0; }
+.rank-cell.top-3 { color: #cd7f32; }
+
+.user-cell { display: flex; align-items: center; gap: 12px; }
+.user-cell-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #ff375f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.user-cell-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.user-cell-info { min-width: 0; }
+.user-cell-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-cell-name a { color: inherit; text-decoration: none; }
+.user-cell-name a:hover { color: var(--accent); text-decoration: underline; }
+.user-cell-college { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+.stat-badge.lc { background: rgba(255,184,0,0.12); color: #ffb800; border: 1px solid rgba(255,184,0,0.2); }
+.stat-badge.gfg { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+.stat-badge.cn { background: rgba(139,92,246,0.12); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.2); }
+.stat-badge.hr { background: rgba(0,189,108,0.12); color: #00bd6c; border: 1px solid rgba(0,189,108,0.2); }
+.stat-badge.dsa { background: rgba(255,107,0,0.12); color: var(--accent); border: 1px solid rgba(255,107,0,0.2); }
+
+.score-cell { font-weight: 900; font-size: 1rem; color: var(--accent); }
+
+.me-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.compare-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+  margin-left: 8px;
+}
+.compare-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .lb-table thead th:nth-child(4),
+  .lb-table tbody td:nth-child(4),
+  .lb-table thead th:nth-child(5),
+  .lb-table tbody td:nth-child(5) { display: none; }
+}
+</style>
+
+<div class="cohort-detail-header">
+  <div class="cohort-detail-header-top">
+    <div>
+      <a href="{{ url_for('cohort.index') }}" class="text-decoration-none" style="color: var(--text-secondary); font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
+        <i class="bi bi-chevron-left"></i> Back to Study Spaces
+      </a>
+      <h1><i class="bi bi-people-fill" style="color:var(--accent)" aria-hidden="true"></i> {{ cohort.name }}</h1>
+      <div class="cohort-detail-meta">
+        <span><i class="bi bi-people"></i> {{ entries|length }} member{{ 's' if entries|length != 1 else '' }}</span>
+        <span>•</span>
+        <span>Created: {{ cohort.created_at.strftime('%Y-%m-%d') if cohort.created_at else 'N/A' }}</span>
+      </div>
+    </div>
+    
+    <div class="cohort-join-badge" id="copyCodeBtn" data-code="{{ cohort.join_code }}" title="Click to copy join code">
+      <i class="bi bi-copy"></i>
+      <span>Join Code: <span class="cohort-join-badge-code">{{ cohort.join_code }}</span></span>
+    </div>
+  </div>
+</div>
+
+<div class="lb-table-wrap">
+  <table class="lb-table" aria-label="Cohort rankings">
+    <thead>
+      <tr>
+        <th scope="col">Rank</th>
+        <th scope="col">User</th>
+        <th scope="col">Score</th>
+        <th scope="col">DSA Done</th>
+        <th scope="col">Platforms</th>
+      </tr>
+    </thead>
+    <tbody id="cohortBody">
+      {% if entries %}
+        {% for entry in entries %}
+          {% set rank = entry.rank %}
+          {% set isMe = entry.user_id == current_user_id %}
+          {% set rankClass = 'top-1' if rank == 1 else 'top-2' if rank == 2 else 'top-3' if rank == 3 else '' %}
+          {% set rankIcon = '🥇' if rank == 1 else '🥈' if rank == 2 else '🥉' if rank == 3 else '#' ~ rank %}
+          <tr class="{{ 'me-row' if isMe else '' }}">
+            <td class="rank-cell {{ rankClass }}" aria-label="Rank {{ rank }}">{{ rankIcon }}</td>
+            <td>
+              <div class="user-cell">
+                <div class="user-cell-avatar">
+                  {% if entry.profile_photo %}
+                    <img src="{{ entry.profile_photo }}" alt="{{ entry.name }}">
+                  {% else %}
+                    {{ entry.name[0]|upper }}
+                  {% endif %}
+                </div>
+                <div class="user-cell-info">
+                  <div class="user-cell-name">
+                    <a href="{{ url_for('public.public_profile', user_id=entry.user_id) }}">{{ entry.name }}</a>
+                    {% if isMe %}
+                      <span class="me-tag">YOU</span>
+                    {% endif %}
+                  </div>
+                  <div class="user-cell-college">{{ entry.college or '—' }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="score-cell" aria-label="C-Score: {{ entry.c_score }}">{{ entry.c_score }}</td>
+            <td><span class="stat-badge dsa">{{ entry.dsa_done }} / 450</span></td>
+            <td>
+              {% if entry.lc_total %}
+                <span class="stat-badge lc" aria-label="LeetCode: {{ entry.lc_total }} solved">LC {{ entry.lc_total }}</span>
+              {% endif %}
+              {% if entry.gfg_total %}
+                <span class="stat-badge gfg" aria-label="GFG: {{ entry.gfg_total }} solved">GFG {{ entry.gfg_total }}</span>
+              {% endif %}
+              {% if entry.cn_total %}
+                <span class="stat-badge cn" aria-label="Coding Ninjas: {{ entry.cn_total }} solved">CN {{ entry.cn_total }}</span>
+              {% endif %}
+              {% if entry.hr_total %}
+                <span class="stat-badge hr" aria-label="HackerRank: {{ entry.hr_total }} solved">HR {{ entry.hr_total }}</span>
+              {% endif %}
+              {% if not isMe %}
+                <a class="compare-btn" href="{{ url_for('leaderboard.compare', user_id=entry.user_id) }}">Compare</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="5" class="text-center py-4 color-fg-muted">
+            No active members found.
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('copyCodeBtn').addEventListener('click', function() {
+  const code = this.getAttribute('data-code');
+  navigator.clipboard.writeText(code).then(() => {
+    if (window.showToast) {
+      window.showToast('Join code copied to clipboard!', 'success');
+    } else {
+      alert('Join code copied to clipboard: ' + code);
+    }
+  }).catch(err => {
+    console.error('Failed to copy code: ', err);
+  });
+});
+</script>
+{% endblock %}

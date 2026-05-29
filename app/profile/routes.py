@@ -404,12 +404,31 @@ def profile():
     topic_progress = []
 
     ext_platform_totals = user.external_totals or {}
-    if user.in_sheet_platform_counts:
-        platforms = merge_platform_counts(user.in_sheet_platform_counts, ext_platform_totals)
+    cached_in_sheet_counts = (
+        user.in_sheet_platform_counts
+        if isinstance(user.in_sheet_platform_counts, dict)
+        else None
+    )
+    if cached_in_sheet_counts is not None:
+        platforms = merge_platform_counts(cached_in_sheet_counts, ext_platform_totals)
     else:
         in_sheet_counts = compute_in_sheet_platform_counts(solved_items, all_questions)
-        db.user.update_one({"_id": user.id}, {"$set": {"in_sheet_platform_counts": in_sheet_counts}})
-        platforms = merge_platform_counts(in_sheet_counts, ext_platform_totals)
+
+        # Avoid clobbering concurrent $inc updates from /update_question by setting only
+        # if the field is still absent at write time.
+        update_result = db.user.update_one(
+            {"_id": user.id, "in_sheet_platform_counts": {"$exists": False}},
+            {"$set": {"in_sheet_platform_counts": in_sheet_counts}},
+        )
+
+        effective_counts = in_sheet_counts
+        if not getattr(update_result, "modified_count", 0):
+            refreshed = db.user.find_one({"_id": user.id}, {"in_sheet_platform_counts": 1}) or {}
+            refreshed_counts = refreshed.get("in_sheet_platform_counts")
+            if isinstance(refreshed_counts, dict):
+                effective_counts = refreshed_counts
+
+        platforms = merge_platform_counts(effective_counts, ext_platform_totals)
 
     lc_easy = dsa_easy
     lc_medium = dsa_medium

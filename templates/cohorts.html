@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.cohorts-header { margin-bottom: 24px; }
+.cohorts-header h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.cohorts-header p { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
+
+.cohort-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.cohort-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.cohort-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s, box-shadow 0.2s;
+  height: 100%;
+}
+
+.cohort-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: var(--accent);
+}
+
+.cohort-card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cohort-card-members {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.cohort-card-code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.82rem;
+  padding: 3px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cohort-card-footer {
+  margin-top: auto;
+}
+
+.cohort-empty {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 48px;
+  text-align: center;
+  color: var(--text-secondary);
+  grid-column: 1 / -1;
+}
+
+.cohort-empty i {
+  font-size: 3rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.cohort-modal-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all 0.2s;
+}
+
+/* Modal Form Styles */
+.form-label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.form-control-custom {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.form-control-custom:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2);
+  outline: none;
+}
+</style>
+
+<div class="cohorts-header">
+  <h1><i class="bi bi-people-fill" style="color:var(--accent)" aria-hidden="true"></i> Study Spaces</h1>
+  <p>Create or join custom cohorts to solve questions and track progress alongside your peers</p>
+</div>
+
+<div class="cohort-actions">
+  <button class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill cohort-modal-btn" data-bs-toggle="modal" data-bs-target="#createCohortModal">
+    <i class="bi bi-plus-lg"></i> Create Cohort
+  </button>
+  <button class="pill-btn ui-btn ui-btn-secondary ui-btn-pill cohort-modal-btn" data-bs-toggle="modal" data-bs-target="#joinCohortModal">
+    <i class="bi bi-link-45deg"></i> Join Cohort
+  </button>
+</div>
+
+<div class="cohort-card-grid">
+  {% if cohorts %}
+    {% for cohort in cohorts %}
+      <div class="cohort-card">
+        <div>
+          <h2 class="cohort-card-title" title="{{ cohort.name }}">{{ cohort.name }}</h2>
+          <div class="cohort-card-members">
+            <i class="bi bi-people"></i>
+            <span>{{ cohort.member_count }} Member{{ 's' if cohort.member_count != 1 else '' }}</span>
+            <span class="cohort-card-code">Code: {{ cohort.join_code }}</span>
+          </div>
+        </div>
+        <div class="cohort-card-footer">
+          <a href="{{ url_for('cohort.detail', cohort_id=cohort.id) }}" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill w-100 text-center text-decoration-none">
+            View Rankings
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="cohort-empty">
+      <i class="bi bi-people-fill"></i>
+      <h3>No Cohorts Joined Yet</h3>
+      <p class="mb-4">Create your own study space or enter a join code from your friends to get started.</p>
+      <div class="d-flex justify-content-center gap-3">
+        <button class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" data-bs-toggle="modal" data-bs-target="#createCohortModal">
+          Create Cohort
+        </button>
+        <button class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" data-bs-toggle="modal" data-bs-target="#joinCohortModal">
+          Join Cohort
+        </button>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Create Cohort Modal -->
+<div class="modal fade" id="createCohortModal" tabindex="-1" aria-labelledby="createCohortModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title font-weight-800" id="createCohortModalLabel" style="color: var(--text-primary)">Create New Cohort</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('cohort.create') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body py-4">
+          <div class="mb-3">
+            <label for="cohortName" class="form-label mb-2">Cohort Name</label>
+            <input type="text" class="form-control form-control-custom w-100" id="cohortName" name="name" required placeholder="e.g. Batch of 2026, DSA Buddies">
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill">Create Space</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Join Cohort Modal -->
+<div class="modal fade" id="joinCohortModal" tabindex="-1" aria-labelledby="joinCohortModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title font-weight-800" id="joinCohortModalLabel" style="color: var(--text-primary)">Join Cohort</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form action="{{ url_for('cohort.join') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body py-4">
+          <div class="mb-3">
+            <label for="joinCode" class="form-label mb-2">Enter Join Code</label>
+            <input type="text" class="form-control form-control-custom w-100" id="joinCode" name="join_code" required placeholder="e.g. AB12XY" maxlength="6" style="text-transform: uppercase;">
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill">Join Space</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

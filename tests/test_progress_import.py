@@ -193,12 +193,19 @@ def test_import_commit_route_replace(monkeypatch):
         "url": "https://leetcode.com/problems/two-sum/",
         "url2": ""
     }).inserted_id
+    untouched_id = test_db.question.insert_one({
+        "topic": topic_id,
+        "problem": "Best Time to Buy and Sell Stock",
+        "url": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+        "url2": ""
+    }).inserted_id
 
     # Existing progress
     user_id = test_db.user.insert_one({
         "email": "user@example.com",
         "progress": {
-            str(question_id): {"done": False, "bookmark": True, "notes": "Existing notes"}
+            str(question_id): {"done": False, "bookmark": True, "notes": "Existing notes"},
+            str(untouched_id): {"done": True, "bookmark": False, "notes": "Keep me"}
         },
         "in_sheet_platform_counts": {"LeetCode": 0},
         "is_admin": False
@@ -226,4 +233,10 @@ def test_import_commit_route_replace(monkeypatch):
     assert progress["done"] is True
     assert progress["bookmark"] is False  # Bookmark overwritten to False
     assert progress["notes"] == "Imported notes"  # Notes replaced
-    assert user["in_sheet_platform_counts"]["LeetCode"] == 1
+
+    # Replace mode should not drop unrelated existing entries that were not in the import file.
+    untouched_progress = user["progress"][str(untouched_id)]
+    assert untouched_progress["done"] is True
+    assert untouched_progress["notes"] == "Keep me"
+    # Preserve existing done entries, so counts reflect both solved questions.
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 2
