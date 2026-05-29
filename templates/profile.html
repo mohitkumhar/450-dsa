@@ -852,23 +852,20 @@ function handlePhotoUpload(e){
 })();
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
-{% endblock %}
-
-
 <style>
   @media screen and (max-width:768px)
   {
-    .profile-container
+    .profile-layout
     {
       display:flex;
-      flex-direction:columns;
+      flex-direction:column;
       gap:20px;
       padding:10px;
     }
     .card
     {
       width:100%;
-      boarder-radius:12px;
+      border-radius:12px;
       margin-bottom: 15px;
     }
     img
@@ -878,3 +875,7 @@ function handlePhotoUpload(e){
     }
   }
 </style>
+
+{% endblock %}
+
+
