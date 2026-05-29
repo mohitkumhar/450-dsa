@@ -35,14 +35,14 @@
             window.setTimeout(releasePageLoading, 2500);
         })();
     </script>
-   
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -169,7 +169,7 @@
         }
 
         /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
-        
+
         /* Skip to main content link - for keyboard users */
         .skip-link {
             position: absolute;
@@ -184,30 +184,30 @@
             border-radius: 0 0 8px 0;
             transition: top 0.2s ease;
         }
-        
+
         .skip-link:focus {
             top: 0;
             outline: 2px solid white;
             outline-offset: 2px;
         }
-        
+
         /* Focus indicators for keyboard navigation */
         :focus {
             outline: 2px solid var(--accent);
             outline-offset: 2px;
         }
-        
+
         /* Remove outline for mouse users but keep for keyboard */
         :focus:not(:focus-visible) {
             outline: none;
         }
-        
+
         :focus-visible {
             outline: 2px solid var(--accent);
             outline-offset: 2px;
             border-radius: 4px;
         }
-        
+
         /* Better focus for interactive elements */
         button:focus-visible,
         a:focus-visible,
@@ -218,7 +218,7 @@
             outline: 2px solid var(--accent);
             outline-offset: 2px;
         }
-        
+
         /* High contrast mode support */
         @media (prefers-contrast: high) {
             :focus-visible {
@@ -1693,7 +1693,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        
+
         // Theme Toggle
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
@@ -1921,7 +1921,7 @@
             }
             updatePalettePreviews(prefs.theme_accent);
         }
-        
+
         function accentLabelForHue(hue) {
             if (hue < 22 || hue >= 340) return 'Red';
             if (hue < 50) return 'Orange';
