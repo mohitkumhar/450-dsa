@@ -2,8 +2,14 @@
 
 ## Reporting a Vulnerability
 
-We take the security of this project seriously. If you discover any security vulnerabilities, please do not open a public issue. Instead, report them privately.
+We take the security of this project seriously. If you discover a security vulnerability, please do not open a public issue or disclose exploit details publicly.
 
-You can report security vulnerabilities by opening a private vulnerability report on GitHub under the "Security" tab of this repository, or by contacting the maintainers directly.
+Report vulnerabilities through GitHub private vulnerability reporting for this repository:
 
-We will investigate all reports and respond as quickly as possible.
+1. Open https://github.com/mohitkumhar/450-dsa/security/advisories/new
+2. Include the affected area, reproduction steps, expected impact, and any suggested fix.
+3. Wait for a maintainer response before sharing details publicly.
+
+If GitHub private vulnerability reporting is unavailable, open a public issue that asks for a secure contact method without including sensitive vulnerability details.
+
+We will investigate valid reports and respond as quickly as possible.
