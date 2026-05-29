@@ -5,7 +5,9 @@ from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
-from app.extensions import bcrypt, db, github, google, limiter, login_manager
+from app.extensions import bcrypt, cache, db, github, google, limiter, login_manager
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.profile.sync_service import clear_profile_caches
 from app.utils import utc_now
 
 
@@ -244,6 +246,8 @@ def delete_account():
     user_id = current_user.id
     logout_user()
     db.user.delete_one({"_id": user_id})
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, user_id)
     flash("Your account has been permanently deleted.", "info")
     return redirect(url_for("auth.login"))
 
@@ -271,6 +275,8 @@ def deactivate_account():
         {"_id": current_user.id},
         {"$set": {"is_deactivated": True, "deactivated_at": utc_now()}},
     )
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, current_user.id)
     logout_user()
     flash("Your account has been deactivated. Log in again anytime to reactivate it.", "info")
     return redirect(url_for("auth.login"))
