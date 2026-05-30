@@ -459,6 +459,18 @@ def profile():
         )
 
     topic_progress.sort(key=lambda item: item["done"], reverse=True)
+    best_topic = None
+    focus_topic = None
+
+    if topic_progress:
+      best_topic = max(topic_progress, key=lambda t: t["percent"])
+
+      incomplete_topics = [t for t in topic_progress if t["percent"] < 100]
+
+      if incomplete_topics:
+        focus_topic = min(incomplete_topics, key=lambda t: t["percent"])
+      else:
+        focus_topic = best_topic
     overall_percent = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
     rating_history = list(user.rating_history or [])
 
@@ -507,4 +519,6 @@ def profile():
         profile_leaderboard_rank=profile_leaderboard_rank,
         current_streak=current_streak,
         longest_streak=longest_streak,
+        best_topic=best_topic,
+        focus_topic=focus_topic,
     )

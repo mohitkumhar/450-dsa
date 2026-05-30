@@ -6,263 +6,375 @@
 {% block content %}
 <div class="prof-layout">
 
-<!-- ── LEFT SIDEBAR ── -->
-<div class="prof-sidebar">
-  <div class="card" style="text-align:center">
-    <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
-      {% if user.profile_photo %}
-        <img src="{{ user.profile_photo }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
-      {% else %}
+  <!-- ── LEFT SIDEBAR ── -->
+  <div class="prof-sidebar">
+    <div class="card" style="text-align:center">
+      <div class="avatar-ring" id="avatarRing" aria-label="{{ user.name }}'s profile photo">
+        {% if user.profile_photo %}
+        <img src="{{ user.profile_photo }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async"
+          style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.name }}'s profile photo">
+        {% else %}
         <span aria-hidden="true">{{ user.name[0]|upper }}</span>
         <span class="visually-hidden">{{ user.name }}'s profile initial</span>
-      {% endif %}
-    </div>
-    <div class="prof-name">{{ user.name }}</div>
-    <div class="prof-handle">
-      @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
-      <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
-    </div>
-    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
-    <button class="card-btn ui-btn ui-btn-success ui-btn-block" onclick="copyProgressCardUrl()" aria-label="Share progress image URL">
-      <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
-    </button>
-    <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
-      <input id="progress-card-copy-url" type="text" readonly aria-label="Progress image URL"
-             style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-secondary);font-size:.75rem">
-    </div>
-    <script>
-      function showProgressCardUrlFallback(url) {
-        const fallback = document.getElementById('progress-card-copy-fallback');
-        const input = document.getElementById('progress-card-copy-url');
-        if (!fallback || !input) return;
+        {% endif %}
+      </div>
+      <div class="prof-name">{{ user.name }}</div>
+      <div class="prof-handle">
+        @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
+        <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
+      </div>
+      <button class="card-btn ui-btn ui-btn-primary ui-btn-block" onclick="showCodelioCard()"
+        aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+      <button class="card-btn ui-btn ui-btn-success ui-btn-block" onclick="copyProgressCardUrl()"
+        aria-label="Share progress image URL">
+        <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
+      </button>
+      <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
+        <input id="progress-card-copy-url" type="text" readonly aria-label="Progress image URL"
+          style="width:100%;padding:8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-secondary);color:var(--text-secondary);font-size:.75rem">
+      </div>
+      <script>
+        function showProgressCardUrlFallback(url) {
+          const fallback = document.getElementById('progress-card-copy-fallback');
+          const input = document.getElementById('progress-card-copy-url');
+          if (!fallback || !input) return;
 
-        input.value = url;
-        fallback.style.display = 'block';
-        input.focus();
-        input.select();
+          input.value = url;
+          fallback.style.display = 'block';
+          input.focus();
+          input.select();
 
-        if (typeof showToast === 'function') {
-          showToast('Could not copy automatically. The URL is selected below.', 'warning');
-        }
-      }
-
-      function copyProgressCardUrl() {
-        const url = window.location.origin + endpointConfig.publicCardPath;
-        if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
-          showProgressCardUrlFallback(url);
-          return;
-        }
-
-        navigator.clipboard.writeText(url).then(() => {
           if (typeof showToast === 'function') {
-            showToast('Progress Image URL copied!', 'success');
+            showToast('Could not copy automatically. The URL is selected below.', 'warning');
           }
-        }).catch(() => {
-          showProgressCardUrlFallback(url);
-        });
-      }
-    </script>
-    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_csv') }}" aria-label="Export progress as CSV file">
-      <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
-    </a>
-    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_json') }}" aria-label="Export progress as JSON file">
-      <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress JSON
-    </a>
-    <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openImportModal()" aria-label="Import progress from backup file">
-      <i class="bi bi-upload" style="margin-right:6px" aria-hidden="true"></i> Import Progress (CSV/JSON)
-    </button>
-    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
-      <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
-    </a>
-    <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
-    <div class="social-row">
-      {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
-      {% if user.linkedin_url %}<a href="{{ user.linkedin_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
-      {% if user.twitter_url %}<a href="{{ user.twitter_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
-      {% if user.website_url %}<a href="{{ user.website_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe" aria-hidden="true"></i></a>{% endif %}
-      {% if user.github_username %}<a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
-      {% if user.resume_url %}<a href="{{ user.resume_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}
-    </div>
-    {% if user.location or user.college %}
-    <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
-    <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> {{ user.college }}{% endif %}</div>
-    {% else %}
-    <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
-    <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
-    {% endif %}
-    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
-  </div>
+        }
 
-  <div class="card">
-    <div class="sec-title">About</div>
-    <div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px">
-      450 DSA Progress: <strong style="color:var(--text-primary)">{{ dsa_done }} / {{ total_questions }} ({{ overall_percent }}%)</strong>
-    </div>
-    <div class="sec-title">Problem Solving Stats</div>
-    <div class="platform-row">
-      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-    <div class="platform-row">
-      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-    <div class="platform-row">
-      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-    <div class="platform-row">
-      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-    <div class="platform-row">
-      <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-    <div class="platform-row">
-      <span><i class="bi bi-fire" style="color:#b1361e;margin-right:6px" aria-hidden="true"></i>Codewars</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.codewars_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codewars_username | platform_url('codewars') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Codewars profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Codewars account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-    <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
-    <div class="sec-title" style="margin-top:14px">Development Stats</div>
-    <div class="platform-row">
-      <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
-      <span style="display:flex;align-items:center;gap:6px">
-        {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
-      </span>
-    </div>
-  </div>
+        function copyProgressCardUrl() {
+          const url = window.location.origin + endpointConfig.publicCardPath;
+          if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+            showProgressCardUrlFallback(url);
+            return;
+          }
 
-  <div class="rank-card">
-    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Leaderboard</div>
-    <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
-      <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
-    </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
-    <div class="meta-footer">
-      <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
-      <span><span>Profile Visibility:</span><span>Public</span></span>
-    </div>
-  </div>
-</div>
-
-<!-- ── MIDDLE / MAIN ── -->
-<div class="prof-main">
-
-  <!-- Stat cards + Heatmap -->
-  <div class="stat-row">
-    <div class="stat-card">
-      <div class="stat-lbl">Total Questions</div>
-      <div class="stat-num">{{ global_total_solved }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-lbl">Total Active Days</div>
-      <div class="stat-num">{{ total_active_days }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-lbl">Current Streak</div>
-      <div class="stat-num">{{ current_streak }}d</div>
-      <div style="font-size:.72rem;color:var(--text-secondary);margin-top:6px">Best: {{ longest_streak }}d</div>
-    </div>
-    <div class="stat-card">
-      <div class="hm-meta">
-        <span>Submissions <strong>{{ global_total_solved }}</strong></span>
-        <span>Active Days <strong>{{ total_active_days }}</strong></span>
-        <select style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit" aria-label="Select time period">
-          <option>Current</option>
-        </select>
+          navigator.clipboard.writeText(url).then(() => {
+            if (typeof showToast === 'function') {
+              showToast('Progress Image URL copied!', 'success');
+            }
+          }).catch(() => {
+            showProgressCardUrlFallback(url);
+          });
+        }
+      </script>
+      <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_csv') }}"
+        aria-label="Export progress as CSV file">
+        <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
+      </a>
+      <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_json') }}"
+        aria-label="Export progress as JSON file">
+        <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress JSON
+      </a>
+      <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openImportModal()"
+        aria-label="Import progress from backup file">
+        <i class="bi bi-upload" style="margin-right:6px" aria-hidden="true"></i> Import Progress (CSV/JSON)
+      </button>
+      <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}"
+        aria-label="Export study plan calendar file">
+        <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
+      </a>
+      <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
+      <div class="social-row">
+        {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email"
+          aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
+        {% if user.linkedin_url %}<a href="{{ user.linkedin_url|safe_url }}" target="_blank" rel="noopener noreferrer"
+          class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i
+            class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
+        {% if user.twitter_url %}<a href="{{ user.twitter_url|safe_url }}" target="_blank" rel="noopener noreferrer"
+          class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i
+            class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
+        {% if user.website_url %}<a href="{{ user.website_url|safe_url }}" target="_blank" rel="noopener noreferrer"
+          class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe"
+            aria-hidden="true"></i></a>{% endif %}
+        {% if user.github_username %}<a href="{{ user.github_username | platform_url('github') }}" target="_blank"
+          rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i
+            class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
+        {% if user.resume_url %}<a href="{{ user.resume_url|safe_url }}" target="_blank" rel="noopener noreferrer"
+          class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person"
+            aria-hidden="true"></i></a>{% endif %}
       </div>
-      <div class="heatmap-grid" id="heatmap" aria-label="Activity heatmap showing submission history"></div>
+      {% if user.location or user.college %}
+      <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)"
+          aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
+      <div class="meta-row">{% if user.college %}<i class="bi bi-mortarboard" style="color:var(--info)"
+          aria-hidden="true"></i> {{ user.college }}{% endif %}</div>
+      {% else %}
+      <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
+      <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer
+        Science</div>
+      {% endif %}
+      <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px"
+        aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+      <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px"
+        aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete
+        Account</button>
     </div>
-  </div>
 
-  <!-- Contests + Rating chart -->
-  <div class="contest-grid">
     <div class="card">
-      <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
-      <div class="big-num" style="text-align:center">{{ lc_contests }}</div>
-      <div style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
-        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px" aria-hidden="true"></i>LeetCode</span>
-        <strong>{{ lc_contests }}</strong>
+      <div class="sec-title">About</div>
+      <div style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px">
+        450 DSA Progress: <strong style="color:var(--text-primary)">{{ dsa_done }} / {{ total_questions }} ({{
+          overall_percent }}%)</strong>
+      </div>
+      <div class="sec-title">Problem Solving Stats</div>
+      <div class="platform-row">
+        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer"
+            class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right"
+              aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"
+            aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{%
+          endif %}
+        </span>
+      </div>
+      <div class="platform-row">
+        <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px"
+            aria-hidden="true"></i>GeeksForGeeks</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer"
+            class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right"
+              aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"
+            aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        </span>
+      </div>
+      <div class="platform-row">
+        <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding
+          Ninjas</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank"
+            rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i
+              class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out"
+            onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i
+              class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+        </span>
+      </div>
+      <div class="platform-row">
+        <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer"
+            class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right"
+              aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"
+            aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{%
+          endif %}
+        </span>
+      </div>
+      <div class="platform-row">
+        <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer"
+            class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right"
+              aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"
+            aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif
+          %}
+        </span>
+      </div>
+      <div class="platform-row">
+        <span><i class="bi bi-fire" style="color:#b1361e;margin-right:6px" aria-hidden="true"></i>Codewars</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.codewars_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.codewars_username | platform_url('codewars') }}" target="_blank" rel="noopener noreferrer"
+            class="link-out" aria-label="Codewars profile (opens in new tab)"><i class="bi bi-box-arrow-up-right"
+              aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"
+            aria-label="Connect Codewars account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{%
+          endif %}
+        </span>
+      </div>
+      <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()"
+        aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add
+        Platform</button>
+      <div class="sec-title" style="margin-top:14px">Development Stats</div>
+      <div class="platform-row">
+        <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>
+        <span style="display:flex;align-items:center;gap:6px">
+          {% if user.github_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a
+            href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer"
+            class="link-out" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-box-arrow-up-right"
+              aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;"
+            aria-label="Connect GitHub account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif
+          %}
+        </span>
       </div>
     </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
-        <div>
-          <div class="stat-lbl">Rating</div>
-          <div class="metric-value" style="font-size:1.6rem">{{ lc_rating }}</div>
-        </div>
-        <div style="text-align:right;font-size:.75rem;color:var(--text-secondary)">
-          <div>Rank: {{ lc_rank }}</div>
-          <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%</div>
-        </div>
+
+    <div class="rank-card">
+      <div
+        style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">
+        Leaderboard</div>
+      <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
+        <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
       </div>
-      <div class="chart-shell" id="progressChartShell" style="height:130px;margin-top:4px">
-        <div class="chart-skeleton" aria-hidden="true"></div>
-        <canvas id="progressChart" aria-label="Rating progress chart"></canvas>
+      <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer"
+        class="view-lb-btn ui-btn ui-btn-primary ui-btn-block"
+        aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
+      <div class="meta-footer">
+        <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
+        <span><span>Profile Visibility:</span><span>Public</span></span>
       </div>
     </div>
   </div>
 
-  <!-- Awards -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <span style="font-weight:700">Awards</span>
-      <span style="font-size:.75rem;color:var(--text-muted)">from LeetCode &amp; HackerRank</span>
-    </div>
-    <div class="awards-grid" id="awardsGrid" role="list" aria-label="Achievements and badges">
-      {# Real LC badges #}
-      {% for badge in lc_badges %}
-      <div class="award-badge" title="{{ badge.name }}" role="listitem">
-        {% if badge.icon %}
-          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async" style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'" alt="{{ badge.name }} badge">
-        {% else %}🏅{% endif %}
-        <span class="a-lbl">{{ badge.name[:10] }}</span>
+  <!-- ── MIDDLE / MAIN ── -->
+  <div class="prof-main">
+
+    <!-- Stat cards + Heatmap -->
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-lbl">Total Questions</div>
+        <div class="stat-num">{{ global_total_solved }}</div>
       </div>
-      {% endfor %}
-      {# Real HR badges — only earned stars shown, no empty placeholders #}
-      {% for badge in hr_badges %}
-      {% set earned = badge.stars|int if badge.stars else 0 %}
-      <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}" role="listitem">
-        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c" aria-hidden="true"></i>
-        <div class="hr-stars">
-          {% for i in range(earned) %}
+      <div class="stat-card">
+        <div class="stat-lbl">Total Active Days</div>
+        <div class="stat-num">{{ total_active_days }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Current Streak</div>
+        <div class="stat-num">{{ current_streak }}d</div>
+        <div style="font-size:.72rem;color:var(--text-secondary);margin-top:6px">Best: {{ longest_streak }}d</div>
+      </div>
+      <div class="stat-card">
+        <div class="hm-meta">
+          <span>Submissions <strong>{{ global_total_solved }}</strong></span>
+          <span>Active Days <strong>{{ total_active_days }}</strong></span>
+          <select
+            style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:6px;padding:2px 6px;font-size:0.7rem;font-family:inherit"
+            aria-label="Select time period">
+            <option>Current</option>
+          </select>
+        </div>
+        <div class="heatmap-grid" id="heatmap" aria-label="Activity heatmap showing submission history"></div>
+      </div>
+    </div>
+
+    <!-- Contests + Rating chart -->
+    <div class="contest-grid">
+      <div class="card">
+        <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
+        <div class="big-num" style="text-align:center">{{ lc_contests }}</div>
+        <div
+          style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
+          <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"
+              aria-hidden="true"></i>LeetCode</span>
+          <strong>{{ lc_contests }}</strong>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+          <div>
+            <div class="stat-lbl">Rating</div>
+            <div class="metric-value" style="font-size:1.6rem">{{ lc_rating }}</div>
+          </div>
+          <div style="text-align:right;font-size:.75rem;color:var(--text-secondary)">
+            <div>Rank: {{ lc_rank }}</div>
+            <div style="color:var(--warning)">Top {{ '%.1f'|format(lc_rank / 500000 * 100) if lc_rank > 0 else 0 }}%
+            </div>
+          </div>
+        </div>
+        <div class="chart-shell" id="progressChartShell" style="height:130px;margin-top:4px">
+          <div class="chart-skeleton" aria-hidden="true"></div>
+          <canvas id="progressChart" aria-label="Rating progress chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Awards -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-weight:700">Awards</span>
+        <span style="font-size:.75rem;color:var(--text-muted)">from LeetCode &amp; HackerRank</span>
+      </div>
+      <div class="awards-grid" id="awardsGrid" role="list" aria-label="Achievements and badges">
+        {# Real LC badges #}
+        {% for badge in lc_badges %}
+        <div class="award-badge" title="{{ badge.name }}" role="listitem">
+          {% if badge.icon %}
+          <img src="{{ badge.icon }}" width="36" height="36" loading="lazy" decoding="async"
+            style="width:36px;height:36px;object-fit:contain" onerror="this.outerHTML='<span>🏅</span>'"
+            alt="{{ badge.name }} badge">
+          {% else %}🏅{% endif %}
+          <span class="a-lbl">{{ badge.name[:10] }}</span>
+        </div>
+        {% endfor %}
+        {# Real HR badges — only earned stars shown, no empty placeholders #}
+        {% for badge in hr_badges %}
+        {% set earned = badge.stars|int if badge.stars else 0 %}
+        <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}"
+          role="listitem">
+          <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c" aria-hidden="true"></i>
+          <div class="hr-stars">
+            {% for i in range(earned) %}
             <span class="s-on">★</span>
-          {% endfor %}
+            {% endfor %}
+          </div>
+          <span class="a-lbl">{{ badge.name[:10] }}</span>
         </div>
-        <span class="a-lbl">{{ badge.name[:10] }}</span>
+        {% endfor %}
+        {# DSA milestone badges (always shown) #}
+        {% if dsa_done >= 200 %}<div class="award-badge" title="200 DSA Solved" role="listitem">🔥<span
+            class="a-lbl">200 Solved</span></div>
+        {% elif dsa_done >= 100 %}<div class="award-badge" title="100 DSA Solved" role="listitem">💯<span
+            class="a-lbl">100 Solved</span></div>
+        {% elif dsa_done >= 50 %}<div class="award-badge" title="50 DSA Solved" role="listitem">🏆<span class="a-lbl">50
+            Solved</span></div>{% endif %}
+        {% if lc_contests > 0 %}<div class="award-badge" title="LeetCode Contestant" role="listitem">⚔️<span
+            class="a-lbl">Contestant</span></div>{% endif %}
+        {% if lc_rating > 1400 %}<div class="award-badge" title="Rating 1400+" role="listitem">⭐<span
+            class="a-lbl">1400+ Rating</span></div>{% endif %}
+        {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days" role="listitem">🗓️<span
+            class="a-lbl">100 Days</span></div>
+        {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days" role="listitem">📅<span
+            class="a-lbl">30 Days</span></div>{% endif %}
+        {% if lc_badges|length == 0 and hr_badges|length == 0 and dsa_done < 50 %} <div
+          style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see
+          real awards! 🎯<br><button onclick="openSyncModal()"
+            style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit"
+            aria-label="Connect platforms to see awards">Connect Now</button>
       </div>
-      {% endfor %}
-      {# DSA milestone badges (always shown) #}
-      {% if dsa_done >= 200 %}<div class="award-badge" title="200 DSA Solved" role="listitem">🔥<span class="a-lbl">200 Solved</span></div>
-      {% elif dsa_done >= 100 %}<div class="award-badge" title="100 DSA Solved" role="listitem">💯<span class="a-lbl">100 Solved</span></div>
-      {% elif dsa_done >= 50 %}<div class="award-badge" title="50 DSA Solved" role="listitem">🏆<span class="a-lbl">50 Solved</span></div>{% endif %}
-      {% if lc_contests > 0 %}<div class="award-badge" title="LeetCode Contestant" role="listitem">⚔️<span class="a-lbl">Contestant</span></div>{% endif %}
-      {% if lc_rating > 1400 %}<div class="award-badge" title="Rating 1400+" role="listitem">⭐<span class="a-lbl">1400+ Rating</span></div>{% endif %}
-      {% if total_active_days >= 100 %}<div class="award-badge" title="100 Active Days" role="listitem">🗓️<span class="a-lbl">100 Days</span></div>
-      {% elif total_active_days >= 30 %}<div class="award-badge" title="30 Active Days" role="listitem">📅<span class="a-lbl">30 Days</span></div>{% endif %}
-      {% if lc_badges|length == 0 and hr_badges|length == 0 and dsa_done < 50 %}
-      <div style="color:var(--text-muted);font-size:.8rem;padding:10px 0;width:100%">Sync LeetCode / HackerRank to see real awards! 🎯<br><button onclick="openSyncModal()" style="margin-top:6px;padding:4px 12px;border:1px solid var(--accent);border-radius:6px;background:none;color:var(--accent);font-size:.75rem;cursor:pointer;font-family:inherit" aria-label="Connect platforms to see awards">Connect Now</button></div>
       {% endif %}
     </div>
   </div>
 
   <!-- DSA Topic Analysis -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-weight:700">Topic Progress Analytics</span>
+      <i class="bi bi-graph-up-arrow"></i>
+    </div>
+
+    {% if best_topic %}
+    <div style="margin-bottom:10px">
+      🏆 <strong>Best Topic:</strong>
+      {{ best_topic.name }}
+      <span style="color:var(--success)">
+        ({{ best_topic.percent }}%)
+      </span>
+    </div>
+    {% endif %}
+
+    {% if focus_topic %}
+    <div>
+      🎯 <strong>Needs Attention:</strong>
+      {{ focus_topic.name }}
+      <span style="color:var(--warning)">
+        ({{ focus_topic.percent }}%)
+      </span>
+    </div>
+    {% endif %}
+  </div>
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <span style="font-weight:700">DSA Topic Analysis</span>
@@ -276,7 +388,8 @@
       <div class="t-bar-row">
         <div class="t-bar-name" title="{{ topic.name }}">{{ topic.name }}</div>
         <div class="t-bar-wrap">
-          <div class="t-bar-fill" style="width:{{ [topic.done / [max_done,1]|max * 100, 100]|min|round }}%">{{ topic.done }}</div>
+          <div class="t-bar-fill" style="width:{{ [topic.done / [max_done,1]|max * 100, 100]|min|round }}%">{{
+            topic.done }}</div>
         </div>
       </div>
       {% endif %}
@@ -297,10 +410,16 @@
     <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
       <span>Problems Solved</span>
       <div style="display:flex;gap:10px;">
-        <button onclick="exportChart('platformsChart', 'platforms-solved.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export platform chart">
+        <button onclick="exportChart('platformsChart', 'platforms-solved.png')" title="Export Chart as Image"
+          style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s"
+          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"
+          aria-label="Export platform chart">
           <i class="bi bi-download" aria-hidden="true"></i>
         </button>
-        <button onclick="handleQuickSync(this)" title="Sync Connected Platforms" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Sync connected platforms">
+        <button onclick="handleQuickSync(this)" title="Sync Connected Platforms"
+          style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;display:flex;align-items:center"
+          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"
+          aria-label="Sync connected platforms">
           <i class="bi bi-arrow-clockwise" id="quickSyncIcon" aria-hidden="true"></i>
         </button>
       </div>
@@ -315,12 +434,14 @@
     <div>
       {% for name in ['LeetCode', 'GFG', 'Coding Ninjas', 'HackerRank', 'AtCoder', 'Codewars'] %}
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:{{ PLATFORM_META[name].brand_color }}"></span><span style="color:{{ PLATFORM_META[name].brand_color }};font-weight:700">{{ name }}</span></span>
+        <span><span class="legend-dot" style="background:{{ PLATFORM_META[name].brand_color }}"></span><span
+            style="color:{{ PLATFORM_META[name].brand_color }};font-weight:700">{{ name }}</span></span>
         <strong>{{ platforms[name] }}</strong>
       </div>
       {% endfor %}
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:#6c757d"></span><span style="color:#6c757d;font-weight:700">Other</span></span>
+        <span><span class="legend-dot" style="background:#6c757d"></span><span
+            style="color:#6c757d;font-weight:700">Other</span></span>
         <strong>{{ platforms['Other'] }}</strong>
       </div>
     </div>
@@ -328,9 +449,13 @@
     <hr style="border-color:var(--border-color);margin:16px 0">
 
     <!-- DSA difficulty -->
-    <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:12px">
+    <div
+      style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:12px">
       <span style="flex:1;text-align:center;padding-left:24px">DSA</span>
-      <button onclick="exportChart('difficultyChart', 'dsa-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
+      <button onclick="exportChart('difficultyChart', 'dsa-difficulty.png')" title="Export Chart as Image"
+        style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px"
+        onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"
+        aria-label="Export difficulty chart">
         <i class="bi bi-download" aria-hidden="true"></i>
       </button>
     </div>
@@ -341,15 +466,18 @@
     </div>
     <div>
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:#00b8a3"></span><span style="color:#00b8a3;font-weight:700">Easy</span></span>
+        <span><span class="legend-dot" style="background:#00b8a3"></span><span
+            style="color:#00b8a3;font-weight:700">Easy</span></span>
         <strong>{{ lc_easy }}</strong>
       </div>
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:#ffc01e"></span><span style="color:#ffc01e;font-weight:700">Medium</span></span>
+        <span><span class="legend-dot" style="background:#ffc01e"></span><span
+            style="color:#ffc01e;font-weight:700">Medium</span></span>
         <strong>{{ lc_medium }}</strong>
       </div>
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:#ff375f"></span><span style="color:#ff375f;font-weight:700">Hard</span></span>
+        <span><span class="legend-dot" style="background:#ff375f"></span><span
+            style="color:#ff375f;font-weight:700">Hard</span></span>
         <strong>{{ lc_hard }}</strong>
       </div>
     </div>
@@ -357,13 +485,18 @@
     <hr style="border-color:var(--border-color);margin:16px 0">
 
     <!-- Contest Rankings -->
-    <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:4px">
+    <div
+      style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:4px">
       <span style="flex:1;text-align:center;padding-left:24px">Contest Rankings</span>
-      <button onclick="exportChart('progressChart', 'rating-history.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export rating chart">
+      <button onclick="exportChart('progressChart', 'rating-history.png')" title="Export Chart as Image"
+        style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px"
+        onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'"
+        aria-label="Export rating chart">
         <i class="bi bi-download" aria-hidden="true"></i>
       </button>
     </div>
-    <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">LEETCODE</div>
+    <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">
+      LEETCODE</div>
     <div class="rating-wrap">
       <i class="bi bi-shield-shaded shield-icon" aria-hidden="true"></i>
       <div>
@@ -377,104 +510,167 @@
 </div>
 
 <!-- Sync Modal -->
-{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
-    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
-    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
-    <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
-    <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
-    <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
-    <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
-    <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
-    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
-    <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
-    <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
-    <div class="m-actions">
-      <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
-      <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync Activity</span></button>
-    </div>
+{% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles',
+'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px',
+header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
+<p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap
+  and stats from external platforms.</p>
+<label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
+<input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
+<label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
+<input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
+<label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks
+  Username</label>
+<input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
+<label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas
+  Username</label>
+<input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL"
+  value="{{ user.codingninjas_username or '' }}">
+<label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
+<input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
+<label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
+<input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
+<label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
+<input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
+<div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
+<div class="m-actions">
+  <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
+  <button class="m-save" id="btnSync" onclick="handleSyncProfile(this)"><span id="syncBtnContent"
+      style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-arrow-repeat"></i> Sync
+      Activity</span></button>
+</div>
 {% endcall %}
 
 <!-- Codolio Card Modal -->
-{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
-    <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
-      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
-      <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
-      <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@{{ user.leetcode_username or user.name|lower|replace(' ','') }}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ global_total_solved }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Questions</div></div>
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ total_active_days }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div></div>
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ lc_rating or dsa_done }}</div><div style="font-size:.65rem;color:var(--text-secondary)">{{ 'LC Rating' if lc_rating else 'DSA Done' }}</div></div>
-      </div>
-      <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle',
+"document.getElementById('cardModal').classList.remove('open')",
+box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
+<div
+  style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
+  <div
+    style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">
+    {{ user.name[0]|upper }}</div>
+  <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
+  <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@{{ user.leetcode_username or
+    user.name|lower|replace(' ','') }}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+    <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px">
+      <div style="font-size:1.2rem;font-weight:900">{{ global_total_solved }}</div>
+      <div style="font-size:.65rem;color:var(--text-secondary)">Questions</div>
     </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px">
+      <div style="font-size:1.2rem;font-weight:900">{{ total_active_days }}</div>
+      <div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div>
+    </div>
+    <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px">
+      <div style="font-size:1.2rem;font-weight:900">{{ lc_rating or dsa_done }}</div>
+      <div style="font-size:.65rem;color:var(--text-secondary)">{{ 'LC Rating' if lc_rating else 'DSA Done' }}</div>
+    </div>
+  </div>
+  <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
+</div>
+<button onclick="showToast('Profile card copied! 📋')"
+  style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share
+  Card</button>
 {% endcall %}
 
 <!-- Edit Profile Modal -->
-{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile', 'editProfileModalTitle', 'closeEditProfile()', box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden', header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
-    <div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
-    <!-- Photo Upload -->
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="position:relative;display:inline-block">
-        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
-          {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
-        </div>
-        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
-          <i class="bi bi-camera"></i> Upload Photo
-        </label>
-        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+{% call modal_shell('editProfileModal', '<i class="bi bi-person-gear" style="color:var(--accent)"></i> Edit Profile',
+'editProfileModalTitle', 'closeEditProfile()',
+box_style='max-width:540px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden',
+header_style='flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:18px 24px
+14px;border-bottom:1px solid var(--border-color);margin-bottom:0') %}
+<div style="flex:1;overflow-y:auto;padding:20px 24px 4px">
+  <!-- Photo Upload -->
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="position:relative;display:inline-block">
+      <div id="editAvatarPreview"
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
+        {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy"
+          decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else
+        %}{{ user.name[0]|upper }}{% endif %}
       </div>
-      <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
+      <label for="photoInput"
+        style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+        <i class="bi bi-camera"></i> Upload Photo
+      </label>
+      <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
     </div>
-    <!-- Basic Info -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}"></div>
-      <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline" placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}"></div>
-    </div>
-    <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2" placeholder="Tell the world about yourself...">{{ user.bio or '' }}</textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location" placeholder="e.g. India" value="{{ user.location or '' }}"></div>
-      <div style="position:relative">
-        <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
-        <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..." value="{{ user.college or '' }}" autocomplete="off">
-        <div id="collegeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+    <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
+  </div>
+  <!-- Basic Info -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div><label class="m-lbl">Full Name</label><input class="m-inp" id="ep_name" value="{{ user.name or '' }}"></div>
+    <div><label class="m-lbl">Headline</label><input class="m-inp" id="ep_headline"
+        placeholder="e.g. Full Stack Developer" value="{{ user.headline or '' }}"></div>
+  </div>
+  <div style="margin-bottom:12px"><label class="m-lbl">Bio</label><textarea class="m-inp" id="ep_bio" rows="2"
+      placeholder="Tell the world about yourself...">{{ user.bio or '' }}</textarea></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div><label class="m-lbl"><i class="bi bi-geo-alt"></i> Location</label><input class="m-inp" id="ep_location"
+        placeholder="e.g. India" value="{{ user.location or '' }}"></div>
+    <div style="position:relative">
+      <label class="m-lbl"><i class="bi bi-mortarboard"></i> College / University</label>
+      <input class="m-inp" id="ep_college" placeholder="Start typing to search globally..."
+        value="{{ user.college or '' }}" autocomplete="off">
+      <div id="collegeDropdown"
+        style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--bg-card);border:1px solid var(--accent);border-radius:0 0 10px 10px;z-index:100;margin-top:-13px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
       </div>
     </div>
-    <!-- Social Links -->
-    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">Social Links</div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username" value="{{ user.linkedin_url or '' }}"></div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
-    <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
-    <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
-    </div><!-- end scrollable body -->
-    <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
-      <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
-      <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
-    </div>
+  </div>
+  <!-- Social Links -->
+  <div
+    style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:4px">
+    Social Links</div>
+  <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-linkedin" style="color:#0a66c2"></i> LinkedIn
+      URL</label><input class="m-inp" id="ep_linkedin" placeholder="https://linkedin.com/in/username"
+      value="{{ user.linkedin_url or '' }}"></div>
+  <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input
+      class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}">
+  </div>
+  <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website /
+      Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com"
+      value="{{ user.website_url or '' }}"></div>
+  <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person"
+        style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume"
+      placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}">
+    <div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public
+      resume link</div>
+  </div>
+</div><!-- end scrollable body -->
+<div
+  style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
+  <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
+  <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent"
+      style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save
+      Profile</span></button>
+</div>
 {% endcall %}
 
 <!-- Import Progress Modal -->
 <div class="modal-ov" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
   <div class="modal-bx" style="max-width:500px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <h3 id="importModalTitle" style="margin-bottom:0"><i class="bi bi-upload" style="color:var(--accent)"></i> Import Progress</h3>
-      <button type="button" onclick="closeImportModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close dialog">✕</button>
+      <h3 id="importModalTitle" style="margin-bottom:0"><i class="bi bi-upload" style="color:var(--accent)"></i> Import
+        Progress</h3>
+      <button type="button" onclick="closeImportModal()"
+        style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer"
+        aria-label="Close dialog">✕</button>
     </div>
-    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:15px">Upload a previously exported CSV or JSON progress backup file.</p>
-    
+    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:15px">Upload a previously exported CSV or JSON
+      progress backup file.</p>
+
     <div style="margin-bottom:15px">
       <label class="m-lbl">Choose Backup File (.csv, .json)</label>
-      <input type="file" id="importFile" accept=".csv,.json" class="m-inp" onchange="handleImportFileSelect(event)" style="padding:10px">
+      <input type="file" id="importFile" accept=".csv,.json" class="m-inp" onchange="handleImportFileSelect(event)"
+        style="padding:10px">
     </div>
 
     <!-- Preview Container -->
-    <div id="importPreviewContainer" style="display:none;margin-top:15px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;max-height:300px;overflow-y:auto">
+    <div id="importPreviewContainer"
+      style="display:none;margin-top:15px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;max-height:300px;overflow-y:auto">
       <h4 style="margin:0 0 8px 0;font-size:0.9rem">Dry-Run Preview Summary</h4>
       <table style="width:100%;font-size:0.8rem;border-collapse:collapse;margin-bottom:10px">
         <tr>
@@ -511,20 +707,24 @@
           </label>
         </div>
         <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px" id="importModeHelp">
-          Merge will add new progress and combine note differences. Replace will overwrite only the questions found in your import file (unmatched existing progress is preserved).
+          Merge will add new progress and combine note differences. Replace will overwrite only the questions found in
+          your import file (unmatched existing progress is preserved).
         </div>
       </div>
-      
+
       <!-- Change items preview list -->
-      <div id="previewItemsList" style="margin-top:10px;font-size:0.75rem;border-top:1px solid var(--border-color);padding-top:10px">
+      <div id="previewItemsList"
+        style="margin-top:10px;font-size:0.75rem;border-top:1px solid var(--border-color);padding-top:10px">
         <div style="font-weight:700;margin-bottom:5px">Change Log (First 50 items):</div>
-        <ul id="previewList" style="padding-left:15px;margin:0;max-height:100px;overflow-y:auto;color:var(--text-secondary)"></ul>
+        <ul id="previewList"
+          style="padding-left:15px;margin:0;max-height:100px;overflow-y:auto;color:var(--text-secondary)"></ul>
       </div>
     </div>
 
     <div class="m-actions" style="margin-top:20px">
       <button class="m-cancel" onclick="closeImportModal()">Cancel</button>
-      <button class="m-save" id="btnConfirmImport" onclick="handleConfirmImport(this)" disabled style="opacity:0.6;cursor:not-allowed">
+      <button class="m-save" id="btnConfirmImport" onclick="handleConfirmImport(this)" disabled
+        style="opacity:0.6;cursor:not-allowed">
         <span id="confirmImportBtnContent" style="display:inline-flex;align-items:center;gap:6px">
           <i class="bi bi-check2-circle"></i> Confirm Import
         </span>
@@ -534,8 +734,11 @@
 </div>
 
 <!-- Sync Loading Overlay -->
-<div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
-  <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
+<div id="syncOverlay"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+  <div
+    style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite">
+  </div>
   <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
   <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
   <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px" id="syncSteps"></div>
@@ -544,312 +747,312 @@
 
 {% block scripts %}
 <script>
-const endpointConfig = {{ {
-  "editProfile": url_for('profile.edit_profile'),
-  "syncPlatforms": url_for('profile.sync_platforms'),
-  "uploadPhoto": url_for('profile.upload_photo'),
-  "searchUniversities": url_for('profile.search_universities'),
-  "publicCardPath": url_for('profile.public_card', user_id=user.id),
-  "importPreview": url_for('tracker.import_preview'),
-  "importCommit": url_for('tracker.import_commit'),
-}|tojson }};
-const csrfToken = {{ csrf_token()|tojson }};
+  const endpointConfig = {{ {
+    "editProfile": url_for('profile.edit_profile'),
+      "syncPlatforms": url_for('profile.sync_platforms'),
+        "uploadPhoto": url_for('profile.upload_photo'),
+          "searchUniversities": url_for('profile.search_universities'),
+            "publicCardPath": url_for('profile.public_card', user_id = user.id),
+              "importPreview": url_for('tracker.import_preview'),
+                "importCommit": url_for('tracker.import_commit'),
+}| tojson }};
+  const csrfToken = {{ csrf_token() | tojson }};
 
-// ── Event Listeners (registered first so Chart.js failure can't break them) ──
-window.handleSaveProfile = function(btn){
-  const contentEl=document.getElementById('saveProfileContent');
-  const payload={
-    name: document.getElementById('ep_name').value,
-    bio: document.getElementById('ep_bio').value,
-    headline: document.getElementById('ep_headline').value,
-    location: document.getElementById('ep_location').value,
-    college: document.getElementById('ep_college').value,
-    linkedin_url: document.getElementById('ep_linkedin').value,
-    twitter_url: document.getElementById('ep_twitter').value,
-    website_url: document.getElementById('ep_website').value,
-    resume_url: document.getElementById('ep_resume').value,
-  };
-  window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
-  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})
-    .then(r=>r.json())
-    .then(res=>{
-      if(res.success){
-        contentEl.innerHTML='<i class="bi bi-check-lg"></i> Saved!';
-        showToast('✅ Profile saved!');
-        setTimeout(()=>window.location.reload(),900);
-      } else {
-        showToast('❌ Error: '+(res.error||'unknown'));
+  // ── Event Listeners (registered first so Chart.js failure can't break them) ──
+  window.handleSaveProfile = function (btn) {
+    const contentEl = document.getElementById('saveProfileContent');
+    const payload = {
+      name: document.getElementById('ep_name').value,
+      bio: document.getElementById('ep_bio').value,
+      headline: document.getElementById('ep_headline').value,
+      location: document.getElementById('ep_location').value,
+      college: document.getElementById('ep_college').value,
+      linkedin_url: document.getElementById('ep_linkedin').value,
+      twitter_url: document.getElementById('ep_twitter').value,
+      website_url: document.getElementById('ep_website').value,
+      resume_url: document.getElementById('ep_resume').value,
+    };
+    window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
+    fetch(endpointConfig.editProfile, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify(payload) })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          contentEl.innerHTML = '<i class="bi bi-check-lg"></i> Saved!';
+          showToast('✅ Profile saved!');
+          setTimeout(() => window.location.reload(), 900);
+        } else {
+          showToast('❌ Error: ' + (res.error || 'unknown'));
+          window.setButtonBusyState(btn, contentEl, { busy: false });
+        }
+      }).catch(e => {
+        showToast('❌ Network error');
         window.setButtonBusyState(btn, contentEl, { busy: false });
-      }
-    }).catch(e=>{
-      showToast('❌ Network error');
-      window.setButtonBusyState(btn, contentEl, { busy: false });
-    });
-};
+      });
+  };
 
-window.handleQuickSync = function(btn) {
-  const icon = document.getElementById('quickSyncIcon');
-  if (btn.disabled) return;
-  
-  const lc = '{{ user.leetcode_username or "" }}';
-  const gh = '{{ user.github_username or "" }}';
-  const gfg = '{{ user.gfg_username or "" }}';
-  const hr = '{{ user.hackerrank_username or "" }}';
-  const cn = '{{ user.codingninjas_username or "" }}';
-  const ac = '{{ user.atcoder_username or "" }}';
-  const cw = '{{ user.codewars_username or "" }}';
-  
-  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
-    showToast('⚠️ No platforms connected to sync!');
-    return;
-  }
+  window.handleQuickSync = function (btn) {
+    const icon = document.getElementById('quickSyncIcon');
+    if (btn.disabled) return;
 
-  btn.disabled = true;
-  window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
-  showToast('⏳ Syncing profiles...');
-  
-  fetch(endpointConfig.syncPlatforms, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})
-  })
-  .then(r => r.json())
-  .then(res => {
-    btn.disabled = false;
-    window.setIconBusyState(icon, { busy: false });
-    if(res.success){
-      showToast('✅ Synced successfully! Reloading...');
-      setTimeout(()=>window.location.reload(), 1200);
-    } else {
-      showToast('❌ Sync failed: ' + (res.error || 'unknown'));
+    const lc = '{{ user.leetcode_username or "" }}';
+    const gh = '{{ user.github_username or "" }}';
+    const gfg = '{{ user.gfg_username or "" }}';
+    const hr = '{{ user.hackerrank_username or "" }}';
+    const cn = '{{ user.codingninjas_username or "" }}';
+    const ac = '{{ user.atcoder_username or "" }}';
+    const cw = '{{ user.codewars_username or "" }}';
+
+    if (!lc && !gh && !gfg && !hr && !cn && !ac && !cw) {
+      showToast('⚠️ No platforms connected to sync!');
+      return;
     }
-  })
-  .catch(err => {
-    btn.disabled = false;
-    window.setIconBusyState(icon, { busy: false });
-    showToast('❌ Network error. Check connection.');
-  });
-};
 
-window.handleSyncProfile = function(btn){
-  const syncContent=document.getElementById('syncBtnContent');
-  const lc=document.getElementById('lc_username').value.trim();
-  const gh=document.getElementById('gh_username').value.trim();
-  const gfg=document.getElementById('gfg_username').value.trim();
-  const hr=document.getElementById('hr_username').value.trim();
-  const cn=document.getElementById('cn_username').value.trim();
-  const ac=document.getElementById('ac_username').value.trim();
-  const cw=document.getElementById('cw_username').value.trim();
-  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
+    btn.disabled = true;
+    window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
+    showToast('⏳ Syncing profiles...');
 
-  // Disable button & show spinner
-  window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
+    fetch(endpointConfig.syncPlatforms, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ leetcode: lc, github: gh, gfg: gfg, hackerrank: hr, codingninjas: cn, atcoder: ac, codewars: cw })
+    })
+      .then(r => r.json())
+      .then(res => {
+        btn.disabled = false;
+        window.setIconBusyState(icon, { busy: false });
+        if (res.success) {
+          showToast('✅ Synced successfully! Reloading...');
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          showToast('❌ Sync failed: ' + (res.error || 'unknown'));
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        window.setIconBusyState(icon, { busy: false });
+        showToast('❌ Network error. Check connection.');
+      });
+  };
 
-  // Show loading overlay
-  const overlay=document.getElementById('syncOverlay');
-  overlay.style.display='flex';
-  document.getElementById('syncOverlayMsg').textContent='Syncing your profiles...';
+  window.handleSyncProfile = function (btn) {
+    const syncContent = document.getElementById('syncBtnContent');
+    const lc = document.getElementById('lc_username').value.trim();
+    const gh = document.getElementById('gh_username').value.trim();
+    const gfg = document.getElementById('gfg_username').value.trim();
+    const hr = document.getElementById('hr_username').value.trim();
+    const cn = document.getElementById('cn_username').value.trim();
+    const ac = document.getElementById('ac_username').value.trim();
+    const cw = document.getElementById('cw_username').value.trim();
+    if (!lc && !gh && !gfg && !hr && !cn && !ac && !cw) { showToast('\u26a0\ufe0f Enter at least one username'); return; }
 
-  // Animate step indicators
-  const syncPlatforms=[
-    {id:'ss_lc', label:'LeetCode', value:lc},
-    {id:'ss_gh', label:'GitHub', value:gh},
-    {id:'ss_gfg', label:'GFG', value:gfg},
-    {id:'ss_hr', label:'HackerRank', value:hr},
-    {id:'ss_cn', label:'Coding Ninjas', value:cn},
-    {id:'ss_ac', label:'AtCoder', value:ac},
-    {id:'ss_cw', label:'Codewars', value:cw}
-  ];
-  const activeSyncPlatforms=syncPlatforms.filter(platform=>platform.value);
-  const stepsContainer=document.getElementById('syncSteps');
-  stepsContainer.innerHTML=activeSyncPlatforms.map((platform,index)=>`
-    ${index?'<span style="color:rgba(255,255,255,.2)">·</span>':''}
+    // Disable button & show spinner
+    window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
+
+    // Show loading overlay
+    const overlay = document.getElementById('syncOverlay');
+    overlay.style.display = 'flex';
+    document.getElementById('syncOverlayMsg').textContent = 'Syncing your profiles...';
+
+    // Animate step indicators
+    const syncPlatforms = [
+      { id: 'ss_lc', label: 'LeetCode', value: lc },
+      { id: 'ss_gh', label: 'GitHub', value: gh },
+      { id: 'ss_gfg', label: 'GFG', value: gfg },
+      { id: 'ss_hr', label: 'HackerRank', value: hr },
+      { id: 'ss_cn', label: 'Coding Ninjas', value: cn },
+      { id: 'ss_ac', label: 'AtCoder', value: ac },
+      { id: 'ss_cw', label: 'Codewars', value: cw }
+    ];
+    const activeSyncPlatforms = syncPlatforms.filter(platform => platform.value);
+    const stepsContainer = document.getElementById('syncSteps');
+    stepsContainer.innerHTML = activeSyncPlatforms.map((platform, index) => `
+    ${index ? '<span style="color:rgba(255,255,255,.2)">·</span>' : ''}
     <span id="${platform.id}" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; ${platform.label}</span>
   `).join('');
 
-  const steps=activeSyncPlatforms.map(platform=>platform.id);
-  const labels=activeSyncPlatforms.map(platform=>platform.label);
-  let si=0;
-  const stepTimer=setInterval(()=>{
-    if(si>0) document.getElementById(steps[si-1]).style.color='rgba(0,200,100,.8)';
-    if(si<steps.length){
-      document.getElementById(steps[si]).style.color='#fff';
-      document.getElementById('syncOverlayMsg').textContent='Syncing '+labels[si]+'...';
-      si++;
-    }else clearInterval(stepTimer);
-  }, 6000);
+    const steps = activeSyncPlatforms.map(platform => platform.id);
+    const labels = activeSyncPlatforms.map(platform => platform.label);
+    let si = 0;
+    const stepTimer = setInterval(() => {
+      if (si > 0) document.getElementById(steps[si - 1]).style.color = 'rgba(0,200,100,.8)';
+      if (si < steps.length) {
+        document.getElementById(steps[si]).style.color = '#fff';
+        document.getElementById('syncOverlayMsg').textContent = 'Syncing ' + labels[si] + '...';
+        si++;
+      } else clearInterval(stepTimer);
+    }, 6000);
 
-  // Fetch with 90s timeout
-  const ctrl=new AbortController();
-  const timer=setTimeout(()=>ctrl.abort(),90000);
+    // Fetch with 90s timeout
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 90000);
 
-  fetch(endpointConfig.syncPlatforms,{
-    method:'POST',
-    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw}),
-    signal:ctrl.signal
-  })
-  .then(r=>{clearTimeout(timer);return r.json();})
-  .then(res=>{
-    clearInterval(stepTimer);
-    overlay.style.display='none';
-    if(res.success){
-      syncContent.innerHTML='<i class="bi bi-check-lg"></i> Synced!';
-      showToast('\u2705 Synced successfully! Reloading...');
-      setTimeout(()=>window.location.reload(),1200);
-    }else{
-      window.setButtonBusyState(btn, syncContent, { busy: false });
-      showToast('\u274c Sync failed: '+(res.error||'unknown'));
-    }
-  })
-  .catch(err=>{
-    clearInterval(stepTimer);
-    overlay.style.display='none';
-    window.setButtonBusyState(btn, syncContent, { busy: false });
-    if(err.name==='AbortError'){
-      showToast('\u23f0 Sync timed out. Try again.');
-    }else{
-      showToast('\u274c Network error. Check connection.');
-    }
-    console.error('Sync error:',err);
+    fetch(endpointConfig.syncPlatforms, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+      body: JSON.stringify({ leetcode: lc, github: gh, gfg: gfg, hackerrank: hr, codingninjas: cn, atcoder: ac, codewars: cw }),
+      signal: ctrl.signal
+    })
+      .then(r => { clearTimeout(timer); return r.json(); })
+      .then(res => {
+        clearInterval(stepTimer);
+        overlay.style.display = 'none';
+        if (res.success) {
+          syncContent.innerHTML = '<i class="bi bi-check-lg"></i> Synced!';
+          showToast('\u2705 Synced successfully! Reloading...');
+          setTimeout(() => window.location.reload(), 1200);
+        } else {
+          window.setButtonBusyState(btn, syncContent, { busy: false });
+          showToast('\u274c Sync failed: ' + (res.error || 'unknown'));
+        }
+      })
+      .catch(err => {
+        clearInterval(stepTimer);
+        overlay.style.display = 'none';
+        window.setButtonBusyState(btn, syncContent, { busy: false });
+        if (err.name === 'AbortError') {
+          showToast('\u23f0 Sync timed out. Try again.');
+        } else {
+          showToast('\u274c Network error. Check connection.');
+        }
+        console.error('Sync error:', err);
+      });
+  };
+
+  const dailyCounts = {{ daily_counts | tojson }};
+  const heatmap = document.getElementById('heatmap');
+  function exportChart(id, file) {
+    const c = document.getElementById(id); if (!c) return;
+    const o = document.createElement('canvas'), x = o.getContext('2d'), a = document.createElement('a');
+    o.width = c.width; o.height = c.height; x.fillStyle = '#1e2327'; x.fillRect(0, 0, o.width, o.height); x.drawImage(c, 0, 0);
+    a.download = file; a.href = o.toDataURL('image/png'); a.click();
+  }
+  function markChartReady(id) {
+    const shell = document.getElementById(id);
+    if (shell) shell.classList.add('is-ready');
+  }
+  const today = new Date();
+  const days = 168;
+  let start = new Date(); start.setDate(today.getDate() - days + 1);
+  for (let i = 0; i < days; i++) {
+    let d = new Date(start); d.setDate(d.getDate() + i);
+    let ds = d.toISOString().split('T')[0];
+    let c = dailyCounts[ds] || 0, l = 0;
+    if (c > 0 && c <= 2) l = 1; else if (c > 2 && c <= 5) l = 2; else if (c > 5 && c <= 10) l = 3; else if (c > 10) l = 4;
+    let el = document.createElement('div');
+    el.className = 'hm-cell'; el.dataset.l = l; el.title = ds + ': ' + c + ' submissions';
+    heatmap.appendChild(el);
+  }
+
+  const ratingHistory = {{ rating_history | tojson }};
+  const cumData = {{ cumulative_data | tojson }};
+  const pData = {{ platforms | tojson }};
+  const chartShells = ['progressChartShell', 'platformsChartShell', 'difficultyChartShell'].map(i => document.getElementById(i)).filter(Boolean); let chartJsPromise;
+  function loadChartJs() { return window.Chart ? Promise.resolve(window.Chart) : chartJsPromise || (chartJsPromise = new Promise((ok, bad) => { let add = (src, err) => { let s = document.createElement('script'); s.src = src; s.async = true; s.onload = () => ok(window.Chart); s.onerror = err || bad; document.head.appendChild(s) }; add('https://cdn.jsdelivr.net/npm/chart.js', () => add('https://unpkg.com/chart.js@4/dist/chart.umd.js')) })) }
+  function renderProfileCharts() { loadChartJs().then(() => { let c = document.getElementById('progressChart'), d = ratingHistory.length ? ratingHistory : cumData; if (d.length && c) new Chart(c, { type: 'line', data: { labels: d.map(x => x.x), datasets: [{ data: d.map(x => x.y), borderColor: '#f68b24', backgroundColor: 'rgba(246,139,36,.15)', borderWidth: 2, fill: true, tension: .4, pointRadius: ratingHistory.length ? 3 : 0, pointHoverRadius: 5, pointBackgroundColor: '#f68b24' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#888', maxTicksLimit: 5, font: { size: 10 } } }, y: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#888', font: { size: 10 } } } } } }); else if (c) { let x = c.getContext('2d'); x.fillStyle = '#555'; x.font = '13px Inter, sans-serif'; x.textAlign = 'center'; x.fillText('Sync LeetCode to see rating chart', c.width / 2, c.height / 2 - 8) } markChartReady('progressChartShell');[['platformsChart', 'platformsChartShell', ['LeetCode', 'GFG', 'Coding Ninjas', 'HackerRank', 'Other'], [pData.LeetCode, pData.GFG, pData['Coding Ninjas'], pData.HackerRank, pData.Other], ['{{ PLATFORM_META["LeetCode"].brand_color }}', '{{ PLATFORM_META["GFG"].brand_color }}', '{{ PLATFORM_META["Coding Ninjas"].brand_color }}', '{{ PLATFORM_META["HackerRank"].brand_color }}', '#6c757d']], ['difficultyChart', 'difficultyChartShell', ['Easy', 'Medium', 'Hard'], [{{ lc_easy }}, {{ lc_medium }}, { { lc_hard } }], ['#00b8a3', '#ffc01e', '#ff375f']]].forEach(a => { try { new Chart(document.getElementById(a[0]), { type: 'doughnut', data: { labels: a[2], datasets: [{ data: a[3], backgroundColor: a[4], borderWidth: 0, cutout: '78%' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } }) } catch (e) { } markChartReady(a[1]) })}).catch (() => chartShells.forEach(s => s.classList.add('is-ready')))}
+  if ('IntersectionObserver' in window && chartShells.length) { const io = new IntersectionObserver((e, o) => { if (e.some(x => x.isIntersecting)) { o.disconnect(); renderProfileCharts() } }, { rootMargin: '160px' }); chartShells.forEach(s => io.observe(s)) } else renderProfileCharts();
+
+  function openSyncModal() { document.getElementById('syncModal').classList.add('open') }
+  function closeSyncModal() { document.getElementById('syncModal').classList.remove('open') }
+  function showCodelioCard() { document.getElementById('cardModal').classList.add('open') }
+  function openEditProfile() { document.getElementById('editProfileModal').classList.add('open') }
+  function closeEditProfile() { document.getElementById('editProfileModal').classList.remove('open') }
+
+  ['syncModal', 'cardModal', 'editProfileModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', e => { if (e.target.id === id) el.classList.remove('open'); });
   });
-};
 
-const dailyCounts = {{ daily_counts | tojson }};
-const heatmap = document.getElementById('heatmap');
-function exportChart(id,file){
-  const c=document.getElementById(id);if(!c)return;
-  const o=document.createElement('canvas'),x=o.getContext('2d'),a=document.createElement('a');
-  o.width=c.width;o.height=c.height;x.fillStyle='#1e2327';x.fillRect(0,0,o.width,o.height);x.drawImage(c,0,0);
-  a.download=file;a.href=o.toDataURL('image/png');a.click();
-}
-function markChartReady(id){
-  const shell = document.getElementById(id);
-  if (shell) shell.classList.add('is-ready');
-}
-const today = new Date();
-const days = 168;
-let start = new Date(); start.setDate(today.getDate() - days + 1);
-for(let i=0;i<days;i++){
-  let d=new Date(start); d.setDate(d.getDate()+i);
-  let ds=d.toISOString().split('T')[0];
-  let c=dailyCounts[ds]||0, l=0;
-  if(c>0&&c<=2)l=1; else if(c>2&&c<=5)l=2; else if(c>5&&c<=10)l=3; else if(c>10)l=4;
-  let el=document.createElement('div');
-  el.className='hm-cell'; el.dataset.l=l; el.title=ds+': '+c+' submissions';
-  heatmap.appendChild(el);
-}
+  function handlePhotoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast('❌ Image too large (max 2MB)'); return; }
+    const preview = document.getElementById('editAvatarPreview');
+    const mainAvatar = document.getElementById('avatarRing');
+    const fd = new FormData();
+    fd.append('photo', file);
+    showToast('⏳ Uploading photo...');
+    fetch(endpointConfig.uploadPhoto, { method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: fd })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          // Safe DOM - create img element without innerHTML
+          const makeImg = () => { const i = document.createElement('img'); i.src = res.photo_url; i.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%'; return i; };
+          preview.textContent = '';
+          preview.appendChild(makeImg());
+          if (mainAvatar) { mainAvatar.textContent = ''; const i2 = makeImg(); i2.style.borderRadius = '50%'; mainAvatar.appendChild(i2); }
+          showToast('✅ Photo updated!');
+        } else showToast('❌ ' + res.error);
+      }).catch(() => showToast('❌ Upload failed'));
+  }
 
-const ratingHistory = {{ rating_history | tojson }};
-const cumData = {{ cumulative_data | tojson }};
-const pData = {{ platforms | tojson }};
-const chartShells=['progressChartShell','platformsChartShell','difficultyChartShell'].map(i=>document.getElementById(i)).filter(Boolean);let chartJsPromise;
-function loadChartJs(){return window.Chart?Promise.resolve(window.Chart):chartJsPromise||(chartJsPromise=new Promise((ok,bad)=>{let add=(src,err)=>{let s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>ok(window.Chart);s.onerror=err||bad;document.head.appendChild(s)};add('https://cdn.jsdelivr.net/npm/chart.js',()=>add('https://unpkg.com/chart.js@4/dist/chart.umd.js'))}))}
-function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
-if('IntersectionObserver'in window&&chartShells.length){const io=new IntersectionObserver((e,o)=>{if(e.some(x=>x.isIntersecting)){o.disconnect();renderProfileCharts()}},{rootMargin:'160px'});chartShells.forEach(s=>io.observe(s))}else renderProfileCharts();
+  // ── College/University Autocomplete ──
+  (function () {
+    const inp = document.getElementById('ep_college');
+    const dd = document.getElementById('collegeDropdown');
+    if (!inp || !dd) return;
+    let timer = null, activeIdx = -1;
 
-function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
-function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
-function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
-function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
-function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
+    function renderItems(items) {
+      dd.innerHTML = '';
+      activeIdx = -1;
+      if (!items.length) { dd.style.display = 'none'; return; }
+      items.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;transition:background .15s';
+        const spanName = document.createElement('span');
+        spanName.style.cssText = 'font-weight:600;color:var(--text-primary)';
+        spanName.textContent = item.name;
+        const spanCountry = document.createElement('span');
+        spanCountry.style.cssText = 'font-size:.72rem;color:var(--text-muted)';
+        spanCountry.textContent = item.country;
+        div.appendChild(spanName);
+        div.appendChild(spanCountry);
+        div.dataset.label = item.label;
+        div.addEventListener('mouseenter', () => { setActive(i); });
+        div.addEventListener('click', () => { inp.value = item.label; dd.style.display = 'none'; });
+        dd.appendChild(div);
+      });
+      dd.style.display = 'block';
+    }
 
-['syncModal','cardModal','editProfileModal'].forEach(id=>{
-  const el=document.getElementById(id);
-  if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
-});
+    function setActive(idx) {
+      const children = dd.children;
+      if (activeIdx >= 0 && activeIdx < children.length) children[activeIdx].style.background = '';
+      activeIdx = idx;
+      if (activeIdx >= 0 && activeIdx < children.length) {
+        children[activeIdx].style.background = 'var(--bg-secondary)';
+        children[activeIdx].scrollIntoView({ block: 'nearest' });
+      }
+    }
 
-function handlePhotoUpload(e){
-  const file=e.target.files[0];
-  if(!file)return;
-  if(file.size>2*1024*1024){showToast('❌ Image too large (max 2MB)');return;}
-  const preview=document.getElementById('editAvatarPreview');
-  const mainAvatar=document.getElementById('avatarRing');
-  const fd=new FormData();
-  fd.append('photo',file);
-  showToast('⏳ Uploading photo...');
-  fetch(endpointConfig.uploadPhoto,{method:'POST',headers:{'X-CSRFToken':csrfToken},body:fd})
-    .then(r=>r.json())
-    .then(res=>{
-      if(res.success){
-        // Safe DOM - create img element without innerHTML
-        const makeImg=()=>{const i=document.createElement('img');i.src=res.photo_url;i.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%';return i;};
-        preview.textContent='';
-        preview.appendChild(makeImg());
-        if(mainAvatar){mainAvatar.textContent='';const i2=makeImg();i2.style.borderRadius='50%';mainAvatar.appendChild(i2);}
-        showToast('✅ Photo updated!');
-      } else showToast('❌ '+res.error);
-    }).catch(()=>showToast('❌ Upload failed'));
-}
-
-// ── College/University Autocomplete ──
-(function(){
-  const inp = document.getElementById('ep_college');
-  const dd = document.getElementById('collegeDropdown');
-  if(!inp || !dd) return;
-  let timer = null, activeIdx = -1;
-
-  function renderItems(items){
-    dd.innerHTML = '';
-    activeIdx = -1;
-    if(!items.length){ dd.style.display='none'; return; }
-    items.forEach((item, i) => {
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:.83rem;border-bottom:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;transition:background .15s';
-      const spanName = document.createElement('span');
-      spanName.style.cssText = 'font-weight:600;color:var(--text-primary)';
-      spanName.textContent = item.name;
-      const spanCountry = document.createElement('span');
-      spanCountry.style.cssText = 'font-size:.72rem;color:var(--text-muted)';
-      spanCountry.textContent = item.country;
-      div.appendChild(spanName);
-      div.appendChild(spanCountry);
-      div.dataset.label = item.label;
-      div.addEventListener('mouseenter', () => { setActive(i); });
-      div.addEventListener('click', () => { inp.value = item.label; dd.style.display='none'; });
-      dd.appendChild(div);
+    inp.addEventListener('input', function () {
+      clearTimeout(timer);
+      const q = this.value.trim();
+      if (q.length < 2) { dd.style.display = 'none'; return; }
+      timer = setTimeout(() => {
+        fetch(endpointConfig.searchUniversities + '?q=' + encodeURIComponent(q))
+          .then(r => r.json())
+          .then(data => renderItems(data))
+          .catch(() => { dd.style.display = 'none'; });
+      }, 300);
     });
-    dd.style.display='block';
-  }
 
-  function setActive(idx){
-    const children = dd.children;
-    if(activeIdx >= 0 && activeIdx < children.length) children[activeIdx].style.background = '';
-    activeIdx = idx;
-    if(activeIdx >= 0 && activeIdx < children.length){
-      children[activeIdx].style.background = 'var(--bg-secondary)';
-      children[activeIdx].scrollIntoView({block:'nearest'});
-    }
-  }
+    inp.addEventListener('keydown', function (e) {
+      const children = dd.children;
+      if (!children.length || dd.style.display === 'none') return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(activeIdx + 1, children.length - 1)); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(activeIdx - 1, 0)); }
+      else if (e.key === 'Enter' && activeIdx >= 0) {
+        e.preventDefault();
+        inp.value = children[activeIdx].dataset.label;
+        dd.style.display = 'none';
+      } else if (e.key === 'Escape') { dd.style.display = 'none'; }
+    });
 
-  inp.addEventListener('input', function(){
-    clearTimeout(timer);
-    const q = this.value.trim();
-    if(q.length < 2){ dd.style.display='none'; return; }
-    timer = setTimeout(() => {
-      fetch(endpointConfig.searchUniversities + '?q=' + encodeURIComponent(q))
-        .then(r => r.json())
-        .then(data => renderItems(data))
-        .catch(() => { dd.style.display='none'; });
-    }, 300);
-  });
-
-  inp.addEventListener('keydown', function(e){
-    const children = dd.children;
-    if(!children.length || dd.style.display === 'none') return;
-    if(e.key === 'ArrowDown'){ e.preventDefault(); setActive(Math.min(activeIdx+1, children.length-1)); }
-    else if(e.key === 'ArrowUp'){ e.preventDefault(); setActive(Math.max(activeIdx-1, 0)); }
-    else if(e.key === 'Enter' && activeIdx >= 0){
-      e.preventDefault();
-      inp.value = children[activeIdx].dataset.label;
-      dd.style.display='none';
-    } else if(e.key === 'Escape'){ dd.style.display='none'; }
-  });
-
-  document.addEventListener('click', function(e){
-    if(!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display='none';
-  });
-})();
+    document.addEventListener('click', function (e) {
+      if (!inp.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+    });
+  })();
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
 {% endblock %}
