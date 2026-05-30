@@ -1,42 +1,22 @@
 """LeetCode Solved-Status Sync Module.
 
 Fetches a user's accepted LeetCode submissions via the public GraphQL API
-and reconciles them with the local DSA tracker ``data.json``.
+and reconciles them with their progress in MongoDB.
 
 Design Principles
 -----------------
-* **Additive-only sync** – existing ``Done: true`` entries are never reverted,
-  even if the problem doesn't appear in the remote submission list. This
-  preserves any manual progress the user recorded locally.
-* **Idempotent** – running the sync twice with the same data produces the same
-  result (no duplicate timestamps, no toggled flags).
-* **Graceful degradation** – network failures, private profiles, and rate-limit
-  responses are caught and reported without crashing the caller.
+* **Additive-only sync** – existing progress is never reverted,
+  preserving manual progress.
+* **Idempotent** – running the sync twice produces the same result.
+* **Graceful degradation** – network failures are reported without crashing.
 * **Dual-use** – works both as a standalone CLI script and as an importable
   library for the Flask routes.
-
-Public API
-----------
-``sync_leetcode_progress(username, data_path)``
-    One-call entry point: fetch → match → update → report.
-``fetch_accepted_slugs(username)``
-    Pure network layer – returns the set of accepted title slugs.
-``build_slug_index(data)``
-    Builds a reverse index from LeetCode slug → ``(topic_idx, question_idx)``.
-``apply_sync(data, slug_index, accepted_slugs)``
-    Applies the additive merge and returns a ``SyncReport``.
-
-References
-----------
-* LeetCode GraphQL endpoint: https://leetcode.com/graphql
-* Query: ``recentAcSubmissions`` (public, no auth required for public profiles)
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -57,33 +37,24 @@ logger = logging.getLogger(__name__)
 
 LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql"
 
-# Maximum number of recent submissions to request per page.  LeetCode caps
-# the ``recentAcSubmissions`` query at 20 per call; we paginate by requesting
-# accepted-only submissions until we see no new slugs.
+# Maximum number of recent submissions to request per page. LeetCode caps
+# the query at 20 per call; we paginate using offsets.
 _SUBMISSIONS_PER_PAGE = 20
 
-# Safety cap – stop after this many API pages to avoid runaway loops if the
-# API starts returning duplicates indefinitely.
+# Safety cap – stop after this many API pages to avoid runaway loops.
 _MAX_PAGES = 50
 
 # HTTP timeout for the GraphQL requests (seconds).
 REQUEST_TIMEOUT = 10
-
-# Default path to the local problem database relative to repo root.
-DEFAULT_DATA_PATH = os.path.join(os.path.dirname(__file__), "data.json")
 
 
 # ---------------------------------------------------------------------------
 # GraphQL queries
 # ---------------------------------------------------------------------------
 
-# ``recentAcSubmissions`` returns the user's accepted submissions without
-# authentication.  The ``limit`` argument controls how many items per call
-# (max 20).  We use this instead of ``userSubmissionList`` which requires
-# an authenticated session.
 _RECENT_AC_QUERY = """
-query recentAcSubmissions($username: String!, $limit: Int!) {
-  recentAcSubmissionList(username: $username, limit: $limit) {
+query recentAcSubmissions($username: String!, $limit: Int!, $offset: Int!) {
+  recentAcSubmissionList(username: $username, limit: $limit, offset: $offset) {
     titleSlug
     statusDisplay
   }
@@ -106,7 +77,7 @@ class SyncReport:
     already_done : list[str]
         Problem names that were already solved locally.
     skipped_no_match : list[str]
-        LeetCode slugs that had no matching entry in ``data.json``.
+        LeetCode slugs that had no matching entry in MongoDB.
     errors : list[str]
         Free-form error/warning messages encountered during the run.
     """
@@ -156,21 +127,23 @@ class SyncReport:
 # 1. LeetCode GraphQL Fetcher
 # ---------------------------------------------------------------------------
 
-def _build_recent_ac_payload(username: str, limit: int = _SUBMISSIONS_PER_PAGE) -> dict:
+def _build_recent_ac_payload(username: str, limit: int = _SUBMISSIONS_PER_PAGE, offset: int = 0) -> dict:
     """Construct the JSON body for the ``recentAcSubmissions`` query."""
     return {
         "query": _RECENT_AC_QUERY,
-        "variables": {"username": username, "limit": limit},
+        "variables": {"username": username, "limit": limit, "offset": offset},
     }
 
 
 def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
     """Fetch the set of unique accepted title-slugs for *username*.
 
+    Paginates through submissions using the offset parameter.
+
     Parameters
     ----------
     username : str
-        Public LeetCode username (case-insensitive on LeetCode's side).
+        Public LeetCode username.
 
     Returns
     -------
@@ -178,11 +151,6 @@ def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
         Unique ``titleSlug`` values for accepted submissions.
     errors : list[str]
         Any warning messages generated during fetching.
-
-    Raises
-    ------
-    No exceptions are raised.  Network and API errors are captured in the
-    returned *errors* list so the caller can decide how to surface them.
     """
     accepted: set[str] = set()
     errors: list[str] = []
@@ -192,18 +160,16 @@ def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
         "Referer": "https://leetcode.com",
     }
 
-    # Paginate through recent accepted submissions.
-    # The ``recentAcSubmissionList`` query returns the most recent accepted
-    # submissions.  Because LeetCode caps this at 20 per request, we keep
-    # calling until the returned list is shorter than the requested limit
-    # (indicating we've reached the end) or until we hit our safety cap.
     page = 0
+    limit = _SUBMISSIONS_PER_PAGE
+    offset = 0
+
     while page < _MAX_PAGES:
         page += 1
         try:
             response = requests.post(
                 LEETCODE_GRAPHQL_URL,
-                json=_build_recent_ac_payload(username, _SUBMISSIONS_PER_PAGE),
+                json=_build_recent_ac_payload(username, limit, offset),
                 headers=headers,
                 timeout=REQUEST_TIMEOUT,
             )
@@ -250,7 +216,6 @@ def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
             logger.error("LeetCode sync JSON decode error: %s", exc)
             break
 
-        # GraphQL can return top-level ``errors`` even with a 200 status.
         gql_errors = body.get("errors")
         if gql_errors:
             msg = gql_errors[0].get("message", "Unknown GraphQL error")
@@ -263,19 +228,23 @@ def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
         )
 
         if not submissions:
-            # Empty list means no (more) submissions – stop paginating.
+            # Empty list means no more submissions – stop paginating.
             break
 
+        new_slugs_found = False
         for sub in submissions:
             slug = sub.get("titleSlug", "").strip()
             if slug:
-                accepted.add(slug)
+                if slug not in accepted:
+                    accepted.add(slug)
+                    new_slugs_found = True
 
-        # The ``recentAcSubmissionList`` endpoint does not support cursor-based
-        # pagination – it always returns the same most-recent N items.  So we
-        # break after the first successful page.  If LeetCode ever adds offset
-        # support, this loop structure is ready for it.
-        break
+        # Stop paginating if we received fewer submissions than requested,
+        # or if we found no new slugs (meaning we are seeing duplicate pages).
+        if len(submissions) < limit or not new_slugs_found:
+            break
+
+        offset += limit
 
     logger.info(
         "Fetched %d unique accepted slugs for '%s'", len(accepted), username
@@ -312,33 +281,29 @@ def extract_leetcode_slug(url: str) -> str | None:
     return match.group(1) if match else None
 
 
-def build_slug_index(data: list[dict]) -> dict[str, list[tuple[int, int]]]:
-    """Build a mapping from LeetCode slug → list of ``(topic_idx, question_idx)``.
+def build_slug_index(questions: list[dict]) -> dict[str, list[dict]]:
+    """Build a mapping from LeetCode slug -> list of question documents.
 
-    A single slug can theoretically appear in multiple topics (e.g. the same
-    LeetCode problem listed under "Array" and "Searching"), so we store a list.
+    A single slug can theoretically appear in multiple questions, so we store a list.
 
     Parameters
     ----------
-    data : list[dict]
-        The parsed ``data.json`` structure – a list of topic objects, each
-        containing a ``"questions"`` list.
+    questions : list[dict]
+        A list of question documents from MongoDB.
 
     Returns
     -------
-    dict[str, list[tuple[int, int]]]
-        Slug → positions in the ``data`` structure.
+    dict[str, list[dict]]
+        Slug -> question documents in MongoDB.
     """
-    index: dict[str, list[tuple[int, int]]] = {}
+    index: dict[str, list[dict]] = {}
 
-    for topic_idx, topic in enumerate(data):
-        questions = topic.get("questions", [])
-        for q_idx, question in enumerate(questions):
-            # Check both "URL" and "url" keys (data.json has mixed casing).
-            for url_key in ("URL", "url"):
-                slug = extract_leetcode_slug(question.get(url_key, ""))
-                if slug:
-                    index.setdefault(slug, []).append((topic_idx, q_idx))
+    for question in questions:
+        # Check both "URL" and "url" keys.
+        for url_key in ("URL", "url"):
+            slug = extract_leetcode_slug(question.get(url_key, ""))
+            if slug:
+                index.setdefault(slug, []).append(question)
 
     logger.debug("Built slug index with %d LeetCode entries", len(index))
     return index
@@ -349,28 +314,19 @@ def build_slug_index(data: list[dict]) -> dict[str, list[tuple[int, int]]]:
 # ---------------------------------------------------------------------------
 
 def apply_sync(
-    data: list[dict],
-    slug_index: dict[str, list[tuple[int, int]]],
+    user_progress: dict,
+    slug_index: dict[str, list[dict]],
     accepted_slugs: set[str],
 ) -> SyncReport:
-    """Apply accepted slugs to ``data`` using additive-only merge.
-
-    Rules
-    -----
-    * If a slug matches a question that is NOT marked ``Done: true``, set it
-      to ``true`` → counted as *synced*.
-    * If the question is ALREADY ``Done: true``, leave it → counted as
-      *already_done*.
-    * If a slug has NO match in the index, record it as *skipped_no_match*.
-    * Questions that are locally ``Done: true`` but NOT in the accepted set
-      are **never** reverted.  This is the core conflict-resolution guarantee.
+    """Apply accepted slugs to user progress using additive-only merge.
 
     Parameters
     ----------
-    data : list[dict]
-        Mutable reference to the parsed ``data.json``.  Modified in-place.
+    user_progress : dict
+        Mutable reference to user's existing progress mapping (question_id_str -> progress_dict).
+        Modified in-place.
     slug_index : dict
-        Output of ``build_slug_index(data)``.
+        Output of ``build_slug_index(questions)``.
     accepted_slugs : set[str]
         Output of ``fetch_accepted_slugs()``.
 
@@ -379,90 +335,51 @@ def apply_sync(
     SyncReport
         Detailed report of the sync operation.
     """
+    from app.utils import utc_now
     report = SyncReport()
 
     for slug in sorted(accepted_slugs):
-        positions = slug_index.get(slug)
+        questions = slug_index.get(slug)
 
-        if not positions:
+        if not questions:
             report.skipped_no_match.append(slug)
             continue
 
-        for topic_idx, q_idx in positions:
-            question = data[topic_idx]["questions"][q_idx]
-            problem_name = question.get("Problem", question.get("problem", slug))
+        for question in questions:
+            q_id = str(question["_id"])
+            problem_name = question.get("problem", question.get("Problem", slug))
+            existing = user_progress.get(q_id, {})
 
-            if question.get("Done", False):
+            if existing.get("done", False):
                 # Already solved – preserve local state, no mutation.
                 report.already_done.append(problem_name)
             else:
                 # New solve – flip to Done.
-                question["Done"] = True
+                user_progress[q_id] = {
+                    "done": True,
+                    "bookmark": existing.get("bookmark", False),
+                    "skipped": False,
+                    "notes": existing.get("notes", ""),
+                    "timestamp": utc_now()
+                }
                 report.synced.append(problem_name)
-
-                # Also update the parent topic's bookkeeping counters.
-                topic = data[topic_idx]
-                topic["doneQuestions"] = topic.get("doneQuestions", 0) + 1
-                if not topic.get("started"):
-                    topic["started"] = True
 
     logger.info("Sync complete – %s", report.summary())
     return report
 
 
 # ---------------------------------------------------------------------------
-# 4. File I/O Helpers
-# ---------------------------------------------------------------------------
-
-def load_data(path: str) -> list[dict]:
-    """Load and parse ``data.json``.
-
-    Parameters
-    ----------
-    path : str
-        Absolute or relative path to ``data.json``.
-
-    Returns
-    -------
-    list[dict]
-        Parsed JSON array of topic objects.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the file doesn't exist.
-    json.JSONDecodeError
-        If the file contains invalid JSON.
-    """
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def save_data(data: list[dict], path: str) -> None:
-    """Write the updated ``data.json`` back to disk.
-
-    Uses a two-step write (write to temp → rename) so that a crash mid-write
-    won't corrupt the original file.
-    """
-    tmp_path = path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, indent=2, ensure_ascii=False)
-        fh.write("\n")
-    os.replace(tmp_path, path)
-    logger.info("Saved updated data to %s", path)
-
-
-# ---------------------------------------------------------------------------
-# 5. Top-Level Orchestrator
+# 4. Top-Level Orchestrator
 # ---------------------------------------------------------------------------
 
 def sync_leetcode_progress(
     username: str,
-    data_path: str = DEFAULT_DATA_PATH,
+    db_handle=None,
     *,
     persist: bool = True,
+    user_id=None,
 ) -> SyncReport:
-    """End-to-end LeetCode sync: fetch → match → update → save.
+    """End-to-end LeetCode sync: fetch -> match -> update -> database save.
 
     This is the primary entry point for both CLI usage and Flask route
     integration.
@@ -471,11 +388,13 @@ def sync_leetcode_progress(
     ----------
     username : str
         The public LeetCode username to sync.
-    data_path : str
-        Path to the ``data.json`` file.  Defaults to the repo-root copy.
+    db_handle : pymongo.database.Database, optional
+        MongoDB database handle. If None, initialized using flask app context.
     persist : bool
-        If ``True`` (default), write the updated data back to *data_path*.
+        If ``True`` (default), write the updated data back to MongoDB.
         Set to ``False`` for dry-run / preview mode.
+    user_id : ObjectId or str, optional
+        If provided, lookup user directly by ID. Otherwise, looked up by username.
 
     Returns
     -------
@@ -498,37 +417,104 @@ def sync_leetcode_progress(
         report = SyncReport(errors=fetch_errors)
         return report
 
-    # -- Step 2: Load local data and build the slug index --------------------
-    try:
-        data = load_data(data_path)
-    except FileNotFoundError:
-        report = SyncReport(errors=[f"data.json not found at {data_path}"])
+    # -- Step 2: Acquire DB handle -------------------------------------------
+    if db_handle is None:
+        try:
+            from app import create_app
+            from app.extensions import db as flask_db
+            app = create_app()
+            with app.app_context():
+                return _sync_leetcode_progress_in_context(
+                    username, flask_db, accepted_slugs, fetch_errors, persist=persist, user_id=user_id
+                )
+        except Exception as exc:
+            report = SyncReport(errors=[f"Failed to initialize database: {exc}"])
+            logger.error("Stand-alone DB init failed: %s", exc)
+            return report
+    else:
+        return _sync_leetcode_progress_in_context(
+            username, db_handle, accepted_slugs, fetch_errors, persist=persist, user_id=user_id
+        )
+
+
+def _sync_leetcode_progress_in_context(
+    username: str,
+    db_handle,
+    accepted_slugs: set[str],
+    fetch_errors: list[str],
+    *,
+    persist: bool = True,
+    user_id=None,
+) -> SyncReport:
+    # 1. Retrieve the user document
+    if user_id:
+        user = db_handle.user.find_one({"_id": user_id})
+    else:
+        user = db_handle.user.find_one(
+            {"leetcode_username": {"$regex": f"^{re.escape(username)}$", "$options": "i"}}
+        )
+
+    if not user:
+        report = SyncReport(errors=[f"User not found for LeetCode username: {username}"])
         return report
-    except json.JSONDecodeError as exc:
-        report = SyncReport(errors=[f"Invalid JSON in data.json: {exc}"])
-        return report
 
-    slug_index = build_slug_index(data)
+    user_id = user["_id"]
 
-    # -- Step 3: Apply the additive sync -------------------------------------
-    report = apply_sync(data, slug_index, accepted_slugs)
+    # 2. Retrieve questions and index them
+    all_questions = list(db_handle.question.find())
+    slug_index = build_slug_index(all_questions)
 
-    # Carry over any fetch warnings.
+    # 3. Reconcile user progress
+    user_progress = dict(user.get("progress") or {})
+    report = apply_sync(user_progress, slug_index, accepted_slugs)
     report.errors.extend(fetch_errors)
 
-    # -- Step 4: Persist if there were actual changes ------------------------
+    # 4. Save/Persist back to MongoDB
     if persist and report.synced:
+        from app.utils import (
+            compute_in_sheet_platform_counts,
+            update_computed_stats
+        )
+        from app.leaderboard.cache import invalidate_leaderboard_cache
+        from app.profile.card_service import warm_public_card_cache
+
+        solved_items = {q_id: p for q_id, p in user_progress.items() if p.get("done")}
+        in_sheet_counts = compute_in_sheet_platform_counts(solved_items, all_questions)
+
         try:
-            save_data(data, data_path)
-        except OSError as exc:
-            report.errors.append(f"Failed to save data.json: {exc}")
-            logger.error("Save failed: %s", exc)
+            # Update user document in database
+            db_handle.user.update_one(
+                {"_id": user_id},
+                {"$set": {
+                    "progress": user_progress,
+                    "in_sheet_platform_counts": in_sheet_counts
+                }}
+            )
+
+            # Update computed stats (streaks, progress)
+            update_computed_stats(user_id, user_progress, db_handle, len(all_questions))
+
+            # Invalidate caches safely
+            try:
+                invalidate_leaderboard_cache()
+            except Exception as exc:
+                logger.warning("Could not invalidate leaderboard cache: %s", exc)
+
+            try:
+                warm_public_card_cache(user_id, db_handle=db_handle)
+            except Exception as exc:
+                logger.warning("Could not warm public card cache: %s", exc)
+
+            logger.info("Saved synced progress to database for user %s", username)
+        except Exception as exc:
+            report.errors.append(f"Failed to save user progress: {exc}")
+            logger.error("DB Save failed: %s", exc)
 
     return report
 
 
 # ---------------------------------------------------------------------------
-# 6. CLI Entry Point
+# 5. CLI Entry Point
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -536,7 +522,7 @@ def main() -> None:
 
     Usage::
 
-        python leetcode_sync.py <leetcode_username> [path/to/data.json]
+        python leetcode_sync.py <leetcode_username>
 
     Prints a human-readable sync report to stdout.
     """
@@ -546,41 +532,40 @@ def main() -> None:
     )
 
     if len(sys.argv) < 2:
-        print("Usage: python leetcode_sync.py <leetcode_username> [data.json]")
+        print("Usage: python leetcode_sync.py <leetcode_username>")
         sys.exit(1)
 
     username = sys.argv[1]
-    data_path = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_DATA_PATH
 
-    print(f"🔄 Syncing LeetCode submissions for '{username}'…")
-    report = sync_leetcode_progress(username, data_path)
+    print(f"\U0001f504 Syncing LeetCode submissions for '{username}'\u2026")
+    report = sync_leetcode_progress(username)
 
     # -- Pretty-print the results --------------------------------------------
     if report.synced:
-        print(f"\n✅ Newly synced ({len(report.synced)}):")
+        print(f"\n\u2705 Newly synced ({len(report.synced)}):")
         for name in report.synced:
-            print(f"   • {name}")
+            print(f"   \u2022 {name}")
 
     if report.already_done:
-        print(f"\n📌 Already solved ({len(report.already_done)}):")
+        print(f"\n\U0001f4cc Already solved ({len(report.already_done)}):")
         for name in report.already_done[:10]:
-            print(f"   • {name}")
+            print(f"   \u2022 {name}")
         if len(report.already_done) > 10:
-            print(f"   … and {len(report.already_done) - 10} more")
+            print(f"   \u2026 and {len(report.already_done) - 10} more")
 
     if report.skipped_no_match:
-        print(f"\n⏭️  Not in sheet ({len(report.skipped_no_match)}):")
+        print(f"\n\u23ed\ufe0f  Not in sheet ({len(report.skipped_no_match)}):")
         for slug in report.skipped_no_match[:10]:
-            print(f"   • {slug}")
+            print(f"   \u2022 {slug}")
         if len(report.skipped_no_match) > 10:
-            print(f"   … and {len(report.skipped_no_match) - 10} more")
+            print(f"   \u2026 and {len(report.skipped_no_match) - 10} more")
 
     if report.errors:
-        print(f"\n⚠️  Warnings ({len(report.errors)}):")
+        print(f"\n\u26a0\ufe0f  Warnings ({len(report.errors)}):")
         for err in report.errors:
-            print(f"   • {err}")
+            print(f"   \u2022 {err}")
 
-    print(f"\n📊 Summary: {report.summary()}")
+    print(f"\n\U0001f4ca Summary: {report.summary()}")
 
 
 if __name__ == "__main__":
