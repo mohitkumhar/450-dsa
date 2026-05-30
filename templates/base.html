@@ -46,1454 +46,45 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
-
-    <style>
-        :root {
-            --bg-primary: #111111;
-            --bg-secondary: #1a1a1a;
-            --bg-card: #1e1e1e;
-            --bg-card-hover: #252525;
-            --border-color: #2a2a2a;
-            --border-subtle: #222222;
-            --accent: #ba5912;
-            --accent-rgb: 186, 89, 18;
-            --accent-2: #7c8217;
-            --accent-2-rgb: 124, 130, 23;
-            --accent-hover: #a74f10;
-            --accent-dim: rgba(186, 89, 18, 0.16);
-            --accent-surface: rgba(186, 89, 18, 0.10);
-            --accent-surface-strong: rgba(186, 89, 18, 0.18);
-            --accent-foreground: #ffffff;
-            --accent-gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
-            --accent-surface-gradient: linear-gradient(135deg, rgba(var(--accent-rgb), 0.14), rgba(var(--accent-2-rgb), 0.10));
-            --text-primary: #f0f0f0;
-            --text-secondary: #a0a0a0;
-            --text-muted: #666666;
-            --success: #22c55e;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --easy: #00b8a3;
-            --medium: #ffc01e;
-            --hard: #ff375f;
-            --chart-1: #ba5912;
-            --chart-2: #1d4ed8;
-            --chart-3: #15803d;
-            --chart-4: #be185d;
-            --chart-5: #a16207;
-            --chart-6: #64748b;
-            --sidebar-width: 64px;
-            --topbar-height: 56px;
-            --transition: all 0.2s ease;
-            --radius: 10px;
-            --radius-lg: 16px;
-            --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        .page-load-target {
-            transition: opacity 0.18s ease;
-        }
-
-        .page-load-skeleton {
-            display: none;
-            gap: 14px;
-            margin-bottom: 20px;
-        }
-
-        .page-loading .page-load-target {
-            opacity: 0;
-        }
-
-        .page-loading .page-load-skeleton {
-            display: grid;
-        }
-
-        .skeleton-block,
-        .skeleton-line,
-        .skeleton-chip {
-            position: relative;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .skeleton-block::after,
-        .skeleton-line::after,
-        .skeleton-chip::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            transform: translateX(-100%);
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255, 255, 255, 0.12),
-                transparent
-            );
-            animation: skeleton-shimmer 1.15s linear infinite;
-        }
-
-        .skeleton-block {
-            border-radius: var(--radius-lg);
-            min-height: 120px;
-        }
-
-        .skeleton-line {
-            border-radius: 999px;
-            height: 12px;
-        }
-
-        .skeleton-chip {
-            border-radius: 8px;
-            height: 32px;
-        }
-
-        @keyframes skeleton-shimmer {
-            100% {
-                transform: translateX(100%);
-            }
-        }
-
-        /* ========== ACCESSIBILITY IMPROVEMENTS ========== */
-
-        /* Skip to main content link - for keyboard users */
-        .skip-link {
-            position: absolute;
-            top: -40px;
-            left: 0;
-            background: var(--accent);
-            color: white;
-            padding: 8px 16px;
-            z-index: 10000;
-            text-decoration: none;
-            font-weight: 600;
-            border-radius: 0 0 8px 0;
-            transition: top 0.2s ease;
-        }
-
-        .skip-link:focus {
-            top: 0;
-            outline: 2px solid white;
-            outline-offset: 2px;
-        }
-
-        /* Focus indicators for keyboard navigation */
-        :focus {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-        }
-
-        /* Remove outline for mouse users but keep for keyboard */
-        :focus:not(:focus-visible) {
-            outline: none;
-        }
-
-        :focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-            border-radius: 4px;
-        }
-
-        /* Better focus for interactive elements */
-        button:focus-visible,
-        a:focus-visible,
-        input:focus-visible,
-        textarea:focus-visible,
-        select:focus-visible,
-        [tabindex]:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-        }
-
-        /* High contrast mode support */
-        @media (prefers-contrast: high) {
-            :focus-visible {
-                outline: 3px solid var(--accent);
-                outline-offset: 3px;
-            }
-        }
-
-        /* â”€â”€â”€ Left Sidebar â”€â”€â”€ */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: var(--sidebar-width);
-            background-color: var(--bg-secondary);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 12px 0;
-            z-index: 1000;
-            transition: var(--transition);
-        }
-
-        .sidebar-logo {
-            width: 40px;
-            height: 40px;
-            background: var(--accent);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 1.1rem;
-            color: var(--accent-foreground);
-            text-decoration: none;
-            margin-bottom: 20px;
-            flex-shrink: 0;
-            letter-spacing: -1px;
-        }
-
-        .sidebar-logo:hover {
-            background: var(--accent-hover);
-            color: var(--accent-foreground);
-            text-decoration: none;
-        }
-
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            flex: 1;
-            width: 100%;
-        }
-
-        .sidebar-link {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 1.25rem;
-            transition: var(--transition);
-            position: relative;
-        }
-
-        .sidebar-link:hover,
-        .sidebar-link.active {
-            background: var(--accent-dim);
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .sidebar-link .tooltip-label {
-            position: absolute;
-            left: calc(100% + 12px);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateX(-5px);
-            transition: var(--transition);
-            border: 1px solid var(--border-color);
-            z-index: 999;
-        }
-
-        .sidebar-link:hover .tooltip-label {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .sidebar-bottom {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            padding-bottom: 8px;
-        }
-
-        /* â”€â”€â”€ Top Bar â”€â”€â”€ */
-        .topbar {
-            position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
-            right: 0;
-            height: var(--topbar-height);
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            z-index: 900;
-            gap: 12px;
-        }
-
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .topbar-brand {
-            font-weight: 700;
-            font-size: 1rem;
-            color: var(--text-primary);
-            text-decoration: none;
-        }
-
-        .topbar-brand:hover {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .app-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .app-modal.open {
-            display: flex;
-        }
-
-        .app-modal__dialog {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 28px;
-            width: 90%;
-            max-width: 480px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .app-modal__title {
-            font-size: 1.05rem;
-            font-weight: 700;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .app-modal__textarea {
-            width: 100%;
-            padding: 12px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 0.88rem;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 120px;
-            outline: none;
-        }
-
-        .app-modal__textarea:focus {
-            border-color: var(--accent);
-        }
-
-        .app-modal__actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 16px;
-        }
-
-        .ui-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 8px 16px;
-            border-radius: 9px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            font-family: inherit;
-            font-size: 0.82rem;
-            font-weight: 700;
-            line-height: 1.2;
-            white-space: nowrap;
-        }
-
-        .ui-btn:hover {
-            text-decoration: none;
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .ui-btn-primary {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: white;
-        }
-
-        .ui-btn-primary:hover {
-            background: var(--accent-hover);
-            border-color: var(--accent-hover);
-            color: white;
-        }
-
-        .ui-btn-secondary {
-            background: var(--bg-secondary);
-            border-color: var(--border-color);
-            color: var(--text-secondary);
-        }
-
-        .ui-btn-secondary:hover {
-            color: var(--accent);
-        }
-
-        .ui-btn-success {
-            background: var(--success);
-            border-color: var(--success);
-            color: white;
-        }
-
-        .ui-btn-success:hover {
-            background: #2dd46a;
-            border-color: #2dd46a;
-            color: white;
-        }
-
-        .ui-btn-danger {
-            background: transparent;
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .ui-btn-danger:hover {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: var(--danger);
-            color: var(--danger);
-        }
-
-        .ui-btn-icon {
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .ui-btn-pill {
-            border-radius: 999px;
-            padding: 6px 14px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .ui-btn-block {
-            display: flex;
-            width: 100%;
-        }
-
-        .pill-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            border: 1px solid var(--border-color);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-        .pill-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .pill-btn.accent {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: var(--accent-foreground);
-        }
-
-        .pill-btn.accent:hover {
-            background: var(--accent-hover);
-            color: var(--accent-foreground);
-        }
-
-        .icon-btn {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 1rem;
-        }
-
-        .icon-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .modal-ov {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.68);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-        }
-
-        .modal-ov.open {
-            display: flex;
-        }
-
-        .modal-bx {
-            width: min(100%, 420px);
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 22px;
-            box-shadow: var(--shadow);
-        }
-
-        .theme-settings-panel {
-            width: min(100%, 460px);
-            max-height: min(88vh, 620px);
-            overflow-y: auto;
-        }
-
-        .theme-settings-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 14px;
-            margin-bottom: 18px;
-        }
-
-        .theme-settings-head h3 {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 800;
-            color: var(--text-primary);
-        }
-
-        .theme-settings-head .icon-btn {
-            width: 32px;
-            height: 32px;
-            flex-shrink: 0;
-        }
-
-        .m-lbl {
-            display: block;
-            margin: 12px 0 6px;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            font-weight: 700;
-        }
-
-        .m-inp {
-            width: 100%;
-            padding: 9px 12px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 0.85rem;
-            font-family: inherit;
-            outline: none;
-        }
-
-        .m-inp:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-dim);
-        }
-
-        .accent-picker {
-            display: grid;
-            grid-template-columns: 58px 1fr;
-            gap: 12px;
-            align-items: center;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            background: var(--bg-secondary);
-        }
-
-        .accent-picker-preview {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: var(--accent-gradient);
-            border: 2px solid var(--border-color);
-            box-shadow: 0 0 0 4px var(--accent-surface);
-        }
-
-        .accent-picker-control {
-            display: grid;
-            gap: 8px;
-            min-width: 0;
-        }
-
-        .accent-hue-range {
-            width: 100%;
-            height: 10px;
-            appearance: none;
-            border-radius: 999px;
-            background: linear-gradient(90deg, #c2410c, #a16207, #15803d, #0f766e, #2563eb, #7e22ce, #be185d, #c2410c);
-            outline: none;
-            cursor: pointer;
-        }
-
-        .accent-hue-range::-webkit-slider-thumb {
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent);
-            border: 3px solid var(--bg-card);
-            box-shadow: 0 0 0 1px var(--border-color), 0 3px 10px rgba(0, 0, 0, 0.25);
-        }
-
-        .accent-hue-range::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent);
-            border: 3px solid var(--bg-card);
-            box-shadow: 0 0 0 1px var(--border-color), 0 3px 10px rgba(0, 0, 0, 0.25);
-        }
-
-        .accent-picker-meta {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            font-size: 0.76rem;
-            color: var(--text-secondary);
-            min-width: 0;
-        }
-
-        .accent-picker-meta strong {
-            color: var(--text-primary);
-            font-size: 0.78rem;
-        }
-
-        .accent-presets {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .accent-swatch {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2px solid var(--border-color);
-            background: var(--swatch);
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .accent-swatch.active {
-            border-color: var(--text-primary);
-            box-shadow: 0 0 0 3px var(--accent-dim);
-        }
-
-        .theme-segment {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 4px;
-            padding: 4px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-        }
-
-        .theme-segment-btn {
-            min-height: 34px;
-            border: 0;
-            border-radius: 8px;
-            background: transparent;
-            color: var(--text-secondary);
-            font-size: 0.82rem;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .theme-segment-btn.active,
-        .theme-segment-btn[aria-pressed="true"] {
-            background: var(--accent);
-            color: var(--accent-foreground);
-            box-shadow: 0 8px 18px var(--accent-dim);
-        }
-
-        .palette-options {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
-        }
-
-        .palette-choice {
-            min-height: 58px;
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 9px;
-            text-align: left;
-            transition: var(--transition);
-            font-family: inherit;
-        }
-
-        .palette-choice:hover,
-        .palette-choice.active,
-        .palette-choice[aria-pressed="true"] {
-            border-color: var(--accent);
-            color: var(--text-primary);
-            box-shadow: 0 0 0 3px var(--accent-dim);
-        }
-
-        .palette-choice-label {
-            display: block;
-            font-size: 0.78rem;
-            font-weight: 800;
-            margin-bottom: 8px;
-        }
-
-        .chart-palette-preview {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .chart-palette-preview span {
-            height: 10px;
-            border-radius: 999px;
-        }
-
-        .chart-palette-preview span:nth-child(1) { background: var(--chart-1); }
-        .chart-palette-preview span:nth-child(2) { background: var(--chart-2); }
-        .chart-palette-preview span:nth-child(3) { background: var(--chart-3); }
-        .chart-palette-preview span:nth-child(4) { background: var(--chart-4); }
-
-        .palette-choice .chart-palette-preview {
-            margin-top: 0;
-            gap: 5px;
-        }
-
-        .palette-choice .chart-palette-preview span {
-            height: 8px;
-        }
-
-        .palette-choice[data-palette="default"] .chart-palette-preview span:nth-child(1) { background: var(--chart-1); }
-        .palette-choice[data-palette="default"] .chart-palette-preview span:nth-child(2) { background: var(--chart-2); }
-        .palette-choice[data-palette="default"] .chart-palette-preview span:nth-child(3) { background: var(--chart-3); }
-        .palette-choice[data-palette="default"] .chart-palette-preview span:nth-child(4) { background: var(--chart-4); }
-        .palette-choice[data-palette="pastel"] .chart-palette-preview span:nth-child(1) { background: #b45309; }
-        .palette-choice[data-palette="pastel"] .chart-palette-preview span:nth-child(2) { background: #2563eb; }
-        .palette-choice[data-palette="pastel"] .chart-palette-preview span:nth-child(3) { background: #15803d; }
-        .palette-choice[data-palette="pastel"] .chart-palette-preview span:nth-child(4) { background: #be185d; }
-        .palette-choice[data-palette="vivid"] .chart-palette-preview span:nth-child(1) { background: #b91c1c; }
-        .palette-choice[data-palette="vivid"] .chart-palette-preview span:nth-child(2) { background: #1d4ed8; }
-        .palette-choice[data-palette="vivid"] .chart-palette-preview span:nth-child(3) { background: #047857; }
-        .palette-choice[data-palette="vivid"] .chart-palette-preview span:nth-child(4) { background: #a21caf; }
-        .palette-choice[data-palette="colorblind"] .chart-palette-preview span:nth-child(1) { background: #0072b2; }
-        .palette-choice[data-palette="colorblind"] .chart-palette-preview span:nth-child(2) { background: #e69f00; }
-        .palette-choice[data-palette="colorblind"] .chart-palette-preview span:nth-child(3) { background: #009e73; }
-        .palette-choice[data-palette="colorblind"] .chart-palette-preview span:nth-child(4) { background: #cc79a7; }
-
-        .m-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 18px;
-        }
-
-        .m-cancel,
-        .m-save {
-            min-height: 36px;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 0.83rem;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .m-cancel {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-        }
-
-        .m-save {
-            background: var(--accent);
-            border: 1px solid var(--accent);
-            color: var(--accent-foreground);
-        }
-
-        .m-cancel:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .m-save:hover {
-            background: var(--accent-hover);
-        }
-
-        .m-save:disabled {
-            opacity: 0.7;
-            cursor: wait;
-        }
-
-        body.compact .card-dark,
-        body.compact .topic-card,
-        body.compact .overall-progress-bar-wrap {
-            padding: 14px;
-        }
-
-        body.compact .sidebar-link {
-            width: 38px;
-            height: 38px;
-            font-size: 1.1rem;
-        }
-
-        body.compact .main-wrapper {
-            padding: 16px;
-        }
-
-        .user-avatar-sm {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--accent-gradient);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.8rem;
-            color: var(--accent-foreground);
-            cursor: pointer;
-            border: 2px solid var(--border-color);
-            transition: var(--transition);
-            text-decoration: none;
-            flex-shrink: 0;
-        }
-
-        .user-avatar-sm:hover {
-            border-color: var(--accent);
-            color: var(--accent-foreground);
-            text-decoration: none;
-        }
-
-        /* â”€â”€â”€ Main Content â”€â”€â”€ */
-        .main-wrapper {
-            margin-left: var(--sidebar-width);
-            margin-top: var(--topbar-height);
-            min-height: calc(100vh - var(--topbar-height) - 130px);
-            padding: 24px;
-        }
-
-        /* â”€â”€â”€ Cards â”€â”€â”€ */
-        .card-dark {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 18px;
-            color: var(--text-primary);
-            transition: var(--transition);
-        }
-
-        .card-dark:hover {
-            border-color: #333;
-        }
-
-        .card,
-        .stat-card {
-            color: var(--text-primary);
-        }
-
-        .stat-num,
-        .big-num,
-        .metric-value,
-        .rating-num,
-        .rank-num,
-        .donut-inner {
-            color: var(--text-primary);
-        }
-
-        .stat-lbl,
-        .metric-label,
-        .sub-label,
-        .rating-sub {
-            color: var(--text-secondary);
-        }
-
-        /* â”€â”€â”€ Toast Notifications - TOP RIGHT â”€â”€â”€ */
-        .toast-container {
-            position: fixed;
-            top: calc(var(--topbar-height) + 12px);
-            right: 20px;
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-width: 380px;
-        }
-
-        .toast-notification {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 14px 16px;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-            border-left: 4px solid;
-            animation: toastSlideIn 0.3s ease;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-        }
-
-        .toast-notification:hover {
-            transform: translateX(-4px);
-        }
-
-        .toast-notification.success {
-            border-left-color: var(--success);
-            background: linear-gradient(135deg, var(--bg-card), rgba(34, 197, 94, 0.05));
-        }
-        .toast-notification.success .toast-icon { color: var(--success); }
-
-        .toast-notification.error {
-            border-left-color: var(--danger);
-            background: linear-gradient(135deg, var(--bg-card), rgba(239, 68, 68, 0.05));
-        }
-        .toast-notification.error .toast-icon { color: var(--danger); }
-
-        .toast-notification.info {
-            border-left-color: var(--info);
-            background: linear-gradient(135deg, var(--bg-card), rgba(59, 130, 246, 0.05));
-        }
-        .toast-notification.info .toast-icon { color: var(--info); }
-
-        .toast-notification.warning {
-            border-left-color: var(--warning);
-            background: linear-gradient(135deg, var(--bg-card), rgba(245, 158, 11, 0.05));
-        }
-        .toast-notification.warning .toast-icon { color: var(--warning); }
-
-        .toast-icon {
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-
-        .toast-content {
-            flex: 1;
-        }
-
-        .toast-title {
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-bottom: 2px;
-        }
-
-        .toast-message {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .toast-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.9rem;
-            padding: 2px;
-            transition: var(--transition);
-            flex-shrink: 0;
-        }
-
-        .toast-close:hover {
-            color: var(--text-primary);
-        }
-
-        @keyframes toastSlideIn {
-            from {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes toastSlideOut {
-            from {
-                opacity: 1;
-                transform: translateX(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-        }
-
-        /* Flash messages (legacy, kept for backward compatibility) */
-        .flash-messages {
-            position: fixed;
-            top: calc(var(--topbar-height) + 12px);
-            right: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-width: 360px;
-        }
-
-        .flash-alert {
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            font-size: 0.85rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: slideIn 0.3s ease;
-            cursor: pointer;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        /* â”€â”€â”€ Footer â”€â”€â”€ */
-        .site-footer {
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border-color);
-            padding: 24px 20px;
-            margin-left: var(--sidebar-width);
-            text-align: center;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 12px 24px;
-            margin-bottom: 16px;
-        }
-
-        .footer-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.82rem;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover {
-            color: var(--accent);
-        }
-
-        .footer-socials {
-            display: flex;
-            justify-content: center;
-            gap: 14px;
-            margin-bottom: 12px;
-        }
-
-        .footer-socials a {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 1rem;
-            transition: var(--transition);
-        }
-
-        .footer-socials a:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .footer-copy {
-            color: var(--text-muted);
-            font-size: 0.78rem;
-        }
-
-        /* â”€â”€â”€ Scrollbars â”€â”€â”€ */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #444;
-        }
-
-        /* â”€â”€â”€ Mobile Responsive â”€â”€â”€ */
-        @media (max-width: 768px) {
-            .sidebar {
-                bottom: 0;
-                top: auto;
-                width: 100%;
-                height: 56px;
-                flex-direction: row;
-                justify-content: space-around;
-                padding: 0 10px;
-                border-right: none;
-                border-top: 1px solid var(--border-color);
-            }
-
-            .sidebar-logo {
-                display: none;
-            }
-
-            .sidebar-nav {
-                flex-direction: row;
-                flex: 1;
-                justify-content: space-around;
-            }
-
-            .sidebar-bottom {
-                flex-direction: row;
-                padding-bottom: 0;
-            }
-
-            .sidebar-link .tooltip-label {
-                display: none;
-            }
-
-            .topbar {
-                left: 0;
-            }
-
-            .main-wrapper {
-                margin-left: 0;
-                margin-top: var(--topbar-height);
-                padding: 14px;
-                padding-bottom: 72px;
-            }
-
-            .site-footer {
-                margin-left: 0;
-                padding-bottom: 72px;
-            }
-
-            .pill-btn span {
-                display: none;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .topbar {
-                padding: 0 12px;
-            }
-
-            .pill-btn {
-                padding: 5px 10px;
-            }
-
-            .palette-options {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
 
     {% block head %}{% endblock %}
     <script>
         (() => {
             let savedTheme = 'dark';
-            try {
-                savedTheme = localStorage.getItem('theme') || 'dark';
-            } catch {}
-
+            try { savedTheme = localStorage.getItem('theme') || 'dark'; } catch { }
             const rootStyle = document.documentElement.style;
             const themeVars = savedTheme === 'light'
                 ? {
-                    '--bg-primary': '#f0f2f5',
-                    '--bg-secondary': '#ffffff',
-                    '--bg-card': '#ffffff',
-                    '--bg-card-hover': '#f5f5f5',
-                    '--border-color': '#e0e0e0',
-                    '--border-subtle': '#ececec',
-                    '--text-primary': '#111111',
-                    '--text-secondary': '#555555',
-                    '--text-muted': '#999999',
+                    '--bg-primary': '#f0f2f5', '--bg-secondary': '#ffffff', '--bg-card': '#ffffff',
+                    '--bg-card-hover': '#f5f5f5', '--border-color': '#e0e0e0', '--border-subtle': '#ececec',
+                    '--text-primary': '#111111', '--text-secondary': '#555555', '--text-muted': '#999999'
                 }
                 : {
-                    '--bg-primary': '#111111',
-                    '--bg-secondary': '#1a1a1a',
-                    '--bg-card': '#1e1e1e',
-                    '--bg-card-hover': '#252525',
-                    '--border-color': '#2a2a2a',
-                    '--border-subtle': '#222222',
-                    '--text-primary': '#f0f0f0',
-                    '--text-secondary': '#a0a0a0',
-                    '--text-muted': '#666666',
+                    '--bg-primary': '#111111', '--bg-secondary': '#1a1a1a', '--bg-card': '#1e1e1e',
+                    '--bg-card-hover': '#252525', '--border-color': '#2a2a2a', '--border-subtle': '#222222',
+                    '--text-primary': '#f0f0f0', '--text-secondary': '#a0a0a0', '--text-muted': '#666666'
                 };
-
-            Object.entries(themeVars).forEach(([key, value]) => rootStyle.setProperty(key, value));
+            Object.entries(themeVars).forEach(([k, v]) => rootStyle.setProperty(k, v));
             document.documentElement.dataset.theme = savedTheme;
         })();
-        (() => {
-            const defaultPrefs = {
-                theme_accent: '#ba5912',
-                theme_density: 'comfortable',
-                theme_chart_palette: 'default',
-            };
-            const serverPrefs = {% if current_user.is_authenticated %}{{ {
-                "theme_accent": current_user.theme_accent,
-                "theme_density": current_user.theme_density,
-                "theme_chart_palette": current_user.theme_chart_palette,
-                "theme_preferences_customized": current_user.theme_preferences_customized,
-            } | tojson }}{% else %}null{% endif %};
-            const fixedPalettes = {
-                pastel: ['#b45309', '#2563eb', '#15803d', '#be185d', '#7c3aed', '#64748b'],
-                vivid: ['#b91c1c', '#1d4ed8', '#047857', '#a21caf', '#a16207', '#475569'],
-                colorblind: ['#0072b2', '#a16207', '#00875a', '#8f3f97', '#4d5bd1', '#64748b'],
-            };
-            const normalizeHex = (value) => /^#[0-9a-fA-F]{6}$/.test(String(value || '').trim())
-                ? String(value).trim().toLowerCase()
-                : null;
-            const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-            const hexToRgb = (hex) => ({
-                r: parseInt(hex.slice(1, 3), 16),
-                g: parseInt(hex.slice(3, 5), 16),
-                b: parseInt(hex.slice(5, 7), 16),
-            });
-            const rgbToHex = ({ r, g, b }) => `#${[r, g, b].map((part) => Math.round(part).toString(16).padStart(2, '0')).join('')}`;
-            const mixHex = (hex, target, amount) => {
-                const sourceRgb = hexToRgb(hex);
-                const targetRgb = hexToRgb(target);
-                return rgbToHex({
-                    r: sourceRgb.r + (targetRgb.r - sourceRgb.r) * amount,
-                    g: sourceRgb.g + (targetRgb.g - sourceRgb.g) * amount,
-                    b: sourceRgb.b + (targetRgb.b - sourceRgb.b) * amount,
-                });
-            };
-            const rgbToHsl = ({ r, g, b }) => {
-                r /= 255; g /= 255; b /= 255;
-                const max = Math.max(r, g, b);
-                const min = Math.min(r, g, b);
-                let h = 0;
-                let s = 0;
-                const l = (max + min) / 2;
-                if (max !== min) {
-                    const d = max - min;
-                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
-                    else if (max === g) h = (b - r) / d + 2;
-                    else h = (r - g) / d + 4;
-                    h *= 60;
-                }
-                return { h, s: s * 100, l: l * 100 };
-            };
-            const hslToHex = (h, s, l) => {
-                h = ((h % 360) + 360) % 360;
-                s = clamp(s, 0, 100) / 100;
-                l = clamp(l, 0, 100) / 100;
-                const c = (1 - Math.abs(2 * l - 1)) * s;
-                const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-                const m = l - c / 2;
-                let r = 0, g = 0, b = 0;
-                if (h < 60) [r, g, b] = [c, x, 0];
-                else if (h < 120) [r, g, b] = [x, c, 0];
-                else if (h < 180) [r, g, b] = [0, c, x];
-                else if (h < 240) [r, g, b] = [0, x, c];
-                else if (h < 300) [r, g, b] = [x, 0, c];
-                else [r, g, b] = [c, 0, x];
-                return rgbToHex({ r: (r + m) * 255, g: (g + m) * 255, b: (b + m) * 255 });
-            };
-            const channelLuminance = (value) => {
-                value /= 255;
-                return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
-            };
-            const luminance = (hex) => {
-                const rgb = hexToRgb(hex);
-                return 0.2126 * channelLuminance(rgb.r) + 0.7152 * channelLuminance(rgb.g) + 0.0722 * channelLuminance(rgb.b);
-            };
-            const contrast = (a, b) => {
-                const l1 = luminance(a);
-                const l2 = luminance(b);
-                return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-            };
-            const accessibleAccent = (hex) => {
-                const fallback = normalizeHex(hex) || defaultPrefs.theme_accent;
-                const hsl = rgbToHsl(hexToRgb(fallback));
-                const saturation = clamp(Math.max(hsl.s, 58), 58, 82);
-                let best = fallback;
-                let bestScore = -1;
-                for (let lightness = 30; lightness <= 48; lightness += 1) {
-                    const candidate = hslToHex(hsl.h, saturation, lightness);
-                    const score = Math.min(contrast(candidate, '#111111'), contrast(candidate, '#f0f2f5'));
-                    if (score > bestScore) {
-                        best = candidate;
-                        bestScore = score;
-                    }
-                }
-                return best;
-            };
-            const accessibleAccentFromHue = (hue) => accessibleAccent(hslToHex(Number(hue) || 0, 72, 42));
-            const derivedPalette = (accent) => {
-                const hsl = rgbToHsl(hexToRgb(accent));
-                return [
-                    accent,
-                    accessibleAccent(hslToHex(hsl.h + 38, 70, 42)),
-                    accessibleAccent(hslToHex(hsl.h + 135, 66, 40)),
-                    accessibleAccent(hslToHex(hsl.h + 245, 68, 42)),
-                    accessibleAccent(hslToHex(hsl.h + 78, 70, 40)),
-                    '#64748b',
-                ];
-            };
-            const chartPalette = (palette, accent) => palette === 'default'
-                ? derivedPalette(accent)
-                : (fixedPalettes[palette] || derivedPalette(accent));
-            const accentDetails = (accent) => {
-                const normalized = accessibleAccent(accent);
-                const rgb = hexToRgb(normalized);
-                const accent2 = derivedPalette(normalized)[1];
-                const accent2Rgb = hexToRgb(accent2);
-                return {
-                    accent: normalized,
-                    accent2,
-                    rgb,
-                    accent2Rgb,
-                    hover: mixHex(normalized, '#000000', 0.12),
-                    foreground: contrast(normalized, '#ffffff') >= contrast(normalized, '#111111') ? '#ffffff' : '#111111',
-                };
-            };
-            const applyThemeVars = (prefs) => {
-                const accent = accessibleAccent(prefs.theme_accent);
-                const details = accentDetails(accent);
-                const palette = chartPalette(prefs.theme_chart_palette, accent);
-                const density = prefs.theme_density === 'compact' ? 'compact' : 'comfortable';
-                const rootStyle = document.documentElement.style;
-                rootStyle.setProperty('--accent', details.accent);
-                rootStyle.setProperty('--accent-rgb', `${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}`);
-                rootStyle.setProperty('--accent-2', details.accent2);
-                rootStyle.setProperty('--accent-2-rgb', `${details.accent2Rgb.r}, ${details.accent2Rgb.g}, ${details.accent2Rgb.b}`);
-                rootStyle.setProperty('--accent-hover', details.hover);
-                rootStyle.setProperty('--accent-dim', `rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.16)`);
-                rootStyle.setProperty('--accent-surface', `rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.10)`);
-                rootStyle.setProperty('--accent-surface-strong', `rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.18)`);
-                rootStyle.setProperty('--accent-foreground', details.foreground);
-                rootStyle.setProperty('--accent-gradient', `linear-gradient(135deg, ${details.accent}, ${details.accent2})`);
-                rootStyle.setProperty('--accent-surface-gradient', `linear-gradient(135deg, rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.14), rgba(${details.accent2Rgb.r}, ${details.accent2Rgb.g}, ${details.accent2Rgb.b}, 0.10))`);
-                rootStyle.setProperty('--radius', density === 'compact' ? '8px' : '10px');
-                rootStyle.setProperty('--radius-lg', density === 'compact' ? '12px' : '16px');
-                rootStyle.setProperty('--topbar-height', density === 'compact' ? '50px' : '56px');
-                rootStyle.setProperty('--sidebar-width', density === 'compact' ? '56px' : '64px');
-                palette.forEach((color, index) => rootStyle.setProperty(`--chart-${index + 1}`, color));
-            };
 
-            window.themeColorUtils = {
-                defaultPrefs,
-                fixedPalettes,
-                normalizeHex,
-                hexToRgb,
-                rgbToHex,
-                rgbToHsl,
-                hslToHex,
-                accessibleAccent,
-                accessibleAccentFromHue,
-                derivedPalette,
-                chartPalette,
-                accentDetails,
-                applyThemeVars,
-            };
-
-            let localPrefs = {};
-            try {
-                localPrefs = JSON.parse(localStorage.getItem('theme_prefs') || '{}');
-            } catch {}
-
-            const hasCustomPrefs = (prefs) => Boolean(prefs) && Object.keys(defaultPrefs).some((key) => prefs[key] && prefs[key] !== defaultPrefs[key]);
-            const initialPrefs = serverPrefs && (serverPrefs.theme_preferences_customized || !hasCustomPrefs(localPrefs))
-                ? serverPrefs
-                : localPrefs;
-            const prefs = { ...defaultPrefs, ...initialPrefs };
-            applyThemeVars(prefs);
-
-            if (prefs.theme_density === 'compact') {
-                document.addEventListener('DOMContentLoaded', () => document.body.classList.add('compact'));
+        /* only Jinja2-dependent value */
+        window.__themeServerPrefs = {% if current_user.is_authenticated %}{
+            {
+                {
+                    "theme_accent": current_user.theme_accent,
+                        "theme_density": current_user.theme_density,
+                            "theme_chart_palette": current_user.theme_chart_palette,
+                                "theme_preferences_customized": current_user.theme_preferences_customized,
+        } | tojson
             }
-        })();
+        } {% else %} null{% endif %};
     </script>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
-<body{% if current_user.is_authenticated %} data-authenticated="1"{% endif %}>
+<body{% if current_user.is_authenticated %} data-authenticated="1" {% endif %}>
 
     <!-- Skip to main content link - Accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -1502,25 +93,35 @@
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
         <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
         <nav class="sidebar-nav">
-            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
+            <a href="{{ url_for('tracker.index') }}"
+                class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home"
+                aria-label="Home">
                 <i class="bi bi-house-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Home</span>
             </a>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
+            <a href="{{ url_for('profile.profile') }}"
+                class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile"
+                aria-label="Profile">
                 <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="tooltip-label">Profile</span>
             </a>
-            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
+            <a href="{{ url_for('tracker.bookmarks') }}"
+                class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}"
+                id="nav-bookmarks" aria-label="Bookmarks">
                 <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Bookmarks</span>
             </a>
-            <a href="{{ url_for('cohort.index') }}" class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}" id="nav-cohorts" aria-label="Cohorts">
+            <a href="{{ url_for('cohort.index') }}"
+                class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}"
+                id="nav-cohorts" aria-label="Cohorts">
                 <i class="bi bi-people-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Cohorts</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
+            <a href="{{ url_for('search.search') }}"
+                class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search"
+                aria-label="Search">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <span class="tooltip-label">Search</span>
             </a>
@@ -1528,13 +129,16 @@
                 <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Stats</span>
             </a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
+            <a href="{{ url_for('leaderboard.leaderboard') }}"
+                class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}"
+                id="nav-leaderboard" aria-label="Leaderboard">
                 <i class="bi bi-trophy-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Leaderboard</span>
             </a>
             {% if current_user.is_authenticated and current_user.is_admin %}
             <a href="{{ url_for('admin.dashboard') }}"
-                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin"
+                aria-label="Admin Dashboard">
                 <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Admin</span>
             </a>
@@ -1564,26 +168,32 @@
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn"
+                aria-label="Monthly Rewind">
                 <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question"
+                class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank"
+                rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle" aria-label="Toggle dark/light theme">
+            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle"
+                aria-label="Toggle dark/light theme">
                 <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
             <button class="icon-btn" id="theme-settings-btn" aria-label="Theme settings">
                 <i class="bi bi-palette-fill"></i>
             </button>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
+            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}"
+                aria-label="Profile: {{ current_user.name }}">
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" aria-label="Login">
+            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill"
+                aria-label="Login">
                 <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
@@ -1592,7 +202,8 @@
     </header>
 
     <!-- Theme Settings Modal -->
-    <div class="modal-ov theme-settings-modal" id="theme-settings-modal" tabindex="-1" aria-modal="true" role="dialog" aria-labelledby="theme-settings-title">
+    <div class="modal-ov theme-settings-modal" id="theme-settings-modal" tabindex="-1" aria-modal="true" role="dialog"
+        aria-labelledby="theme-settings-title">
         <div class="modal-bx theme-settings-panel">
             <div class="theme-settings-head">
                 <div>
@@ -1607,7 +218,8 @@
             <div class="accent-picker">
                 <div class="accent-picker-preview" id="accent-picker-preview" aria-hidden="true"></div>
                 <div class="accent-picker-control">
-                    <input type="range" id="accent-hue-input" class="accent-hue-range" min="0" max="359" value="18" aria-label="Custom accent hue">
+                    <input type="range" id="accent-hue-input" class="accent-hue-range" min="0" max="359" value="18"
+                        aria-label="Custom accent hue">
                     <div class="accent-picker-meta">
                         <strong id="accent-picker-label">Accessible orange</strong>
                         <span id="accent-picker-value">#BA5912</span>
@@ -1615,43 +227,61 @@
                 </div>
             </div>
             <div class="accent-presets" aria-label="Accent presets">
-                <button class="accent-swatch" type="button" data-accent="#ba5912" style="--swatch:#ba5912" aria-label="Orange accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#a16207" style="--swatch:#a16207" aria-label="Amber accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#b91c1c" style="--swatch:#b91c1c" aria-label="Red accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#be185d" style="--swatch:#be185d" aria-label="Rose accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#7e22ce" style="--swatch:#7e22ce" aria-label="Purple accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#4338ca" style="--swatch:#4338ca" aria-label="Indigo accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#2563eb" style="--swatch:#2563eb" aria-label="Blue accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#0369a1" style="--swatch:#0369a1" aria-label="Sky accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#0f766e" style="--swatch:#0f766e" aria-label="Teal accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#15803d" style="--swatch:#15803d" aria-label="Green accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#4d7c0f" style="--swatch:#4d7c0f" aria-label="Olive accent"></button>
-                <button class="accent-swatch" type="button" data-accent="#475569" style="--swatch:#475569" aria-label="Slate accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#ba5912" style="--swatch:#ba5912"
+                    aria-label="Orange accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#a16207" style="--swatch:#a16207"
+                    aria-label="Amber accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#b91c1c" style="--swatch:#b91c1c"
+                    aria-label="Red accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#be185d" style="--swatch:#be185d"
+                    aria-label="Rose accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#7e22ce" style="--swatch:#7e22ce"
+                    aria-label="Purple accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#4338ca" style="--swatch:#4338ca"
+                    aria-label="Indigo accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#2563eb" style="--swatch:#2563eb"
+                    aria-label="Blue accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#0369a1" style="--swatch:#0369a1"
+                    aria-label="Sky accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#0f766e" style="--swatch:#0f766e"
+                    aria-label="Teal accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#15803d" style="--swatch:#15803d"
+                    aria-label="Green accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#4d7c0f" style="--swatch:#4d7c0f"
+                    aria-label="Olive accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#475569" style="--swatch:#475569"
+                    aria-label="Slate accent"></button>
             </div>
 
             <span class="m-lbl" id="density-label">Density</span>
             <div class="theme-segment" role="group" aria-labelledby="density-label">
-                <button class="theme-segment-btn" type="button" data-density="comfortable" aria-pressed="true">Comfortable</button>
-                <button class="theme-segment-btn" type="button" data-density="compact" aria-pressed="false">Compact</button>
+                <button class="theme-segment-btn" type="button" data-density="comfortable"
+                    aria-pressed="true">Comfortable</button>
+                <button class="theme-segment-btn" type="button" data-density="compact"
+                    aria-pressed="false">Compact</button>
             </div>
 
             <span class="m-lbl" id="chart-palette-label">Chart palette</span>
             <div class="palette-options" role="group" aria-labelledby="chart-palette-label">
                 <button class="palette-choice" type="button" data-palette="default" aria-pressed="true">
                     <span class="palette-choice-label">Default</span>
-                    <span class="chart-palette-preview" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
                 </button>
                 <button class="palette-choice" type="button" data-palette="pastel" aria-pressed="false">
                     <span class="palette-choice-label">Pastel</span>
-                    <span class="chart-palette-preview" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
                 </button>
                 <button class="palette-choice" type="button" data-palette="vivid" aria-pressed="false">
                     <span class="palette-choice-label">Vivid</span>
-                    <span class="chart-palette-preview" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
                 </button>
                 <button class="palette-choice" type="button" data-palette="colorblind" aria-pressed="false">
                     <span class="palette-choice-label">Colorblind safe</span>
-                    <span class="chart-palette-preview" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
                 </button>
             </div>
 
@@ -1674,7 +304,8 @@
     <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
         {% for category, message in messages %}
         <div class="flash-alert {{ category }}" role="alert">
-            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
+            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"
+                aria-hidden="true"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -1692,477 +323,97 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-
-        // Theme Toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
-        const root = document.documentElement;
-
-        const toastConfig = {
-            success: { title: 'Success', icon: 'bi-check-circle-fill' },
-            error: { title: 'Error', icon: 'bi-x-circle-fill' },
-            danger: { title: 'Error', icon: 'bi-x-circle-fill' },
-            warning: { title: 'Warning', icon: 'bi-exclamation-triangle-fill' },
-            info: { title: 'Info', icon: 'bi-info-circle-fill' },
+        /* only the 3 Jinja2-dependent values stay inline */
+        window.__themeConfig = {
+            serverThemePrefs: {% if current_user.is_authenticated %}{
+                {
+                    {
+                        "theme_accent": current_user.theme_accent,
+                            "theme_density": current_user.theme_density,
+                                "theme_chart_palette": current_user.theme_chart_palette,
+                                    "theme_preferences_customized": current_user.theme_preferences_customized,
+            } | tojson
+                }
+        } {% else %} null{% endif %},
+        themePrefsUrl: "{{ url_for('auth.get_theme_preferences') }}",
+            themeCsrfToken: { { csrf_token() | tojson } },
         };
-
-        window.showToast = function(message, type = 'info', timeout = 4000) {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
-
-            const normalizedType = type === 'danger' ? 'error' : type;
-            const variant = toastConfig[normalizedType] || toastConfig.info;
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${normalizedType}`;
-            toast.setAttribute('role', 'alert');
-
-            const icon = document.createElement('i');
-            icon.className = `bi ${variant.icon} toast-icon`;
-
-            const content = document.createElement('div');
-            content.className = 'toast-content';
-
-            const title = document.createElement('div');
-            title.className = 'toast-title';
-            title.textContent = variant.title;
-
-            const body = document.createElement('div');
-            body.className = 'toast-message';
-            body.textContent = message;
-
-            const close = document.createElement('button');
-            close.type = 'button';
-            close.className = 'toast-close';
-            close.setAttribute('aria-label', 'Dismiss notification');
-            close.innerHTML = '<i class="bi bi-x-lg"></i>';
-
-            content.append(title, body);
-            toast.append(icon, content, close);
-            container.appendChild(toast);
-
-            const removeToast = () => {
-                toast.style.animation = 'toastSlideOut 0.25s ease forwards';
-                setTimeout(() => toast.remove(), 250);
-            };
-
-            close.addEventListener('click', (event) => {
-                event.stopPropagation();
-                removeToast();
-            });
-            toast.addEventListener('click', removeToast);
-            setTimeout(removeToast, timeout);
-        };
-
-        window.setButtonBusyState = function(button, contentEl, options = {}) {
-            if (!button || !contentEl) return;
-
-            const {
-                busy = false,
-                busyLabel = 'Working...',
-                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
-            } = options;
-
-            if (!contentEl.dataset.idleHtml) {
-                contentEl.dataset.idleHtml = idleHTML;
-            }
-
-            if (busy) {
-                button.disabled = true;
-                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+    </script>
+    <script>
+        (function () {
+            if (!("serviceWorker" in navigator) || !window.isSecureContext) {
                 return;
             }
 
-            button.disabled = false;
-            contentEl.innerHTML = contentEl.dataset.idleHtml;
-        };
+            let deferredPrompt = null;
+            let installButton = null;
 
-        window.setIconBusyState = function(icon, options = {}) {
-            if (!icon) return;
+            function ensureInstallButton() {
+                if (installButton) {
+                    return installButton;
+                }
 
-            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
-            if (!icon.dataset.idleClassName) {
-                icon.dataset.idleClassName = idleClassName;
+                const button = document.createElement("button");
+                button.type = "button";
+                button.hidden = true;
+                button.setAttribute("aria-label", "Install app");
+                button.textContent = "Install App";
+                button.style.position = "fixed";
+                button.style.right = "20px";
+                button.style.bottom = "20px";
+                button.style.zIndex = "10001";
+                button.style.padding = "10px 14px";
+                button.style.border = "1px solid rgba(255, 107, 0, 0.35)";
+                button.style.borderRadius = "999px";
+                button.style.background = "rgba(17, 17, 17, 0.96)";
+                button.style.color = "#f0f0f0";
+                button.style.font = "600 0.85rem Inter, -apple-system, BlinkMacSystemFont, sans-serif";
+                button.style.cursor = "pointer";
+                button.style.boxShadow = "0 10px 32px rgba(0, 0, 0, 0.28)";
+
+                button.addEventListener("click", async function () {
+                    if (!deferredPrompt) {
+                        return;
+                    }
+
+                    deferredPrompt.prompt();
+                    try {
+                        await deferredPrompt.userChoice;
+                    } finally {
+                        deferredPrompt = null;
+                        button.hidden = true;
+                    }
+                });
+
+                document.body.appendChild(button);
+                installButton = button;
+                return button;
             }
 
-            icon.className = options.busy
-                ? `${icon.dataset.idleClassName} btn-spinner`
-                : icon.dataset.idleClassName;
-        };
-
-        function applyTheme(theme) {
-            if (theme === 'light') {
-                root.style.setProperty('--bg-primary', '#f0f2f5');
-                root.style.setProperty('--bg-secondary', '#ffffff');
-                root.style.setProperty('--bg-card', '#ffffff');
-                root.style.setProperty('--bg-card-hover', '#f5f5f5');
-                root.style.setProperty('--border-color', '#e0e0e0');
-                root.style.setProperty('--border-subtle', '#ececec');
-                root.style.setProperty('--text-primary', '#111111');
-                root.style.setProperty('--text-secondary', '#555555');
-
-                root.style.setProperty('--text-muted', '#6b7280');
-                document.documentElement.dataset.theme = 'light';
-
-                themeIcon.className = 'bi bi-sun-fill';
-            } else {
-                root.style.setProperty('--bg-primary', '#111111');
-                root.style.setProperty('--bg-secondary', '#1a1a1a');
-                root.style.setProperty('--bg-card', '#1e1e1e');
-                root.style.setProperty('--bg-card-hover', '#252525');
-                root.style.setProperty('--border-color', '#2a2a2a');
-                root.style.setProperty('--border-subtle', '#222222');
-                root.style.setProperty('--text-primary', '#f0f0f0');
-                root.style.setProperty('--text-secondary', '#a0a0a0');
-
-                root.style.setProperty('--text-muted', '#8a8a8a');
-                document.documentElement.dataset.theme = 'dark';
-
-                themeIcon.className = 'bi bi-moon-fill';
-            }
-        }
-
-        const saved = localStorage.getItem('theme') || 'dark';
-        applyTheme(saved);
-
-        themeToggle.addEventListener('click', () => {
-            const curr = localStorage.getItem('theme') || 'dark';
-            const next = curr === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('theme', next);
-            applyTheme(next);
-            showToast(`Switched to ${next} mode`, 'info');
-        });
-
-        const themeUtils = window.themeColorUtils;
-        const defaultThemePrefs = themeUtils.defaultPrefs;
-        const serverThemePrefs = {% if current_user.is_authenticated %}{{ {
-            "theme_accent": current_user.theme_accent,
-            "theme_density": current_user.theme_density,
-            "theme_chart_palette": current_user.theme_chart_palette,
-            "theme_preferences_customized": current_user.theme_preferences_customized,
-        } | tojson }}{% else %}null{% endif %};
-        const themePrefsStorageKey = 'theme_prefs';
-        const themePrefsUrl = "{{ url_for('auth.get_theme_preferences') }}";
-        const themeCsrfToken = {{ csrf_token()|tojson }};
-        const themeUserAuthenticated = document.body.dataset.authenticated === '1';
-        const themeSettingsBtn = document.getElementById('theme-settings-btn');
-        const themeSettingsModal = document.getElementById('theme-settings-modal');
-        const themeSettingsClose = document.getElementById('theme-settings-close');
-        const themeSettingsReset = document.getElementById('theme-settings-reset');
-        const themeSettingsSave = document.getElementById('theme-settings-save');
-        const accentHueInput = document.getElementById('accent-hue-input');
-        const accentPickerValue = document.getElementById('accent-picker-value');
-        const accentPickerLabel = document.getElementById('accent-picker-label');
-        const accentPickerPreview = document.getElementById('accent-picker-preview');
-        const densityButtons = Array.from(document.querySelectorAll('[data-density]'));
-        const paletteButtons = Array.from(document.querySelectorAll('[data-palette]'));
-        let persistedThemePrefs = { ...defaultThemePrefs };
-        let draftThemePrefs = { ...defaultThemePrefs };
-
-        const chartPalettes = { default: true, ...themeUtils.fixedPalettes };
-
-        function normalizeHex(value) {
-            return themeUtils.normalizeHex(value);
-        }
-
-        function normalizeThemePrefs(prefs = {}) {
-            const normalized = {
-                theme_accent: themeUtils.accessibleAccent(prefs.theme_accent || defaultThemePrefs.theme_accent),
-                theme_density: prefs.theme_density === 'compact' ? 'compact' : 'comfortable',
-                theme_chart_palette: chartPalettes[prefs.theme_chart_palette]
-                    ? prefs.theme_chart_palette
-                    : defaultThemePrefs.theme_chart_palette,
-            };
-            normalized.theme_preferences_customized = Boolean(
-                prefs.theme_preferences_customized
-                || Object.keys(defaultThemePrefs).some((key) => normalized[key] !== defaultThemePrefs[key])
-            );
-            return normalized;
-        }
-
-        function themePrefsPayload(prefs) {
-            const normalized = normalizeThemePrefs(prefs);
-            return {
-                theme_accent: normalized.theme_accent,
-                theme_density: normalized.theme_density,
-                theme_chart_palette: normalized.theme_chart_palette,
-            };
-        }
-
-        function hasCustomThemePrefs(prefs) {
-            if (!prefs) return false;
-            const normalized = normalizeThemePrefs(prefs);
-            return Object.keys(defaultThemePrefs).some((key) => normalized[key] !== defaultThemePrefs[key]);
-        }
-
-        function updateThemeControls(prefs = draftThemePrefs) {
-            densityButtons.forEach((button) => {
-                const isActive = button.dataset.density === prefs.theme_density;
-                button.classList.toggle('active', isActive);
-                button.setAttribute('aria-pressed', String(isActive));
+            window.addEventListener("beforeinstallprompt", (event) => {
+                event.preventDefault();
+                deferredPrompt = event;
+                ensureInstallButton().hidden = false;
             });
-            paletteButtons.forEach((button) => {
-                const isActive = button.dataset.palette === prefs.theme_chart_palette;
-                button.classList.toggle('active', isActive);
-                button.setAttribute('aria-pressed', String(isActive));
-            });
-            document.querySelectorAll('.accent-swatch').forEach((swatch) => {
-                const swatchAccent = themeUtils.accessibleAccent(swatch.dataset.accent);
-                const isActive = swatchAccent === prefs.theme_accent;
-                swatch.classList.toggle('active', isActive);
-                swatch.setAttribute('aria-pressed', String(isActive));
-            });
-            if (accentHueInput) {
-                const hsl = themeUtils.rgbToHsl(themeUtils.hexToRgb(prefs.theme_accent));
-                accentHueInput.value = String(Math.round(hsl.h));
-                accentPickerValue.textContent = prefs.theme_accent.toUpperCase();
-                accentPickerLabel.textContent = accentLabelForHue(hsl.h);
-                accentPickerPreview.style.background = 'var(--accent-gradient)';
-            }
-            updatePalettePreviews(prefs.theme_accent);
-        }
 
-        function accentLabelForHue(hue) {
-            if (hue < 22 || hue >= 340) return 'Red';
-            if (hue < 50) return 'Orange';
-            if (hue < 82) return 'Amber';
-            if (hue < 155) return 'Green';
-            if (hue < 190) return 'Teal';
-            if (hue < 230) return 'Blue';
-            if (hue < 285) return 'Purple';
-            return 'Rose';
-        }
+            window.addEventListener("appinstalled", () => {
+                deferredPrompt = null;
+                if (installButton) {
+                    installButton.hidden = true;
+                }
+            });
 
-        function updatePalettePreviews(accent) {
-            const previewMap = {
-                default: themeUtils.chartPalette('default', accent),
-                pastel: themeUtils.chartPalette('pastel', accent),
-                vivid: themeUtils.chartPalette('vivid', accent),
-                colorblind: themeUtils.chartPalette('colorblind', accent),
-            };
-            paletteButtons.forEach((button) => {
-                const colors = previewMap[button.dataset.palette] || previewMap.default;
-                button.querySelectorAll('.chart-palette-preview span').forEach((span, index) => {
-                    span.style.background = colors[index] || colors[0];
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => {
+                    // Safe no-op: PWA install support should never break the page.
                 });
             });
-        }
-
-        function applyAccentColor(color) {
-            const details = themeUtils.accentDetails(color);
-            root.style.setProperty('--accent', details.accent);
-            root.style.setProperty('--accent-rgb', `${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}`);
-            root.style.setProperty('--accent-2', details.accent2);
-            root.style.setProperty('--accent-2-rgb', `${details.accent2Rgb.r}, ${details.accent2Rgb.g}, ${details.accent2Rgb.b}`);
-            root.style.setProperty('--accent-hover', details.hover);
-            root.style.setProperty('--accent-dim', `rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.16)`);
-            root.style.setProperty('--accent-surface', `rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.10)`);
-            root.style.setProperty('--accent-surface-strong', `rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.18)`);
-            root.style.setProperty('--accent-foreground', details.foreground);
-            root.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${details.accent}, ${details.accent2})`);
-            root.style.setProperty('--accent-surface-gradient', `linear-gradient(135deg, rgba(${details.rgb.r}, ${details.rgb.g}, ${details.rgb.b}, 0.14), rgba(${details.accent2Rgb.r}, ${details.accent2Rgb.g}, ${details.accent2Rgb.b}, 0.10))`);
-        }
-
-        function applyDensity(density) {
-            const nextDensity = density === 'compact' ? 'compact' : 'comfortable';
-            document.body.classList.toggle('compact', nextDensity === 'compact');
-            root.style.setProperty('--radius', nextDensity === 'compact' ? '8px' : '10px');
-            root.style.setProperty('--radius-lg', nextDensity === 'compact' ? '12px' : '16px');
-            root.style.setProperty('--topbar-height', nextDensity === 'compact' ? '50px' : '56px');
-            root.style.setProperty('--sidebar-width', nextDensity === 'compact' ? '56px' : '64px');
-        }
-
-        function applyChartPalette(palette, accent = draftThemePrefs.theme_accent) {
-            const colors = themeUtils.chartPalette(palette, accent);
-            colors.forEach((color, index) => {
-                root.style.setProperty(`--chart-${index + 1}`, color);
-            });
-        }
-
-        function applyThemeVisuals(prefs) {
-            const normalized = normalizeThemePrefs(prefs);
-            applyAccentColor(normalized.theme_accent);
-            applyDensity(normalized.theme_density);
-            applyChartPalette(normalized.theme_chart_palette, normalized.theme_accent);
-            updateThemeControls(normalized);
-            if (typeof window.refreshThemedCharts === 'function') {
-                window.refreshThemedCharts();
-            }
-        }
-
-        function readLocalThemePrefs() {
-            try {
-                return JSON.parse(localStorage.getItem(themePrefsStorageKey) || '{}');
-            } catch {
-                return {};
-            }
-        }
-
-        function writeLocalThemePrefs(prefs) {
-            localStorage.setItem(themePrefsStorageKey, JSON.stringify(themePrefsPayload(prefs)));
-        }
-
-        function setPersistedThemePrefs(prefs) {
-            persistedThemePrefs = normalizeThemePrefs(prefs);
-            draftThemePrefs = { ...persistedThemePrefs };
-            applyThemeVisuals(persistedThemePrefs);
-            syncThemeForm(persistedThemePrefs);
-        }
-
-        function setDraftThemePrefs(prefs) {
-            draftThemePrefs = normalizeThemePrefs({ ...draftThemePrefs, ...prefs });
-            applyThemeVisuals(draftThemePrefs);
-            syncThemeForm(draftThemePrefs);
-        }
-
-        function syncThemeForm(prefs = draftThemePrefs) {
-            updateThemeControls(prefs);
-        }
-
-        function getThemeFormPrefs() {
-            return {
-                theme_accent: draftThemePrefs.theme_accent,
-                theme_density: draftThemePrefs.theme_density,
-                theme_chart_palette: draftThemePrefs.theme_chart_palette,
-            };
-        }
-
-        function openThemeSettings() {
-            draftThemePrefs = { ...persistedThemePrefs };
-            syncThemeForm();
-            themeSettingsModal.classList.add('open');
-            accentHueInput.focus();
-        }
-
-        function closeThemeSettings({ revert = true } = {}) {
-            themeSettingsModal.classList.remove('open');
-            if (revert) {
-                draftThemePrefs = { ...persistedThemePrefs };
-                applyThemeVisuals(persistedThemePrefs);
-                syncThemeForm(persistedThemePrefs);
-            }
-            themeSettingsBtn.focus();
-        }
-
-        async function persistThemePrefs(prefs, { silent = false, closePanel = false } = {}) {
-            const payload = themePrefsPayload(prefs);
-            applyThemeVisuals(payload);
-
-            if (!themeUserAuthenticated) {
-                writeLocalThemePrefs(payload);
-                setPersistedThemePrefs({ ...payload, theme_preferences_customized: hasCustomThemePrefs(payload) });
-                if (!silent) showToast('Theme settings saved', 'success');
-                if (closePanel) closeThemeSettings({ revert: false });
-                return true;
-            }
-
-            themeSettingsSave.disabled = true;
-            try {
-                const response = await fetch(themePrefsUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': themeCsrfToken,
-                    },
-                    body: JSON.stringify(payload),
-                });
-                const result = await response.json();
-                if (!response.ok) {
-                    const errors = result.errors ? Object.values(result.errors).join(' ') : result.error;
-                    throw new Error(errors || 'Unable to save theme settings.');
-                }
-                setPersistedThemePrefs(result);
-                writeLocalThemePrefs(result);
-                if (!silent) showToast('Theme settings saved', 'success');
-                if (closePanel) closeThemeSettings({ revert: false });
-                return true;
-            } catch (error) {
-                if (!silent) showToast(error.message || 'Unable to save theme settings.', 'error');
-                return false;
-            } finally {
-                themeSettingsSave.disabled = false;
-            }
-        }
-
-        async function refreshThemePrefs() {
-            const localPrefs = readLocalThemePrefs();
-            if (!themeUserAuthenticated) {
-                setPersistedThemePrefs(localPrefs);
-                return;
-            }
-
-            try {
-                const response = await fetch(themePrefsUrl);
-                if (!response.ok) return;
-                const serverPrefs = await response.json();
-                if (!serverPrefs.theme_preferences_customized && hasCustomThemePrefs(localPrefs)) {
-                    setDraftThemePrefs(localPrefs);
-                    await persistThemePrefs(localPrefs, { silent: true });
-                    return;
-                }
-                setPersistedThemePrefs(serverPrefs);
-                writeLocalThemePrefs(serverPrefs);
-            } catch {
-                setPersistedThemePrefs(serverThemePrefs || {});
-            }
-        }
-
-        async function saveThemePrefs() {
-            const prefs = getThemeFormPrefs();
-            await persistThemePrefs(prefs, { closePanel: true });
-        }
-
-        const localInitialThemePrefs = readLocalThemePrefs();
-        const initialThemePrefs = themeUserAuthenticated
-            && serverThemePrefs
-            && (serverThemePrefs.theme_preferences_customized || !hasCustomThemePrefs(localInitialThemePrefs))
-                ? serverThemePrefs
-                : localInitialThemePrefs;
-        setPersistedThemePrefs(initialThemePrefs);
-        refreshThemePrefs();
-
-        themeSettingsBtn.addEventListener('click', openThemeSettings);
-        themeSettingsClose.addEventListener('click', () => closeThemeSettings());
-        themeSettingsModal.addEventListener('click', (event) => {
-            if (event.target === themeSettingsModal) closeThemeSettings();
-        });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && themeSettingsModal.classList.contains('open')) {
-                closeThemeSettings();
-            }
-        });
-        accentHueInput.addEventListener('input', () => {
-            setDraftThemePrefs({ theme_accent: themeUtils.accessibleAccentFromHue(accentHueInput.value) });
-        });
-        densityButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                setDraftThemePrefs({ theme_density: button.dataset.density });
-            });
-        });
-        paletteButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                setDraftThemePrefs({ theme_chart_palette: button.dataset.palette });
-            });
-        });
-        document.querySelectorAll('.accent-swatch').forEach((swatch) => {
-            swatch.addEventListener('click', () => {
-                const nextAccent = swatch.dataset.accent;
-                setDraftThemePrefs({ theme_accent: nextAccent });
-            });
-        });
-        themeSettingsReset.addEventListener('click', () => {
-            setDraftThemePrefs(defaultThemePrefs);
-        });
-        themeSettingsSave.addEventListener('click', saveThemePrefs);
-
-        // Auto-dismiss flash messages
-        setTimeout(() => {
-            const fc = document.getElementById('flash-container');
-            if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
-        }, 4000);
+        })();
 
     </script>
     {% block scripts %}{% endblock %}
-</body>
+    </body>
 
 </html>
