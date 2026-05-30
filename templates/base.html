@@ -36,8 +36,6 @@
         })();
     </script>
    
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +45,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
     <style>
         :root {
@@ -961,6 +960,10 @@
                 <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Bookmarks</span>
             </a>
+            <a href="{{ url_for('cohort.index') }}" class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}" id="nav-cohorts" aria-label="Cohorts">
+                <i class="bi bi-people-fill" aria-hidden="true"></i>
+                <span class="tooltip-label">Cohorts</span>
+            </a>
             {% endif %}
             <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
                 <i class="bi bi-search" aria-hidden="true"></i>
@@ -1006,7 +1009,7 @@
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="#" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
                 <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
@@ -1053,22 +1056,7 @@
     </main>
 
     <!-- ─── Footer ─── -->
-    <footer class="site-footer" role="contentinfo">
-        <div class="footer-links">
-            <a href="/faq">FAQ</a>
-            <a href="#">Contact Us</a>
-            <a href="#">Privacy</a>
-            <a href="#">Timeline</a>
-            <a href="#">Terms</a>
-            <a href="#">Refund Policy</a>
-        </div>
-        <div class="footer-socials">
-            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin" aria-hidden="true"></i></a>
-            <a href="#" aria-label="X/Twitter"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram" aria-hidden="true"></i></a>
-        </div>
-        <p class="footer-copy">&copy; 2026 450 DSA Cracker. All rights reserved.</p>
-    </footer>
+    {% include 'partials/footer.html' %}
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -1134,6 +1122,42 @@
             setTimeout(removeToast, timeout);
         };
 
+        window.setButtonBusyState = function(button, contentEl, options = {}) {
+            if (!button || !contentEl) return;
+
+            const {
+                busy = false,
+                busyLabel = 'Working...',
+                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
+            } = options;
+
+            if (!contentEl.dataset.idleHtml) {
+                contentEl.dataset.idleHtml = idleHTML;
+            }
+
+            if (busy) {
+                button.disabled = true;
+                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+                return;
+            }
+
+            button.disabled = false;
+            contentEl.innerHTML = contentEl.dataset.idleHtml;
+        };
+
+        window.setIconBusyState = function(icon, options = {}) {
+            if (!icon) return;
+
+            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
+            if (!icon.dataset.idleClassName) {
+                icon.dataset.idleClassName = idleClassName;
+            }
+
+            icon.className = options.busy
+                ? `${icon.dataset.idleClassName} btn-spinner`
+                : icon.dataset.idleClassName;
+        };
+
         function applyTheme(theme) {
             if (theme === 'light') {
                 root.style.setProperty('--bg-primary', '#f0f2f5');
@@ -1144,7 +1168,7 @@
                 root.style.setProperty('--border-subtle', '#ececec');
                 root.style.setProperty('--text-primary', '#111111');
                 root.style.setProperty('--text-secondary', '#555555');
-                root.style.setProperty('--text-muted', '#999999');
+                root.style.setProperty('--text-muted', '#6b7280');
                 themeIcon.className = 'bi bi-sun-fill';
             } else {
                 root.style.setProperty('--bg-primary', '#111111');
@@ -1155,7 +1179,7 @@
                 root.style.setProperty('--border-subtle', '#222222');
                 root.style.setProperty('--text-primary', '#f0f0f0');
                 root.style.setProperty('--text-secondary', '#a0a0a0');
-                root.style.setProperty('--text-muted', '#666666');
+                root.style.setProperty('--text-muted', '#8a8a8a');
                 themeIcon.className = 'bi bi-moon-fill';
             }
         }

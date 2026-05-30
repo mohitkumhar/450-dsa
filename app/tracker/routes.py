@@ -1,29 +1,45 @@
 from bson import ObjectId
-from flask import Blueprint, Response, jsonify, render_template, request
+from bson.errors import InvalidId
+from flask import Blueprint, Response, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
 from app.extensions import db
 from app.utils import json_error, json_success, utc_now
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
+from progress_import import parse_csv_backup, parse_json_backup, process_dry_run
 
 
 tracker_bp = Blueprint("tracker", __name__)
 
+DIFFICULTY_FILTERS = {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+}
+
+
+def normalize_difficulty_filter(raw_filter):
+    value = (raw_filter or "all").strip().lower()
+    if value == "all":
+        return "all"
+    return DIFFICULTY_FILTERS.get(value, "all")
 INDEX_QUESTION_PROJECTION = {"topic": 1}
 TOPIC_PAGE_QUESTION_PROJECTION = {
     "problem": 1,
     "difficulty": 1,
     "url": 1,
     "url2": 1,
+    "editorial_links": 1,
 }
 TOPIC_NOTES_EXPORT_PROJECTION = {"problem": 1}
-QUESTION_STATUS_PROJECTION = {"problem": 1}
+QUESTION_STATUS_PROJECTION = {"problem": 1, "url": 1}
 BOOKMARKS_QUESTION_PROJECTION = {
     "topic": 1,
     "problem": 1,
     "url": 1,
     "url2": 1,
+    "editorial_links": 1,
 }
 CSV_EXPORT_QUESTION_PROJECTION = {
     "topic": 1,
@@ -37,8 +53,19 @@ ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
 
 @tracker_bp.route("/")
 def index():
-    topics = list(db.topic.find().sort("position", 1))
-    total_questions = db.question.count_documents({})
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        total_questions = pre["total_questions"]
+        topic_question_count = pre["topic_question_count"]
+    else:
+        topics = list(db.topic.find().sort("position", 1))
+        total_questions = db.question.count_documents({})
+        all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
+        topic_question_count = {}
+        for question in all_questions:
+            topic_id = str(question["topic"])
+            topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
 
     if current_user.is_authenticated:
         progress = current_user.progress
@@ -46,12 +73,6 @@ def index():
     else:
         progress = {}
         done_questions = 0
-
-    all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
-    topic_question_count = {}
-    for question in all_questions:
-        topic_id = str(question["topic"])
-        topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
 
     topic_progress = {}
     for topic in topics:
@@ -75,13 +96,16 @@ def index():
 @tracker_bp.route("/topic/<topic_id>")
 def topic(topic_id):
     try:
-        topic_doc = db.topic.find_one({"_id": ObjectId(topic_id)})
-    except Exception:
+        topic_id_obj = ObjectId(topic_id)
+    except InvalidId:
         return "Topic not found", 404
+    topic_doc = db.topic.find_one({"_id": topic_id_obj})
     if not topic_doc:
         return "Topic not found", 404
 
     questions = list(db.question.find({"topic": topic_doc["_id"]}, TOPIC_PAGE_QUESTION_PROJECTION))
+    for question in questions:
+        question["editorial_links"] = question_editorial_links(question)
     progress_dict = current_user.progress if current_user.is_authenticated else {}
     
     # Calculate counts based on the unfiltered list of questions
@@ -94,7 +118,7 @@ def topic(topic_id):
     todo_count = total_count - done_count - skipped_count
     
     # Get difficulty filter from query parameter
-    difficulty_filter = request.args.get('difficulty', 'all')
+    difficulty_filter = normalize_difficulty_filter(request.args.get('difficulty', 'all'))
     status_filter = request.args.get('status', 'all')
     
     if difficulty_filter != 'all':
@@ -139,9 +163,10 @@ def topic(topic_id):
 @login_required
 def export_topic_notes(topic_id):
     try:
-        topic_doc = db.topic.find_one({"_id": ObjectId(topic_id)})
-    except Exception:
+        topic_id_obj = ObjectId(topic_id)
+    except InvalidId:
         return "Topic not found", 404
+    topic_doc = db.topic.find_one({"_id": topic_id_obj})
     if not topic_doc:
         return "Topic not found", 404
 
@@ -211,9 +236,10 @@ def update_question(question_id):
               example: Question not found
     """
     try:
-        question = db.question.find_one({"_id": ObjectId(question_id)}, QUESTION_STATUS_PROJECTION)
-    except Exception:
+        question_id_obj = ObjectId(question_id)
+    except InvalidId:
         return json_error("Question not found", status_code=404)
+    question = db.question.find_one({"_id": question_id_obj}, QUESTION_STATUS_PROJECTION)
     if not question:
         return json_error("Question not found", status_code=404)
 
@@ -230,20 +256,26 @@ def update_question(question_id):
     progress = current_user.progress
     existing = progress.get(question_id, {})
     message = ""
+    platform_count_field = f"in_sheet_platform_counts.{platform_from_question_url(question.get('url'))}"
 
     if "done" in data:
         if data["done"] and not existing.get("done"):
             update_fields[f"progress.{question_id}.timestamp"] = utc_now()
             message = f"✅ Marked '{question.get('problem', 'Question')}' as complete!"
             update_fields[f"progress.{question_id}.skipped"] = False
+            update_fields[platform_count_field] = 1
         elif not data["done"] and existing.get("done"):
             message = f"📝 Marked '{question.get('problem', 'Question')}' as incomplete"
+        if not data["done"] and existing.get("done"):
+            update_fields[platform_count_field] = -1
         update_fields[f"progress.{question_id}.done"] = data["done"]
 
     if "skipped" in data:
         if data["skipped"] and not existing.get("skipped"):
             message = f"⏭️ Marked '{question.get('problem', 'Question')}' as skipped for now"
             update_fields[f"progress.{question_id}.done"] = False
+            if existing.get("done"):
+                update_fields[platform_count_field] = -1
         elif not data["skipped"] and existing.get("skipped"):
             message = f"↩️ Removed skipped status for '{question.get('problem', 'Question')}'"
         update_fields[f"progress.{question_id}.skipped"] = data["skipped"]
@@ -260,8 +292,24 @@ def update_question(question_id):
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
 
     if update_fields:
-        db.user.update_one({"_id": user_id}, {"$set": update_fields})
+        inc_fields = {
+            field: update_fields.pop(field)
+            for field in list(update_fields)
+            if field.startswith("in_sheet_platform_counts.")
+        }
+        update_doc = {}
+        if update_fields:
+            update_doc["$set"] = update_fields
+        if inc_fields:
+            update_doc["$inc"] = inc_fields
+        db.user.update_one({"_id": user_id}, update_doc)
         current_user.reload()
+        pre = current_app.config.get("_PRECOMPUTED")
+        total_questions = (pre["total_questions"] if pre
+                           else db.question.count_documents({}))
+        update_computed_stats(user_id, current_user.progress, db, total_questions)
+        invalidate_leaderboard_cache()
+        warm_public_card_cache(user_id, db_handle=db)
         return json_success(message=message)
 
     return json_success(message="No changes made")
@@ -277,7 +325,7 @@ def bookmarks():
     for question_id in bookmarked_question_ids:
         try:
             object_ids.append(ObjectId(question_id))
-        except Exception:
+        except InvalidId:
             pass
     questions = list(db.question.find({"_id": {"$in": object_ids}}, BOOKMARKS_QUESTION_PROJECTION))
 
@@ -292,15 +340,114 @@ def bookmarks():
 @tracker_bp.route("/export/csv")
 @login_required
 def export_csv():
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        questions = pre["all_questions"]
+        topic_lookup = {tid: t["name"] for tid, t in pre["topic_lookup"].items()}
+    else:
+        questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+        topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
+        topic_lookup = {
+            topic['_id']: topic.get('name', 'Unknown')
+            for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
+        }
+    csv_content = build_progress_csv(questions, topic_lookup, current_user.progress)
+    response = Response(csv_content, mimetype='text/csv')
+    response.headers['Content-Disposition'] = 'attachment; filename=progress.csv'
+    return response
+
+
+@tracker_bp.route("/export/study-plan.ics")
+@login_required
+def export_study_plan_ics():
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        questions_by_topic = {}
+        for q in pre["all_questions"]:
+            questions_by_topic.setdefault(q["topic"], []).append(q)
+        for topic in topics:
+            topic["questions"] = questions_by_topic.get(topic["_id"], [])
+    else:
+        topics = list(db.topic.find({}, {"name": 1, "position": 1}).sort("position", 1))
+        topic_ids = [topic["_id"] for topic in topics]
+        questions = list(db.question.find({"topic": {"$in": topic_ids}}, {"topic": 1}))
+        questions_by_topic = {}
+        for question in questions:
+            questions_by_topic.setdefault(question["topic"], []).append(question)
+        for topic in topics:
+            topic["questions"] = questions_by_topic.get(topic["_id"], [])
+
+    calendar_text = build_study_plan_ics(topics, current_user.progress)
+    response = Response(calendar_text, mimetype="text/calendar")
+    response.headers["Content-Disposition"] = "attachment; filename=study-plan.ics"
+    return response
+
+
+@tracker_bp.route("/export/all-notes")
+@login_required
+def export_all_notes():
+    """Download all non-empty notes grouped by topic as a single Markdown file."""
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        questions_by_topic = {}
+        for question in pre["all_questions"]:
+            questions_by_topic.setdefault(question["topic"], []).append(question)
+    else:
+        topics = list(db.topic.find().sort("position", 1))
+        all_questions = list(db.question.find({}, ALL_NOTES_QUESTION_PROJECTION))
+        questions_by_topic = {}
+        for question in all_questions:
+            topic_id = str(question["topic"])
+            questions_by_topic.setdefault(topic_id, []).append(question)
+
+    markdown = build_all_notes_markdown(
+        topics, questions_by_topic, current_user.progress,
+    )
+    response = Response(markdown, mimetype="text/markdown")
+    response.headers["Content-Disposition"] = 'attachment; filename=all_notes.md'
+    return response
+
+
+@tracker_bp.route("/export/json")
+@login_required
+def export_json():
     questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
     topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
     topic_lookup = {
         topic['_id']: topic.get('name', 'Unknown')
         for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
     }
-    csv_content = build_progress_csv(questions, topic_lookup, current_user.progress)
-    response = Response(csv_content, mimetype='text/csv')
-    response.headers['Content-Disposition'] = 'attachment; filename=progress.csv'
+
+    progress = current_user.progress
+    exported_progress = []
+
+    for question in questions:
+        question_id = str(question.get('_id'))
+        item_progress = progress.get(question_id, {}) or {}
+        if item_progress.get('done') or item_progress.get('bookmark') or item_progress.get('skipped') or item_progress.get('notes'):
+            topic_name = topic_lookup.get(question.get('topic'), 'Unknown')
+            exported_progress.append({
+                "topic": topic_name,
+                "problem": question.get('problem', ''),
+                "done": bool(item_progress.get('done', False)),
+                "bookmark": bool(item_progress.get('bookmark', False)),
+                "skipped": bool(item_progress.get('skipped', False)),
+                "notes": item_progress.get('notes', ''),
+                "url": question.get('url', ''),
+                "url2": question.get('url2', ''),
+            })
+
+    backup_data = {
+        "version": "1.0",
+        "exported_at": utc_now().isoformat(),
+        "progress": exported_progress
+    }
+
+    import json
+    response = Response(json.dumps(backup_data, indent=2), mimetype='application/json')
+    response.headers['Content-Disposition'] = 'attachment; filename=progress_backup.json'
     return response
 
 

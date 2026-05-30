@@ -1,12 +1,26 @@
 import json
+import logging
+import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 
 from app.utils import normalize_coding_ninjas_profile_id
 
+logger = logging.getLogger("flask.app")
+
+
+LEETCODE_REQUEST_TIMEOUT_SECONDS = 8
+LEETCODE_RATING_HISTORY_TIMEOUT_SECONDS = 10
+GITHUB_REQUEST_TIMEOUT_SECONDS = 5
+GFG_API_TIMEOUT_SECONDS = 6
+GFG_PAGE_TIMEOUT_SECONDS = 8
+ATCODER_REQUEST_TIMEOUT_SECONDS = 8
+CODING_NINJAS_REQUEST_TIMEOUT_SECONDS = 8
+CODEWARS_REQUEST_TIMEOUT_SECONDS = 8
 
 _session_local = threading.local()
 
@@ -52,6 +66,31 @@ query userProfile($username: String!) {
 """
 
 
+def run_fetch_jobs(fetch_jobs, max_workers=5):
+    if not fetch_jobs:
+        return {}, {}
+
+    worker_count = min(max_workers, len(fetch_jobs))
+    results = {}
+    errors = {}
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        future_names = {
+            executor.submit(fetch_job): name
+            for name, fetch_job in fetch_jobs.items()
+        }
+
+        for future in as_completed(future_names):
+            name = future_names[future]
+            try:
+                results[name] = future.result()
+            except Exception as exc:
+                results[name] = None
+                errors[name] = str(exc)
+
+    return results, errors
+
+
 def build_leetcode_profile_payload(username):
     return {
         "query": LEETCODE_PROFILE_QUERY,
@@ -64,7 +103,7 @@ def fetch_leetcode(username):
         response = _get_http_session().post(
             "https://leetcode.com/graphql",
             json=build_leetcode_profile_payload(username),
-            timeout=8,
+            timeout=LEETCODE_REQUEST_TIMEOUT_SECONDS,
         )
         response_json = response.json().get("data", {})
         data = response_json.get("matchedUser", {})
@@ -74,7 +113,7 @@ def fetch_leetcode(username):
         calendar_data = json.loads(calendar_str) if calendar_str else {}
         result_calendar = {}
         for ts, count in calendar_data.items():
-            day = datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+            day = datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
             result_calendar[day] = result_calendar.get(day, 0) + count
         total_solved = 0
         diff_stats = {"Easy": 0, "Medium": 0, "Hard": 0}
@@ -93,7 +132,7 @@ def fetch_leetcode(username):
             "contest": contest,
         }
     except Exception as exc:
-        print("LC Error", exc)
+        logger.error(f"LeetCode stats fetch failed: {exc}")
         return {}
 
 
@@ -111,7 +150,7 @@ def fetch_leetcode_rating_history(username):
         response = _get_http_session().post(
             "https://leetcode.com/graphql",
             json={"query": query, "variables": {"username": username}},
-            timeout=10,
+            timeout=LEETCODE_RATING_HISTORY_TIMEOUT_SECONDS,
             headers={"Content-Type": "application/json", "Referer": "https://leetcode.com"},
         )
         history_raw = response.json().get("data", {}).get("userContestRankingHistory", [])
@@ -119,11 +158,11 @@ def fetch_leetcode_rating_history(username):
         for item in history_raw:
             if item.get("attended"):
                 ts = item.get("contest", {}).get("startTime", 0)
-                day = datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+                day = datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%d")
                 result.append({"x": day, "y": round(float(item.get("rating", 0)), 0)})
         return sorted(result, key=lambda item: item["x"])
     except Exception as exc:
-        print("LC Rating History Error", exc)
+        logger.error(f"LeetCode rating history fetch failed: {exc}")
         return []
 
 
@@ -140,7 +179,7 @@ def fetch_lc_badges(username):
         response = _get_http_session().post(
             "https://leetcode.com/graphql",
             json={"query": query, "variables": {"username": username}},
-            timeout=8,
+            timeout=LEETCODE_REQUEST_TIMEOUT_SECONDS,
             headers={"Content-Type": "application/json", "Referer": "https://leetcode.com"},
         )
         badges_raw = response.json().get("data", {}).get("matchedUser", {}).get("badges", [])
@@ -154,7 +193,7 @@ def fetch_lc_badges(username):
             for badge in badges_raw
         ]
     except Exception as exc:
-        print("LC Badges Error", exc)
+        logger.error(f"LeetCode badges fetch failed: {exc}")
         return []
 
 
@@ -163,7 +202,7 @@ def fetch_hr_badges(username):
     try:
         response = _get_http_session().get(
             f"https://www.hackerrank.com/rest/hackers/{username}/badges",
-            timeout=8,
+            timeout=LEETCODE_REQUEST_TIMEOUT_SECONDS,
             headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
         )
         if response.status_code == 200:
@@ -177,48 +216,73 @@ def fetch_hr_badges(username):
             return badges, total_solved
         return [], 0
     except Exception as exc:
-        print("HR Badges Error", exc)
+        logger.error(f"HackerRank badges fetch failed: {exc}")
         return [], 0
 
 
 def fetch_github(username):
     try:
-        response = _get_http_session().get(f"https://github.com/users/{username}/contributions", timeout=5)
+        response = _get_http_session().get(
+            f"https://github.com/users/{username}/contributions",
+            timeout=GITHUB_REQUEST_TIMEOUT_SECONDS,
+        )
         matches = re.findall(r"(\d+|No)\s+contributions?\s+on\s+(\d{4}-\d{2}-\d{2})", response.text)
         result_calendar = {}
         for count_str, date_str in matches:
             count = 0 if count_str == "No" else int(count_str)
             result_calendar[date_str] = count
 
-        response_issues = _get_http_session().get(
-            f"https://api.github.com/search/issues?q=type:issue+author:{username}",
-            timeout=5,
-        ).json()
-        response_prs = _get_http_session().get(
-            f"https://api.github.com/search/issues?q=type:pr+author:{username}",
-            timeout=5,
-        ).json()
-        response_merged = _get_http_session().get(
-            f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
-            timeout=5,
-        ).json()
-        headers = {"Accept": "application/vnd.github.cloak-preview+json"}
-        response_commits = _get_http_session().get(
-            f"https://api.github.com/search/commits?q=author:{username}",
-            headers=headers,
-            timeout=5,
-        ).json()
+        auth_headers = {}
+        token = os.environ.get("GITHUB_TOKEN")
+        if token:
+            auth_headers["Authorization"] = f"token {token}"
 
-        stats = {
-            "issues": response_issues.get("total_count", 0),
-            "prs": response_prs.get("total_count", 0),
-            "merged_prs": response_merged.get("total_count", 0),
-            "commits": response_commits.get("total_count", 0),
-        }
+        def github_search_json(url, extra_headers=None):
+            headers = {**auth_headers, **(extra_headers or {})}
+            search_response = _get_http_session().get(
+                url,
+                headers=headers,
+                timeout=GITHUB_REQUEST_TIMEOUT_SECONDS,
+            )
+            if search_response.status_code in (403, 429):
+                return "rate_limited", None
+            if search_response.status_code != 200:
+                return "api_error", None
+            return None, search_response.json()
+
+        searches = [
+            (
+                "issues",
+                f"https://api.github.com/search/issues?q=type:issue+author:{username}",
+                None,
+            ),
+            (
+                "prs",
+                f"https://api.github.com/search/issues?q=type:pr+author:{username}",
+                None,
+            ),
+            (
+                "merged_prs",
+                f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
+                None,
+            ),
+            (
+                "commits",
+                f"https://api.github.com/search/commits?q=author:{username}",
+                {"Accept": "application/vnd.github.cloak-preview+json"},
+            ),
+        ]
+
+        stats = {}
+        for key, url, extra_headers in searches:
+            error, payload = github_search_json(url, extra_headers)
+            if error:
+                return {"error": error, "calendar": result_calendar, "stats": None}
+            stats[key] = payload.get("total_count", 0)
 
         return {"calendar": result_calendar, "stats": stats}
-    except Exception as exc:
-        print("GH Error", exc)
+    except requests.exceptions.RequestException as exc:
+        logger.error(f"GitHub contributions fetch failed: {exc}")
         return {}
 
 
@@ -228,7 +292,7 @@ def fetch_gfg(username):
         try:
             response = _get_http_session().get(
                 f"https://geeks-for-geeks-stats-api.vercel.app/?raw=Y&userName={username}",
-                timeout=6,
+                timeout=GFG_API_TIMEOUT_SECONDS,
             )
             if response.status_code == 200:
                 data = response.json()
@@ -236,14 +300,14 @@ def fetch_gfg(username):
                 if total and int(total) > 0:
                     return {"total": int(total)}
         except Exception as exc:
-            print("GFG Error", exc)
+            logger.warning(f"GFG stats API method failed: {exc}")
 
         try:
             headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             response = _get_http_session().get(
                 f"https://practiceapi.geeksforgeeks.org/api/v1/user/practice/stats/?user={username}",
                 headers=headers,
-                timeout=6,
+                timeout=GFG_API_TIMEOUT_SECONDS,
             )
             if response.status_code == 200:
                 data = response.json()
@@ -251,10 +315,14 @@ def fetch_gfg(username):
                 if total:
                     return {"total": int(total)}
         except Exception as exc:
-            print("GFG Error", exc)
+            logger.warning(f"GFG practice API method failed: {exc}")
 
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120"}
-        response = _get_http_session().get(f"https://www.geeksforgeeks.org/user/{username}/", timeout=8, headers=headers)
+        response = _get_http_session().get(
+            f"https://www.geeksforgeeks.org/user/{username}/",
+            timeout=GFG_PAGE_TIMEOUT_SECONDS,
+            headers=headers,
+        )
         for pattern in [
             r'"total_problems_solved"\s*[:=]\s*(\d+)',
             r'"totalProblemsSolved"\s*[:=]\s*(\d+)',
@@ -267,7 +335,7 @@ def fetch_gfg(username):
                 return {"total": int(match.group(1))}
         return {"total": 0}
     except Exception as exc:
-        print("GFG Error", exc)
+        logger.error(f"GFG stats fetch failed completely: {exc}")
         return {}
 
 
@@ -275,11 +343,13 @@ def fetch_atcoder(handle):
     try:
         r = _get_http_session().get(
             'https://kenkoooo.com/atcoder/atcoder-api/v3/user/acceptance_count',
-            params={'user': handle}, timeout=8)
+            params={'user': handle},
+            timeout=ATCODER_REQUEST_TIMEOUT_SECONDS,
+        )
         if r.status_code == 200:
             return {'total': r.json().get('count', 0)}
     except Exception as e:
-        print(f'AtCoder Error: {e}')
+        logger.error(f"AtCoder stats fetch failed: {e}")
     return {}
 
 
@@ -296,7 +366,12 @@ def fetch_coding_ninjas(username):
 
     try:
         api_url = "https://www.naukri.com/code360/api/v3/public_section/profile/user_details"
-        response = _get_http_session().get(api_url, params={"uuid": profile_id}, headers=headers, timeout=8)
+        response = _get_http_session().get(
+            api_url,
+            params={"uuid": profile_id},
+            headers=headers,
+            timeout=CODING_NINJAS_REQUEST_TIMEOUT_SECONDS,
+        )
         if response.status_code == 200:
             data = response.json().get("data") or {}
             total = 0
@@ -306,7 +381,7 @@ def fetch_coding_ninjas(username):
             if total > 0:
                 return {"total": total}
     except Exception as exc:
-        print("Coding Ninjas API Error", exc)
+        logger.warning(f"Coding Ninjas API method failed: {exc}")
 
     urls = [
         f"https://www.naukri.com/code360/profile/{profile_id}",
@@ -326,7 +401,11 @@ def fetch_coding_ninjas(username):
     try:
         for url in urls:
             try:
-                response = _get_http_session().get(url, headers=headers, timeout=8)
+                response = _get_http_session().get(
+                    url,
+                    headers=headers,
+                    timeout=CODING_NINJAS_REQUEST_TIMEOUT_SECONDS,
+                )
                 if response.status_code != 200:
                     continue
                 for pattern in patterns:
@@ -334,8 +413,28 @@ def fetch_coding_ninjas(username):
                     if match:
                         return {"total": int(match.group(1))}
             except Exception as exc:
-                print("Coding Ninjas Error", exc)
+                logger.warning(f"Coding Ninjas profile page fetch failed: {exc}")
         return {"total": 0}
     except Exception as exc:
-        print("Coding Ninjas Error", exc)
+        logger.error(f"Coding Ninjas fetch failed completely: {exc}")
+        return {}
+
+
+def fetch_codewars(username):
+    """Fetch Codewars completed kata count, honor, and rank from public API."""
+    try:
+        response = _get_http_session().get(
+            f"https://www.codewars.com/api/v1/users/{username}",
+            timeout=CODEWARS_REQUEST_TIMEOUT_SECONDS,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            total = data.get("codeChallenges", {}).get("totalCompleted", 0)
+            honor = data.get("honor", 0)
+            rank_info = data.get("ranks", {}).get("overall", {})
+            rank_name = rank_info.get("name", "")
+            return {"total": int(total or 0), "honor": int(honor or 0), "rank": rank_name}
+        return {}
+    except Exception as exc:
+        logger.error(f"Codewars stats fetch failed: {exc}")
         return {}

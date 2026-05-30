@@ -1,3 +1,4 @@
+from flask import current_app
 from app.extensions import db
 from app.utils import compute_c_score
 
@@ -6,7 +7,7 @@ def build_leaderboard_data():
     """Query all users and compute leaderboard rankings."""
     users = list(
         db.user.find(
-            {},
+            {"is_deactivated": {"$ne": True}},
             {
                 "name": 1,
                 "email": 1,
@@ -20,11 +21,16 @@ def build_leaderboard_data():
                 "progress": 1,
                 "external_totals": 1,
                 "external_daily_counts": 1,
+                "platform_calendars": 1,
             },
         )
     )
 
-    all_questions = list(db.question.find({}, {"url": 1}))
+    try:
+        pre = current_app.config.get("_PRECOMPUTED")
+    except RuntimeError:
+        pre = None
+    all_questions = pre["all_questions"] if pre else list(db.question.find({}, {"url": 1}))
     entries = []
     for user in users:
         name = user.get("name", "Anonymous")
@@ -44,6 +50,27 @@ def build_leaderboard_data():
         )
 
     return entries
+
+
+def sort_leaderboard_entries_by_c_score(entries=None):
+    """Return entries sorted by the same C-Score ordering used on the leaderboard."""
+    entries = entries if entries is not None else build_leaderboard_data()
+    return sorted(entries, key=lambda item: item["c_score"], reverse=True)
+
+
+def get_user_rank_by_c_score(user_id, entries=None):
+    """Return the one-based local leaderboard rank for the given user id."""
+    if not user_id:
+        return None
+
+    ranked_entries = sort_leaderboard_entries_by_c_score(entries)
+    user_id = str(user_id)
+
+    for index, entry in enumerate(ranked_entries, start=1):
+        if entry.get("user_id") == user_id:
+            return index
+
+    return None
 
 
 def build_college_leaderboard_data(entries=None):

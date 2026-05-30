@@ -559,3 +559,19 @@ def test_public_card_cache_reuse(client, app):
         assert response2.status_code == 200
 
         assert response1.data == response2.data
+
+
+def test_warm_public_card_cache_generates_card(app):
+    from app.profile.card_service import warm_public_card_cache
+
+    user_id = ObjectId()
+    app.mock_db.user.data[str(user_id)] = {
+        "_id": user_id,
+        "name": "Warm Cache User",
+        "progress": {},
+        "external_totals": {},
+    }
+    app.mock_db.question.data = {}
+
+    with patch("app.profile.card_service.db", app.mock_db):
+        assert warm_public_card_cache(user_id, db_handle=app.mock_db) is True

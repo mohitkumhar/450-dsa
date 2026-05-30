@@ -2,8 +2,6 @@
 {% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
-.back-btn { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 20px; padding: 7px 14px; border: 1px solid var(--border-color); border-radius: 8px; transition: all 0.2s; }
-.back-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 .topic-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
 .topic-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 24px; }
 
@@ -14,52 +12,17 @@
 .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
 .status-filter-buttons { margin-top: -8px; margin-bottom: 20px; }
 
-/* Difficulty badges - improved for color contrast */
-.difficulty-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px; }
-.difficulty-easy { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
-.difficulty-medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
-.difficulty-hard { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-
-/* High contrast mode support for difficulty badges */
-@media (prefers-contrast: high) {
-    .difficulty-easy { background: #10b981; color: black; border: 2px solid black; }
-    .difficulty-medium { background: #f59e0b; color: black; border: 2px solid black; }
-    .difficulty-hard { background: #ef4444; color: white; border: 2px solid white; }
-}
-
-.questions-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; overflow-x: auto; }
 .q-table { width: 100%; border-collapse: collapse; min-width: 600px; }
-.q-table thead th { background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); }
-.q-table tbody tr { border-bottom: 1px solid var(--border-subtle); transition: background 0.15s; }
-.q-table tbody tr:last-child { border-bottom: none; }
-.q-table tbody tr:hover { background: var(--bg-secondary); }
 .q-table tbody tr.row-done { background: rgba(34,197,94,0.04); }
-.q-table tbody td { padding: 12px 16px; font-size: 0.88rem; vertical-align: middle; }
 .q-num { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; min-width: 32px; }
-.q-checkbox { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
-.q-name { font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-.q-links { display: flex; gap: 6px; flex-wrap: wrap; }
-.q-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 20px; font-size: 0.73rem; font-weight: 700; text-decoration: none; transition: all 0.2s; }
-.q-badge:hover { opacity: 0.85; text-decoration: none; }
-.badge-lc { background: rgba(255,184,0,0.15); color: #ffb800; border: 1px solid rgba(255,184,0,0.25); }
-.badge-gfg { background: rgba(34,197,94,0.15); color: var(--success); border: 1px solid rgba(34,197,94,0.25); }
-.badge-hr { background: rgba(0,189,108,0.15); color: #00bd6c; border: 1px solid rgba(0,189,108,0.25); }
-.badge-cn { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
-.badge-yt { background: rgba(255,0,0,0.15); color: #ff0000; border: 1px solid rgba(255,0,0,0.25); }
-.badge-link { background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.25); }
-.action-icon { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; font-size: 1.1rem; color: var(--text-muted); transition: all 0.2s; }
-.action-icon:hover { background: var(--bg-secondary); color: var(--accent); }
-.action-icon.bookmarked { color: var(--warning); }
-.action-icon.skipped { color: var(--danger); }
-.action-icon:disabled, .q-checkbox:disabled { cursor: not-allowed; opacity: 0.6; }
-.notes-btn-sm { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 10px; font-size: 0.77rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-family: inherit; }
-.notes-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
-.notes-btn-sm.has-notes { border-color: var(--info); color: var(--info); }
 .topic-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .topic-header-main { min-width: 0; }
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
 
+.bookmark-btn { color: var(--text-muted); }
+.bookmark-btn:hover { color: var(--accent); }
+.bookmark-btn.bookmarked { color: var(--warning); }
 .topic-status {
     margin-bottom: 14px;
     padding: 10px 14px;
@@ -198,7 +161,7 @@
                         {% if q.url %}
                             {% set p1 = q.url|platform_name %}
                             <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p1=='LeetCode' %}badge-lc{% elif p1=='GFG' %}badge-gfg{% elif p1=='HackerRank' %}badge-hr{% elif p1=='Coding Ninjas' %}badge-cn{% elif p1=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               class="q-badge {{ p1 | platform_badge }}"
                                aria-label="Solve on {{ p1 }} (opens in new tab)">
                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
                             </a>
@@ -206,11 +169,18 @@
                         {% if q.url2 %}
                             {% set p2 = q.url2|platform_name %}
                             <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {% if p2=='LeetCode' %}badge-lc{% elif p2=='GFG' %}badge-gfg{% elif p2=='HackerRank' %}badge-hr{% elif p2=='Coding Ninjas' %}badge-cn{% elif p2=='YouTube' %}badge-yt{% else %}badge-link{% endif %}"
+                               class="q-badge {{ p2 | platform_badge }}"
                                aria-label="Solve on {{ p2 }} (opens in new tab)">
                                <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
                             </a>
                         {% endif %}
+                        {% for editorial in q.editorial_links %}
+                            <a href="{{ editorial.url }}" target="_blank" rel="noopener noreferrer"
+                               class="q-badge badge-link"
+                               aria-label="Read {{ editorial.label }} (opens in new tab)">
+                               <i class="bi bi-journal-text" aria-hidden="true"></i> {{ editorial.label }}
+                            </a>
+                        {% endfor %}
                     </div>
                 </td>
                 <td>
@@ -271,6 +241,7 @@ const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
   "csrfToken": csrf_token(),
 }|tojson }};
+const csrfToken = {{ csrf_token()|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
 const topicStatus = document.getElementById('topicStatus');
 
@@ -290,7 +261,101 @@ function setBookmarkState(btn, isBookmarked) {
     icon.className = isBookmarked ? 'bi bi-bookmark-fill' : 'bi bi-bookmark';
 }
 
+/* Offline Progress Queue
+   Queues done / bookmark / notes changes in localStorage when the
+   user is offline and flushes them automatically on reconnection.
+   Conflicts are resolved with last-write-wins using a timestamp so
+   the most recent action always takes precedence.
+*/
+const QUEUE_KEY = 'offlineProgressQueue';
+
+function readQueue() {
+    try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+    catch { return []; }
+}
+
+function writeQueue(q) {
+    try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+    catch { /* storage full; skip queue persistence */ }
+}
+
+function enqueue(id, data) {
+    const queue = readQueue();
+    // Merge into existing entry for same question (last-write-wins per field)
+    const idx = queue.findIndex(e => e.id === id);
+    const entry = idx >= 0 ? queue[idx] : { id, data: {}, ts: 0 };
+    entry.data = { ...entry.data, ...data };
+    entry.ts = Date.now();
+    if (idx >= 0) queue[idx] = entry; else queue.push(entry);
+    writeQueue(queue);
+}
+
+function dequeue(id) {
+    writeQueue(readQueue().filter(e => e.id !== id));
+}
+
+function showOfflineBanner(show) {
+    let banner = document.getElementById('offlineQueueBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'offlineQueueBanner';
+        banner.setAttribute('role', 'status');
+        banner.setAttribute('aria-live', 'polite');
+        banner.style.cssText =
+            'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);' +
+            'background:var(--bg-secondary,#1e293b);color:var(--text-secondary,#94a3b8);' +
+            'border:1px solid var(--border-color,#334155);border-radius:8px;' +
+            'padding:8px 18px;font-size:0.82rem;font-weight:600;z-index:9999;' +
+            'box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:opacity 0.3s;';
+        document.body.appendChild(banner);
+    }
+    if (show) {
+        const count = readQueue().length;
+        banner.textContent = `Offline - ${count} change${count !== 1 ? 's' : ''} queued`;
+        banner.style.opacity = '1';
+        banner.style.display = 'block';
+    } else {
+        banner.style.opacity = '0';
+        setTimeout(() => { banner.style.display = 'none'; }, 300);
+    }
+}
+
+async function flushQueue() {
+    const queue = readQueue();
+    if (!queue.length) return;
+    for (const entry of queue) {
+        try {
+            const r = await fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(entry.id)), {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                body: JSON.stringify(entry.data)
+            });
+            if (r.ok) {
+                const res = await r.json();
+                if (res.success) dequeue(entry.id);
+            }
+        } catch {
+            // Still offline; leave the queue intact and stop trying.
+            break;
+        }
+    }
+    if (!readQueue().length) {
+        showOfflineBanner(false);
+        showUpdateError('Offline changes synced!');
+    }
+}
+
+window.addEventListener('online', flushQueue);
+
 function updateQuestion(id, data, callback) {
+    if (!navigator.onLine) {
+        enqueue(id, data);
+        showOfflineBanner(true);
+        // Optimistic success so UI updates immediately
+        if (callback) callback({ success: true, offline: true });
+        return Promise.resolve({ success: true, offline: true });
+    }
+
     return fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRFToken': endpointConfig.csrfToken},
@@ -302,8 +367,16 @@ function updateQuestion(id, data, callback) {
         if (!res.success) throw new Error(res.error || 'Update failed');
         if (callback) callback(res);
         return res;
+    }).catch(err => {
+        // Network error even though navigator.onLine was true (e.g. flaky connection)
+        enqueue(id, data);
+        showOfflineBanner(true);
+        throw err;
     });
 }
+
+// Flush any queued changes left from a previous session
+if (navigator.onLine) flushQueue();
 
 // Update the checkbox event listener
 document.querySelectorAll('.status-checkbox').forEach(cb => {

@@ -181,14 +181,23 @@ body.modal-open {
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_csv') }}" aria-label="Export progress as CSV file">
       <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress CSV
     </a>
+    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_json') }}" aria-label="Export progress as JSON file">
+      <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress JSON
+    </a>
+    <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openImportModal()" aria-label="Import progress from backup file">
+      <i class="bi bi-upload" style="margin-right:6px" aria-hidden="true"></i> Import Progress (CSV/JSON)
+    </button>
+    <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
+      <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
+    </a>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
       {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
-      {% if user.linkedin_url %}<a href="{{ user.linkedin_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
-      {% if user.twitter_url %}<a href="{{ user.twitter_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
-      {% if user.website_url %}<a href="{{ user.website_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe" aria-hidden="true"></i></a>{% endif %}
+      {% if user.linkedin_url %}<a href="{{ user.linkedin_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="LinkedIn" aria-label="LinkedIn profile (opens in new tab)"><i class="bi bi-linkedin" aria-hidden="true"></i></a>{% endif %}
+      {% if user.twitter_url %}<a href="{{ user.twitter_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Twitter/X" aria-label="Twitter/X profile (opens in new tab)"><i class="bi bi-twitter-x" aria-hidden="true"></i></a>{% endif %}
+      {% if user.website_url %}<a href="{{ user.website_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Website" aria-label="Personal website (opens in new tab)"><i class="bi bi-globe" aria-hidden="true"></i></a>{% endif %}
       {% if user.github_username %}<a href="{{ user.github_username | platform_url('github') }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="GitHub" aria-label="GitHub profile (opens in new tab)"><i class="bi bi-github" aria-hidden="true"></i></a>{% endif %}
-      {% if user.resume_url %}<a href="{{ user.resume_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}
+      {% if user.resume_url %}<a href="{{ user.resume_url|safe_url }}" target="_blank" rel="noopener noreferrer" class="social-icon" title="Resume" aria-label="Resume (opens in new tab)"><i class="bi bi-file-earmark-person" aria-hidden="true"></i></a>{% endif %}
     </div>
     {% if user.location or user.college %}
     <div class="meta-row">{% if user.location %}<i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> {{ user.location }}{% endif %}</div>
@@ -252,7 +261,7 @@ body.modal-open {
     <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:8px">Global Rank — Based on C Score</div>
     <div style="display:flex;align-items:center;gap:8px">
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
-      <span class="rank-num">{{ dsa_done * 2 + (lc_easy + lc_medium * 2 + lc_hard * 3) }}</span>
+      <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
     </div>
     <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
     <div class="meta-footer">
@@ -409,26 +418,12 @@ body.modal-open {
       <div class="donut-inner">{{ global_total_solved }}</div>
     </div>
     <div>
+      {% for name in ['LeetCode', 'GFG', 'Coding Ninjas', 'HackerRank', 'AtCoder', 'Codewars'] %}
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:#ffb800"></span><span style="color:#ffb800;font-weight:700">LeetCode</span></span>
-        <strong>{{ platforms['LeetCode'] }}</strong>
+        <span><span class="legend-dot" style="background:{{ PLATFORM_META[name].brand_color }}"></span><span style="color:{{ PLATFORM_META[name].brand_color }};font-weight:700">{{ name }}</span></span>
+        <strong>{{ platforms[name] }}</strong>
       </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:#22c55e"></span><span style="color:#22c55e;font-weight:700">GFG</span></span>
-        <strong>{{ platforms['GFG'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:#8b5cf6"></span><span style="color:#8b5cf6;font-weight:700">Coding Ninjas</span></span>
-        <strong>{{ platforms['Coding Ninjas'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:#00bd6c"></span><span style="color:#00bd6c;font-weight:700">HackerRank</span></span>
-        <strong>{{ platforms['HackerRank'] }}</strong>
-      </div>
-      <div class="legend-item">
-        <span><span class="legend-dot" style="background:#f97316"></span><span style="color:#f97316;font-weight:700">AtCoder</span></span>
-        <strong>{{ platforms['AtCoder'] }}</strong>
-      </div>
+      {% endfor %}
       <div class="legend-item">
         <span><span class="legend-dot" style="background:#6c757d"></span><span style="color:#6c757d;font-weight:700">Other</span></span>
         <strong>{{ platforms['Other'] }}</strong>
@@ -438,7 +433,12 @@ body.modal-open {
     <hr style="border-color:var(--border-color);margin:16px 0">
 
     <!-- DSA difficulty -->
-    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:12px">DSA</div>
+    <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:12px">
+      <span style="flex:1;text-align:center;padding-left:24px">DSA</span>
+      <button onclick="exportChart('difficultyChart', 'dsa-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
+        <i class="bi bi-download" aria-hidden="true"></i>
+      </button>
+    </div>
     <div class="donut-wrap chart-shell" id="difficultyChartShell">
       <div class="chart-skeleton" aria-hidden="true"></div>
       <canvas id="difficultyChart" aria-label="Difficulty distribution chart"></canvas>
@@ -462,7 +462,12 @@ body.modal-open {
     <hr style="border-color:var(--border-color);margin:16px 0">
 
     <!-- Contest Rankings -->
-    <div style="font-size:.8rem;font-weight:700;text-align:center;color:var(--text-secondary);margin-bottom:4px">Contest Rankings</div>
+    <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:4px">
+      <span style="flex:1;text-align:center;padding-left:24px">Contest Rankings</span>
+      <button onclick="exportChart('progressChart', 'rating-history.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export rating chart">
+        <i class="bi bi-download" aria-hidden="true"></i>
+      </button>
+    </div>
     <div style="font-size:.72rem;text-align:center;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em">LEETCODE</div>
     <div class="rating-wrap">
       <i class="bi bi-shield-shaded shield-icon" aria-hidden="true"></i>
@@ -489,6 +494,10 @@ body.modal-open {
     <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
     <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
+    <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
+    <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" data-modal-close="syncModal">Cancel</button>
@@ -555,26 +564,87 @@ body.modal-open {
     </div>
 {% endcall %}
 
-<!-- Toast notification -->
-<div class="toast" id="toast" style=""></div>
+<!-- Import Progress Modal -->
+<div class="modal-ov" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+  <div class="modal-bx" style="max-width:500px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3 id="importModalTitle" style="margin-bottom:0"><i class="bi bi-upload" style="color:var(--accent)"></i> Import Progress</h3>
+      <button type="button" onclick="closeImportModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close dialog">✕</button>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:15px">Upload a previously exported CSV or JSON progress backup file.</p>
+    
+    <div style="margin-bottom:15px">
+      <label class="m-lbl">Choose Backup File (.csv, .json)</label>
+      <input type="file" id="importFile" accept=".csv,.json" class="m-inp" onchange="handleImportFileSelect(event)" style="padding:10px">
+    </div>
+
+    <!-- Preview Container -->
+    <div id="importPreviewContainer" style="display:none;margin-top:15px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;max-height:300px;overflow-y:auto">
+      <h4 style="margin:0 0 8px 0;font-size:0.9rem">Dry-Run Preview Summary</h4>
+      <table style="width:100%;font-size:0.8rem;border-collapse:collapse;margin-bottom:10px">
+        <tr>
+          <td style="padding:4px 0;color:var(--text-secondary)">Total Parsed:</td>
+          <td><strong id="previewTotal" style="float:right">0</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:var(--text-secondary)">Matched:</td>
+          <td><strong id="previewMatched" style="float:right">0</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:var(--text-secondary)">Unmatched (Skipped):</td>
+          <td><strong id="previewUnmatched" style="float:right">0</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:var(--text-secondary)">Changes Detected:</td>
+          <td><strong id="previewChanges" style="float:right;color:var(--accent)">0</strong></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:var(--text-secondary)">Conflicts (e.g. notes):</td>
+          <td><strong id="previewConflicts" style="float:right;color:var(--warning)">0</strong></td>
+        </tr>
+      </table>
+
+      <!-- Option for Import Mode -->
+      <div style="margin:15px 0 10px 0;border-top:1px solid var(--border-color);padding-top:10px">
+        <label class="m-lbl" style="margin-bottom:5px">Import Mode</label>
+        <div style="display:flex;gap:15px;align-items:center">
+          <label style="font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:4px">
+            <input type="radio" name="importMode" value="merge" checked> Merge (Safe append)
+          </label>
+          <label style="font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:4px">
+            <input type="radio" name="importMode" value="replace"> Replace (Overwrite)
+          </label>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px" id="importModeHelp">
+          Merge will add new progress and combine note differences. Replace will overwrite only the questions found in your import file (unmatched existing progress is preserved).
+        </div>
+      </div>
+      
+      <!-- Change items preview list -->
+      <div id="previewItemsList" style="margin-top:10px;font-size:0.75rem;border-top:1px solid var(--border-color);padding-top:10px">
+        <div style="font-weight:700;margin-bottom:5px">Change Log (First 50 items):</div>
+        <ul id="previewList" style="padding-left:15px;margin:0;max-height:100px;overflow-y:auto;color:var(--text-secondary)"></ul>
+      </div>
+    </div>
+
+    <div class="m-actions" style="margin-top:20px">
+      <button class="m-cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="m-save" id="btnConfirmImport" onclick="handleConfirmImport(this)" disabled style="opacity:0.6;cursor:not-allowed">
+        <span id="confirmImportBtnContent" style="display:inline-flex;align-items:center;gap:6px">
+          <i class="bi bi-check2-circle"></i> Confirm Import
+        </span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Sync Loading Overlay -->
 <div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
   <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
   <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
   <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
-  <div style="display:flex;gap:8px;margin-top:4px" id="syncSteps">
-    <span id="ss_lc" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; LeetCode</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_gh" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GitHub</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_gfg" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; GFG</span>
-    <span style="color:rgba(255,255,255,.2)">·</span>
-    <span id="ss_cn" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; Coding Ninjas</span>
-  </div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px" id="syncSteps"></div>
 </div>
-<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-
 {% endblock %}
 
 {% block scripts %}
@@ -582,6 +652,7 @@ body.modal-open {
 const endpointConfig = {{ {
   "editProfile": url_for('profile.edit_profile'),
   "syncPlatforms": url_for('profile.sync_platforms'),
+  "uploadPhoto": url_for('profile.upload_photo'),
   "searchUniversities": url_for('profile.search_universities'),
   "publicCardPath": url_for('profile.public_card', user_id=user.id),
   "csrfToken": csrf_token(),
@@ -615,13 +686,11 @@ window.handleSaveProfile = function(btn){
         setTimeout(()=>window.location.reload(),900);
       } else {
         showToast('❌ Error: '+(res.error||'unknown'));
-        btn.disabled=false;
-        contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+        window.setButtonBusyState(btn, contentEl, { busy: false });
       }
     }).catch(e=>{
       showToast('❌ Network error');
-      btn.disabled=false;
-      contentEl.innerHTML='<i class="bi bi-check2-circle"></i> Save Profile';
+      window.setButtonBusyState(btn, contentEl, { busy: false });
     });
 };
 
@@ -634,15 +703,16 @@ window.handleQuickSync = function(btn) {
   const gfg = '{{ user.gfg_username or "" }}';
   const hr = '{{ user.hackerrank_username or "" }}';
   const cn = '{{ user.codingninjas_username or "" }}';
+  const ac = '{{ user.atcoder_username or "" }}';
+  const cw = '{{ user.codewars_username or "" }}';
   
-  if(!lc && !gh && !gfg && !hr && !cn){
+  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
 
   btn.disabled = true;
-  icon.classList.add('btn-spinner');
-  icon.className = 'bi bi-arrow-clockwise btn-spinner';
+  window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
   showToast('⏳ Syncing profiles...');
   
   fetch(endpointConfig.syncPlatforms, {
@@ -653,7 +723,7 @@ window.handleQuickSync = function(btn) {
   .then(r => r.json())
   .then(res => {
     btn.disabled = false;
-    icon.className = 'bi bi-arrow-clockwise';
+    window.setIconBusyState(icon, { busy: false });
     if(res.success){
       showToast('✅ Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(), 1200);
@@ -663,7 +733,7 @@ window.handleQuickSync = function(btn) {
   })
   .catch(err => {
     btn.disabled = false;
-    icon.className = 'bi bi-arrow-clockwise';
+    window.setIconBusyState(icon, { busy: false });
     showToast('❌ Network error. Check connection.');
   });
 };
@@ -675,11 +745,12 @@ window.handleSyncProfile = function(btn){
   const gfg=document.getElementById('gfg_username').value.trim();
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
-  if(!lc && !gh && !gfg && !hr && !cn){showToast('\u26a0\ufe0f Enter at least one username');return;}
+  const ac=document.getElementById('ac_username').value.trim();
+  const cw=document.getElementById('cw_username').value.trim();
+  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
-  btn.disabled=true;
-  syncContent.innerHTML='<span class="btn-spinner"></span> Syncing...';
+  window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
 
   // Show loading overlay
   const overlay=document.getElementById('syncOverlay');
@@ -687,8 +758,24 @@ window.handleSyncProfile = function(btn){
   document.getElementById('syncOverlayMsg').textContent='Syncing your profiles...';
 
   // Animate step indicators
-  const steps=['ss_lc','ss_gh','ss_gfg','ss_cn'];
-  const labels=['LeetCode','GitHub','GFG','Coding Ninjas'];
+  const syncPlatforms=[
+    {id:'ss_lc', label:'LeetCode', value:lc},
+    {id:'ss_gh', label:'GitHub', value:gh},
+    {id:'ss_gfg', label:'GFG', value:gfg},
+    {id:'ss_hr', label:'HackerRank', value:hr},
+    {id:'ss_cn', label:'Coding Ninjas', value:cn},
+    {id:'ss_ac', label:'AtCoder', value:ac},
+    {id:'ss_cw', label:'Codewars', value:cw}
+  ];
+  const activeSyncPlatforms=syncPlatforms.filter(platform=>platform.value);
+  const stepsContainer=document.getElementById('syncSteps');
+  stepsContainer.innerHTML=activeSyncPlatforms.map((platform,index)=>`
+    ${index?'<span style="color:rgba(255,255,255,.2)">·</span>':''}
+    <span id="${platform.id}" style="font-size:.75rem;color:rgba(255,255,255,.4)">&#9675; ${platform.label}</span>
+  `).join('');
+
+  const steps=activeSyncPlatforms.map(platform=>platform.id);
+  const labels=activeSyncPlatforms.map(platform=>platform.label);
   let si=0;
   const stepTimer=setInterval(()=>{
     if(si>0) document.getElementById(steps[si-1]).style.color='rgba(0,200,100,.8)';
@@ -718,16 +805,14 @@ window.handleSyncProfile = function(btn){
       showToast('\u2705 Synced successfully! Reloading...');
       setTimeout(()=>window.location.reload(),1200);
     }else{
-      btn.disabled=false;
-      syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+      window.setButtonBusyState(btn, syncContent, { busy: false });
       showToast('\u274c Sync failed: '+(res.error||'unknown'));
     }
   })
   .catch(err=>{
     clearInterval(stepTimer);
     overlay.style.display='none';
-    btn.disabled=false;
-    syncContent.innerHTML='<i class="bi bi-arrow-repeat"></i> Sync Activity';
+    window.setButtonBusyState(btn, syncContent, { busy: false });
     if(err.name==='AbortError'){
       showToast('\u23f0 Sync timed out. Try again.');
     }else{
@@ -737,9 +822,14 @@ window.handleSyncProfile = function(btn){
   });
 };
 
-// ── Chart & Visualization Code ──
 const dailyCounts = {{ daily_counts | tojson }};
 const heatmap = document.getElementById('heatmap');
+function exportChart(id,file){
+  const c=document.getElementById(id);if(!c)return;
+  const o=document.createElement('canvas'),x=o.getContext('2d'),a=document.createElement('a');
+  o.width=c.width;o.height=c.height;x.fillStyle='#1e2327';x.fillRect(0,0,o.width,o.height);x.drawImage(c,0,0);
+  a.download=file;a.href=o.toDataURL('image/png');a.click();
+}
 function markChartReady(id){
   const shell = document.getElementById(id);
   if (shell) shell.classList.add('is-ready');
@@ -801,12 +891,6 @@ window._chartJsReady.then(initCharts).catch(function(){
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
 function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
-function showToast(msg){
-  const t=document.getElementById('toast');
-  if(!t)return;
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
-}
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
 

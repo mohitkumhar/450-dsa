@@ -1,9 +1,11 @@
 import re
+from math import isfinite
 from datetime import datetime, timezone
 
 from flask import jsonify
 
 from app.extensions import db
+from app.platforms.metadata import PLATFORM_META
 from app.search import service as search_service
 
 
@@ -46,21 +48,14 @@ def normalize_coding_ninjas_profile_id(value):
         return match.group(1).strip()
     return value.rstrip("/").split("/")[-1].strip()
 
-
 def platform_name_filter(url):
     if not url:
         return None
     url = url.lower()
-    if "leetcode.com" in url:
-        return "LeetCode"
-    if "geeksforgeeks.org" in url:
-        return "GFG"
-    if "codingninjas.com" in url or "naukri.com/code360" in url:
-        return "Coding Ninjas"
-    if "youtube.com" in url or "youtu.be" in url:
-        return "YouTube"
-    if "hackerrank.com" in url:
-        return "HackerRank"
+    for meta in PLATFORM_META.values():
+        for domain in meta["domains"]:
+            if domain in url:
+                return meta["name"]
     return "Link"
 
 
@@ -91,7 +86,27 @@ def platform_profile_url(username, platform):
         return f"https://github.com/{username}"
     if platform == "atcoder":
         return f"https://atcoder.jp/users/{username}"
+    if platform == "codewars":
+        return f"https://www.codewars.com/users/{username}"
     return "#"
+
+
+def safe_url_filter(url):
+    if not url:
+        return "#"
+    url_stripped = url.strip()
+    # Allow http/https only
+    if url_stripped.lower().startswith(("http://", "https://")):
+        return url_stripped
+    # If the URL contains other scheme characters like ':' or similar, reject it
+    # to avoid javascript:, data:, or any custom protocols
+    if ":" in url_stripped and not url_stripped.lower().startswith(("http://", "https://")):
+        return "#"
+    # If the url starts with //, prepend https:
+    if url_stripped.startswith("//"):
+        return "https:" + url_stripped
+    # Otherwise, treat it as a path/domain and prepend https://
+    return "https://" + url_stripped
 
 
 def parse_search_query(raw_query):
@@ -110,11 +125,70 @@ def question_links(question):
     return search_service.question_links(question)
 
 
+def question_editorial_links(question):
+    return search_service.question_editorial_links(question)
+
+
 def search_dsa_questions(raw_query, limit=40):
     return search_service.search_dsa_questions(raw_query, limit=limit, db_handle=db)
 
 
-EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder")
+EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Codewars")
+PLATFORM_COUNT_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Codewars", "Other")
+
+
+def empty_platform_counts():
+    return {platform: 0 for platform in PLATFORM_COUNT_KEYS}
+
+
+def platform_from_question_url(url):
+    """Return the tracked platform bucket for a question URL."""
+    url = (url or "").lower()
+    if "leetcode.com" in url:
+        return "LeetCode"
+    if "geeksforgeeks.org" in url:
+        return "GFG"
+    if "codingninjas.com" in url or "naukri.com/code360" in url:
+        return "Coding Ninjas"
+    if "hackerrank.com" in url:
+        return "HackerRank"
+    if "atcoder.jp" in url:
+        return "AtCoder"
+    return "Other"
+
+
+def coerce_non_negative_number(value):
+    """Return a safe finite non-negative numeric value for persisted stats."""
+    if isinstance(value, bool) or value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return value if isfinite(value) and value > 0 else 0
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return 0
+        try:
+            parsed = float(stripped)
+        except ValueError:
+            return 0
+        return parsed if isfinite(parsed) and parsed > 0 else 0
+    return 0
+
+
+def count_valid_external_daily_entries(external_daily_counts):
+    if not isinstance(external_daily_counts, dict):
+        return 0
+    return sum(1 for value in external_daily_counts.values() if coerce_non_negative_number(value) > 0)
+
+
+def valid_external_daily_keys(external_daily_counts):
+    if not isinstance(external_daily_counts, dict):
+        return set()
+    return {
+        day_key
+        for day_key, value in external_daily_counts.items()
+        if coerce_non_negative_number(value) > 0
+    }
 
 
 def compute_total_solved(progress, external_totals, all_questions=None):
@@ -122,11 +196,72 @@ def compute_total_solved(progress, external_totals, all_questions=None):
     if all_questions is not None:
         solved_items = {question_id: item for question_id, item in progress.items() if item.get("done")}
         platforms = compute_user_platforms(solved_items, external_totals or {}, all_questions)
-        return sum(max(value, 0) for value in platforms.values())
+        return sum(coerce_non_negative_number(value) for value in platforms.values())
 
     dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
-    external_total = sum(max(value, 0) for key, value in (external_totals or {}).items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
+    external_total = sum(
+        coerce_non_negative_number(value)
+        for key, value in (external_totals or {}).items()
+        if key in EXTERNAL_SOLVED_TOTAL_KEYS
+    )
     return max(dsa_done, external_total)
+
+
+def _get_field(user_doc, name, default=None):
+    """Get a field from a raw dict or a ``UserWrapper`` (Flask-Login) object."""
+    if user_doc is None:
+        return default
+    try:
+        return user_doc.get(name, default)
+    except (TypeError, AttributeError):
+        pass
+    try:
+        return getattr(user_doc, name)
+    except AttributeError:
+        return default
+
+
+def get_merged_daily_counts(user_doc):
+    """Return merged flat dict of daily counts, preferring per-platform data with legacy fallback.
+
+    Uses the new ``platform_calendars`` dict (``{platform: {date: count}}``) when available.
+    A special ``_legacy`` key stores the old combined totals during the migration period;
+    for dates that overlap with real per-platform data the higher of the two values is kept
+    (so non-migrated platform contributions are not lost).  Dates from the legacy
+    ``external_daily_counts`` field are merged using ``max()`` so older cumulative history
+    is not lost when per-platform calendars have partial coverage (e.g. limited API windows).
+
+    Falls back entirely to ``external_daily_counts`` when no per-platform data exists.
+    """
+    platform_calendars = _get_field(user_doc, "platform_calendars", {})
+    if isinstance(platform_calendars, dict) and platform_calendars:
+        legacy_fallback = {}
+        calendars = {}
+        for key, value in platform_calendars.items():
+            if key == "_legacy" and isinstance(value, dict):
+                legacy_fallback = value
+            else:
+                calendars[key] = value
+
+        merged = {}
+        for _platform, counts in calendars.items():
+            if isinstance(counts, dict):
+                for date, count in counts.items():
+                    if coerce_non_negative_number(count) > 0:
+                        merged[date] = merged.get(date, 0) + count
+
+        for date, count in legacy_fallback.items():
+            if coerce_non_negative_number(count) > 0:
+                merged[date] = max(merged.get(date, 0), count)
+
+        if merged:
+            legacy = _get_field(user_doc, "external_daily_counts", {})
+            if isinstance(legacy, dict):
+                for date, count in legacy.items():
+                    if coerce_non_negative_number(count) > 0:
+                        merged[date] = max(merged.get(date, 0), count)
+            return merged
+    return _get_field(user_doc, "external_daily_counts", {})
 
 
 def compute_c_score(user_doc, all_questions=None):
@@ -135,17 +270,26 @@ def compute_c_score(user_doc, all_questions=None):
     dsa_done = sum(1 for progress_item in progress.values() if progress_item.get("done"))
 
     ext = user_doc.get("external_totals", {})
-    lc_total = max(ext.get("LeetCode", 0), 0)
-    lc_easy = max(ext.get("LeetCode_Easy", 0), 0)
-    lc_medium = max(ext.get("LeetCode_Medium", 0), 0)
-    lc_hard = max(ext.get("LeetCode_Hard", 0), 0)
-    lc_rating = max(ext.get("LeetCode_Rating", 0), 0)
-    gfg_total = max(ext.get("GFG", 0), 0)
-    hr_total = max(ext.get("HackerRank", 0), 0)
-    cn_total = max(ext.get("Coding Ninjas", 0), 0)
-    external_total = sum(max(value, 0) for key, value in ext.items() if key in EXTERNAL_SOLVED_TOTAL_KEYS)
+    if not isinstance(ext, dict):
+        ext = {}
+    lc_total = coerce_non_negative_number(ext.get("LeetCode", 0))
+    lc_easy = coerce_non_negative_number(ext.get("LeetCode_Easy", 0))
+    lc_medium = coerce_non_negative_number(ext.get("LeetCode_Medium", 0))
+    lc_hard = coerce_non_negative_number(ext.get("LeetCode_Hard", 0))
+    lc_rating = coerce_non_negative_number(ext.get("LeetCode_Rating", 0))
+    gfg_total = coerce_non_negative_number(ext.get("GFG", 0))
+    hr_total = coerce_non_negative_number(ext.get("HackerRank", 0))
+    cn_total = coerce_non_negative_number(ext.get("Coding Ninjas", 0))
+    cw_total = coerce_non_negative_number(ext.get("Codewars", 0))
+    external_total = sum(
+        coerce_non_negative_number(value)
+        for key, value in ext.items()
+        if key in EXTERNAL_SOLVED_TOTAL_KEYS
+    )
 
-    ext_daily = user_doc.get("external_daily_counts", {})
+    ext_daily = get_merged_daily_counts(user_doc)
+    valid_external_days = count_valid_external_daily_entries(ext_daily)
+    ext_daily_keys = valid_external_daily_keys(ext_daily)
     extra_progress_days = set()
     for progress_item in progress.values():
         timestamp = progress_item.get("timestamp")
@@ -155,15 +299,15 @@ def compute_c_score(user_doc, all_questions=None):
             day_key = timestamp[:10]
         else:
             day_key = timestamp.date().isoformat()
-        if day_key not in ext_daily:
+        if day_key not in ext_daily_keys:
             extra_progress_days.add(day_key)
-    active_days = len(ext_daily) + len(extra_progress_days)
+    active_days = valid_external_days + len(extra_progress_days)
 
     s_dsa = min(dsa_done / 450, 1.0) * 250
     s_lc_total = min(lc_total / 500, 1.0) * 200
     s_lc_diff = min((lc_easy * 1 + lc_medium * 3 + lc_hard * 6) / 1500, 1.0) * 150
     s_lc_rating = min(lc_rating / 2500, 1.0) * 200
-    s_other = min((gfg_total + hr_total + cn_total) / 300, 1.0) * 100
+    s_other = min((gfg_total + hr_total + cn_total + cw_total) / 300, 1.0) * 100
     s_consistency = min(active_days / 365, 1.0) * 100
 
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
@@ -182,35 +326,63 @@ def compute_c_score(user_doc, all_questions=None):
         "gfg_total": gfg_total,
         "hr_total": hr_total,
         "cn_total": cn_total,
+        "cw_total": cw_total,
         "active_days": active_days,
         "total_solved": global_total,
     }
 
-
 def compute_user_platforms(solved_items, external_totals, all_questions):
     """Compute platform counts combining solved DSA questions with external totals."""
-    platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "AtCoder": 0, "Other": 0}
+    platforms = compute_in_sheet_platform_counts(solved_items, all_questions)
+    return merge_platform_counts(platforms, external_totals)
+
+
+def compute_in_sheet_platform_counts(solved_items, all_questions):
+    platforms = empty_platform_counts()
     
     for question in all_questions:
         question_id = str(question.get("_id", ""))
         if question_id in solved_items:
-            url = (question.get("url") or "").lower()
-            if "leetcode.com" in url:
-                platforms["LeetCode"] += 1
-            elif "geeksforgeeks.org" in url:
-                platforms["GFG"] += 1
-            elif "codingninjas.com" in url or "naukri.com/code360" in url:
-                platforms["Coding Ninjas"] += 1
-            elif "hackerrank.com" in url:
-                platforms["HackerRank"] += 1
-            else:
-                platforms["Other"] += 1
-
-    ext_totals = external_totals or {}
-    platforms["LeetCode"] = max(platforms["LeetCode"], ext_totals.get("LeetCode", 0), 0)
-    platforms["GFG"] = max(platforms["GFG"], ext_totals.get("GFG", 0), 0)
-    platforms["Coding Ninjas"] = max(platforms["Coding Ninjas"], ext_totals.get("Coding Ninjas", 0), 0)
-    platforms["HackerRank"] = max(platforms["HackerRank"], ext_totals.get("HackerRank", 0), 0)
-    platforms["AtCoder"] = max(ext_totals.get("AtCoder", 0), 0)
+            platforms[platform_from_question_url(question.get("url"))] += 1
 
     return platforms
+
+
+def merge_platform_counts(in_sheet_counts, external_totals):
+    platforms = empty_platform_counts()
+    for platform, count in (in_sheet_counts or {}).items():
+        if platform in platforms:
+            platforms[platform] = max(int(count or 0), 0)
+
+    ext_totals = external_totals if isinstance(external_totals, dict) else {}
+    platforms["LeetCode"] = max(platforms["LeetCode"], coerce_non_negative_number(ext_totals.get("LeetCode", 0)))
+    platforms["GFG"] = max(platforms["GFG"], coerce_non_negative_number(ext_totals.get("GFG", 0)))
+    platforms["Coding Ninjas"] = max(
+        platforms["Coding Ninjas"],
+        coerce_non_negative_number(ext_totals.get("Coding Ninjas", 0)),
+    )
+    platforms["HackerRank"] = max(
+        platforms["HackerRank"],
+        coerce_non_negative_number(ext_totals.get("HackerRank", 0)),
+    )
+    platforms["AtCoder"] = max(platforms["AtCoder"], coerce_non_negative_number(ext_totals.get("AtCoder", 0)))
+    platforms["Codewars"] = max(platforms["Codewars"], coerce_non_negative_number(ext_totals.get("Codewars", 0)))
+
+    return platforms
+
+
+def update_computed_stats(user_id, progress, db_handle, total_questions):
+    from streaks import compute_streak
+
+    dsa_done = sum(1 for p in progress.values() if p.get("done"))
+    dsa_progress = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
+    current_streak, longest_streak = compute_streak(progress)
+
+    db_handle.user.update_one(
+        {"_id": user_id},
+        {"$set": {
+            "dsa_progress": dsa_progress,
+            "current_streak": current_streak,
+            "longest_streak": longest_streak,
+        }}
+    )

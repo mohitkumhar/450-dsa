@@ -7,7 +7,6 @@ from flask_pymongo import PyMongo
 from werkzeug.local import LocalProxy
 from flask_caching import Cache
 
-
 mongo = PyMongo()
 db = LocalProxy(lambda: mongo.db)
 bcrypt = Bcrypt()

@@ -35,9 +35,21 @@ def build_profile_updates(data):
             return None, f'{field} must be at most {max_length} characters'
 
         if field in PROFILE_URL_FIELDS and value:
-            parsed = urlparse(value)
+            url_val = value.strip()
+            parsed_raw = urlparse(url_val)
+            if parsed_raw.scheme:
+                if parsed_raw.scheme not in {'http', 'https'}:
+                    return None, f'Invalid URL for {field}'
+            else:
+                if '//' in url_val:
+                    url_val = 'https:' + url_val if url_val.startswith('//') else 'https://' + url_val.split('//', 1)[1]
+                else:
+                    url_val = 'https://' + url_val
+            
+            parsed = urlparse(url_val)
             if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
                 return None, f'Invalid URL for {field}'
+            value = url_val
 
         update_fields[field] = value
     return update_fields, None

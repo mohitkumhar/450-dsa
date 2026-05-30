@@ -1,4 +1,5 @@
 venv
+venv12
 .venv
 __pycache__
 .env
@@ -15,3 +16,4 @@ AGENTS.md
 CLAUDE.md
 GEMINI.md
 .codex
+out.html

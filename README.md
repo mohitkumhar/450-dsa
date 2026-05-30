@@ -85,7 +85,7 @@ CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 ```
 
-The app now refuses to start if `SECRET_KEY` is missing or still set to an insecure placeholder. If a secret was ever committed or shared, rotate it before running the app again.
+The app warns and generates a temporary `SECRET_KEY` if the variable is missing or still set to an insecure placeholder. Set a real generated secret in deployed environments so user sessions persist across restarts. If a secret was ever committed or shared, rotate it before running the app again.
 
 **3. Run**
 ```bash
@@ -205,7 +205,7 @@ pytest
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SECRET_KEY` | Yes | Flask session secret. Must be a real generated secret, not a placeholder. |
+| `SECRET_KEY` | Recommended | Flask session secret. Must be a real generated secret, not a placeholder. Missing or insecure values fall back to a temporary key and reset sessions on restart. |
 | `MONGO_URI` | Yes | MongoDB connection string |
 | `GITHUB_CLIENT_ID` | No | GitHub OAuth app client ID |
 | `GITHUB_CLIENT_SECRET` | No | GitHub OAuth app client secret |

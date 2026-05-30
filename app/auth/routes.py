@@ -5,12 +5,15 @@ from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
-from app.extensions import bcrypt, db, github, google, login_manager
+from app.extensions import bcrypt, cache, db, github, google, limiter, login_manager
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.profile.sync_service import clear_profile_caches
 from app.utils import utc_now
 
 
 auth_bp = Blueprint("auth", __name__)
 GOOGLE_OAUTH_NONCE_SESSION_KEY = "google_oauth_nonce"
+DEACTIVATE_CSRF_SESSION_KEY = "deactivate_csrf_token"
 COMMON_WEAK_PASSWORDS = {
     "12345678",
     "123456789",
@@ -29,6 +32,8 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
     Returns a tuple of `(user_doc, action)` where action is one of
     `existing`, `linked`, or `created`.
     """
+    if email is not None:
+        email = normalize_email(email)
     user_doc = db.user.find_one({provider_field: provider_id})
     if user_doc:
         return user_doc, "existing"
@@ -79,6 +84,12 @@ def validate_registration_password(password, confirm_password):
     return errors
 
 
+def normalize_email(email):
+    if not email:
+        return ""
+    return email.strip().lower()
+
+
 class UserWrapper(UserMixin):
     """Wrap a pymongo user dict for flask-login compatibility."""
 
@@ -94,7 +105,7 @@ class UserWrapper(UserMixin):
 
     @property
     def progress(self):
-        return self._doc.get("progress", {})
+        return self._doc.get("progress") or {}
 
     @property
     def is_admin(self):
@@ -105,9 +116,27 @@ class UserWrapper(UserMixin):
             raise AttributeError(name)
         return self._doc.get(name)
 
+    def get(self, name, default=None):
+        return self._doc.get(name, default)
+
     def reload(self):
         self._doc = db.user.find_one({"_id": self._doc["_id"]}) or self._doc
         return self
+
+
+def reactivate_user_if_needed(user_doc):
+    """Reactivate a soft-deactivated user on successful authentication."""
+    if not user_doc or not user_doc.get("is_deactivated"):
+        return user_doc
+
+    db.user.update_one(
+        {"_id": user_doc["_id"]},
+        {"$set": {"is_deactivated": False}, "$unset": {"deactivated_at": ""}},
+    )
+    refreshed = dict(user_doc)
+    refreshed["is_deactivated"] = False
+    refreshed.pop("deactivated_at", None)
+    return refreshed
 
 
 @login_manager.user_loader
@@ -120,14 +149,16 @@ def load_user(user_id):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
-        email = request.form.get("email")
+        email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
         user_doc = db.user.find_one({"email": email})
-        if user_doc and user_doc.get("password") and bcrypt.check_password_hash(user_doc["password"], password):
+        if user_doc and user_doc.get("password") and password and bcrypt.check_password_hash(user_doc["password"], password):
+            user_doc = reactivate_user_if_needed(user_doc)
             login_user(UserWrapper(user_doc))
             flash(f"Welcome back, {user_doc.get('name', 'User')}! 👋", "success")
             return redirect(url_for("tracker.index"))
@@ -136,12 +167,13 @@ def login():
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("3 per hour", methods=["POST"])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("tracker.index"))
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
-        email = request.form.get("email")
+        email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
@@ -214,8 +246,50 @@ def delete_account():
     user_id = current_user.id
     logout_user()
     db.user.delete_one({"_id": user_id})
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, user_id)
     flash("Your account has been permanently deleted.", "info")
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/deactivate_account", methods=["POST"])
+@login_required
+def deactivate_account():
+    token = request.form.get("csrf_token", "")
+    expected = session.pop(DEACTIVATE_CSRF_SESSION_KEY, None)
+    if not token or not expected or token != expected:
+        abort(403)
+
+    user_doc = db.user.find_one({"_id": current_user.id})
+    if not user_doc:
+        logout_user()
+        return redirect(url_for("auth.login"))
+
+    if user_doc.get("password"):
+        password = request.form.get("password", "")
+        if not password or not bcrypt.check_password_hash(user_doc["password"], password):
+            flash("Incorrect password. Account not deactivated.", "danger")
+            return redirect(url_for("profile.profile"))
+
+    db.user.update_one(
+        {"_id": current_user.id},
+        {"$set": {"is_deactivated": True, "deactivated_at": utc_now()}},
+    )
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, current_user.id)
+    logout_user()
+    flash("Your account has been deactivated. Log in again anytime to reactivate it.", "info")
+    return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/deactivate_account/token", methods=["GET"])
+@login_required
+def deactivate_account_token():
+    token = secrets.token_hex(32)
+    session[DEACTIVATE_CSRF_SESSION_KEY] = token
+    from flask import jsonify
+    user_doc = db.user.find_one({"_id": current_user.id}, {"password": 1}) or {}
+    return jsonify({"csrf_token": token, "is_oauth": not bool(user_doc.get("password"))})
 
 
 @auth_bp.route("/delete_account/token", methods=["GET"])
@@ -272,7 +346,7 @@ def authorize_github():
         if response_emails.status_code == 200:
             for email_item in response_emails.json():
                 if email_item["primary"] and email_item["verified"]:
-                    email = email_item["email"]
+                    email = normalize_email(email_item["email"])
                     break
     except Exception:
         current_app.logger.exception("GitHub OAuth email lookup failed")
@@ -288,6 +362,7 @@ def authorize_github():
     elif action == "created":
         flash("Welcome! Your GitHub account has been connected. 🎉", "success")
 
+    user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
 
@@ -332,7 +407,7 @@ def authorize_google():
         return "Failed to fetch Google user info", 400
 
     google_id = user_info["sub"]
-    email = user_info.get("email")
+    email = normalize_email(user_info.get("email"))
 
     user_doc, action = resolve_oauth_user(
         "google_id",
@@ -345,5 +420,6 @@ def authorize_google():
     elif action == "created":
         flash("Welcome! Your Google account has been connected. 🎉", "success")
 
+    user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))

@@ -61,6 +61,12 @@
     justify-content: center;
     align-items: stretch;
 }
+.topic-card-shell {
+    position: relative;
+    width: 220px;
+    flex: 0 0 220px;
+    display: flex;
+}
 .topic-card {
     width: 220px;
     flex: 0 0 220px;
@@ -75,6 +81,11 @@
     gap: 12px;
     transition: border-color 0.18s, background 0.18s, transform 0.15s;
     cursor: pointer;
+}
+.topic-card-shell .topic-card {
+    width: 100%;
+    flex: 1 1 auto;
+    padding-right: 44px;
 }
 .topic-card:hover {
     border-color: var(--accent);
@@ -183,17 +194,97 @@
     color: #4ade80;
     border-color: rgba(34, 197, 94, 0.35);
 }
-/* Focus indicator for topic cards */
 .topic-card:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
     transform: translateY(-2px);
+}
+.pin-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    width: 30px;
+    height: 30px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.pin-btn:hover,
+.pin-btn:focus-visible,
+.topic-card-shell.is-pinned .pin-btn {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-dim);
 }
 .topic-skeleton-grid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 .topic-skeleton-card {
     min-height: 160px;
+}
+.widget-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.widget-controls-label {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    margin-right: 4px;
+    text-transform: uppercase;
+}
+.widget-toggle-input {
+    height: 1px;
+    opacity: 0;
+    position: absolute;
+    width: 1px;
+}
+.widget-toggle-label,
+.widget-reset-btn {
+    align-items: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 11px;
+    transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+}
+.widget-reset-btn {
+    min-width: 34px;
+    padding: 5px 9px;
+}
+.widget-toggle-label:hover,
+.widget-toggle-input:focus-visible + .widget-toggle-label,
+.widget-toggle-input:checked + .widget-toggle-label,
+.widget-reset-btn:hover,
+.widget-reset-btn:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.widget-toggle-input:not(:checked) + .widget-toggle-label {
+    opacity: 0.55;
+}
+#widget-controls:has(#widget-progress:not(:checked)) ~ #overall-progress,
+#widget-controls:has(#widget-topics:not(:checked)) ~ #topics-grid {
+    display: none;
 }
 </style>
 {% endblock %}
@@ -216,12 +307,29 @@
     <p>Track your progress across all 450 DSA questions</p>
 </div>
 
+<form class="widget-controls" id="widget-controls" aria-label="Dashboard widgets">
+    <span class="widget-controls-label">Widgets</span>
+    <input class="widget-toggle-input" type="checkbox" id="widget-progress" checked>
+    <label class="widget-toggle-label" for="widget-progress">
+        <i class="bi bi-bar-chart" aria-hidden="true"></i>
+        <span>Progress</span>
+    </label>
+    <input class="widget-toggle-input" type="checkbox" id="widget-topics" checked>
+    <label class="widget-toggle-label" for="widget-topics">
+        <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
+        <span>Topics</span>
+    </label>
+    <button type="reset" class="widget-reset-btn" id="widget-reset" aria-label="Reset widgets">
+        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+    </button>
+</form>
+
 {% set percentage = 0 %}
 {% if total_questions > 0 %}
     {% set percentage = (done_questions / total_questions * 100) | round(1) %}
 {% endif %}
 
-<div class="overall-progress-bar-wrap" role="region" aria-label="Overall progress">
+<div class="overall-progress-bar-wrap" id="overall-progress" role="region" aria-label="Overall progress">
     <div class="progress-info">
         <div class="label">Overall Progress</div>
         <div class="numbers">{{ done_questions }} / {{ total_questions }}</div>
@@ -232,7 +340,7 @@
     </div>
 </div>
 
-<div class="topics-grid" role="list" aria-label="DSA topics list">
+<div class="topics-grid" id="topics-grid" role="list" aria-label="DSA topics list">
     {% for topic in topics %}
     {% set t_id_str = topic._id | string %}
     {% set t_done = topic_progress[t_id_str]['done'] %}
@@ -241,45 +349,56 @@
     {% if t_total > 0 %}
         {% set t_percent = (t_done / t_total * 100) | round(1) %}
     {% endif %}
-    
+
     {% set status_text = "Completed" if t_percent == 100 else "In progress" if t_percent > 0 else "Not started" %}
-    
-    <a href="{{ url_for('tracker.topic', topic_id=t_id_str) }}" class="topic-card" role="listitem" aria-label="{{ topic.name }} topic, {{ status_text }}, {{ t_done }} of {{ t_total }} questions completed">
-        <div class="card-top">
-            <div class="topic-card-name">{{ topic.name }}</div>
-            {% if t_percent == 100 %}
-            <span class="status-badge completed" aria-label="Completed">Completed</span>
-            {% elif t_percent > 0 %}
-            <span class="status-badge in-progress" aria-label="In progress">In progress</span>
-            {% else %}
-            <span class="status-badge not-started" aria-label="Not started">Not started</span>
-            {% endif %}
-        </div>
-        <div class="topic-progress-row">
-            <div class="topic-track" aria-label="Progress bar for {{ topic.name }}">
-                <div class="topic-fill {% if t_percent == 100 %}done{% elif t_percent > 0 %}partial{% else %}empty{% endif %}" style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <div class="progress-meta">
-                <span>{{ t_done }} / {{ t_total }} questions</span>
-                <span>{{ t_percent }}%</span>
-            </div>
-        </div>
-        <div class="card-footer">
-            <span class="question-count">
-                <i class="bi bi-list-ul" aria-hidden="true"></i> {{ t_total }} qs
-            </span>
-            <span class="topic-action-btn {% if t_percent == 100 %}completed{% elif t_percent > 0 %}started{% endif %}" aria-hidden="true">
+
+    <div class="topic-card-shell" role="listitem" data-topic-id="{{ t_id_str }}" data-default-order="{{ loop.index0 }}">
+        <button type="button" class="pin-btn" data-topic-id="{{ t_id_str }}" aria-label="Pin {{ topic.name }}" aria-pressed="false">
+            <i class="bi bi-pin" aria-hidden="true"></i>
+        </button>
+        <a href="{{ url_for('tracker.topic', topic_id=t_id_str) }}" class="topic-card" aria-label="{{ topic.name }} topic, {{ status_text }}, {{ t_done }} of {{ t_total }} questions completed">
+            <div class="card-top">
+                <div class="topic-card-name">{{ topic.name }}</div>
                 {% if t_percent == 100 %}
-                <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Completed
+                <span class="status-badge completed" aria-label="Completed">Completed</span>
                 {% elif t_percent > 0 %}
-                <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Continue
+                <span class="status-badge in-progress" aria-label="In progress">In progress</span>
                 {% else %}
-                <i class="bi bi-play-circle" aria-hidden="true"></i> Start
+                <span class="status-badge not-started" aria-label="Not started">Not started</span>
                 {% endif %}
-            </span>
-        </div>
-    </a>
+            </div>
+            <div class="topic-progress-row">
+                <div class="topic-track" aria-label="Progress bar for {{ topic.name }}">
+                    <div class="topic-fill {% if t_percent == 100 %}done{% elif t_percent > 0 %}partial{% else %}empty{% endif %}" style="width: {{ t_percent }}%;" aria-valuenow="{{ t_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="progress-meta">
+                    <span>{{ t_done }} / {{ t_total }} questions</span>
+                    <span>{{ t_percent }}%</span>
+                </div>
+            </div>
+            <div class="card-footer">
+                <span class="question-count">
+                    <i class="bi bi-list-ul" aria-hidden="true"></i> {{ t_total }} qs
+                </span>
+                <span class="topic-action-btn {% if t_percent == 100 %}completed{% elif t_percent > 0 %}started{% endif %}" aria-hidden="true">
+                    {% if t_percent == 100 %}
+                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Completed
+                    {% elif t_percent > 0 %}
+                    <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Continue
+                    {% else %}
+                    <i class="bi bi-play-circle" aria-hidden="true"></i> Start
+                    {% endif %}
+                </span>
+            </div>
+        </a>
+    </div>
     {% endfor %}
 </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const K='pinnedTopics:{{ current_user.get_id() if current_user.is_authenticated else "anonymous" }}',C=[...document.querySelectorAll('.topic-card-shell')],G=()=>{try{return JSON.parse(localStorage[K]||'[]').filter(x=>C.some(c=>c.dataset.topicId==x))}catch{return[]}},S=a=>{try{localStorage[K]=JSON.stringify(a)}catch{}},R=()=>{let p=G();S(p);C.forEach((c,i)=>{let x=c.dataset.topicId,o=p.includes(x);c.classList.toggle('is-pinned',o);c.style.order=o?p.indexOf(x):C.length+i;c.querySelector('.pin-btn').setAttribute('aria-pressed',o)})};document.querySelectorAll('.pin-btn').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();let p=G(),x=b.dataset.topicId,i=p.indexOf(x);i<0?p.unshift(x):p.splice(i,1);S(p);R()});R();
+</script>
 {% endblock %}

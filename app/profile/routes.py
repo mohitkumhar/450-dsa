@@ -1,87 +1,50 @@
 import json
+from datetime import timedelta
 
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, send_file
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
-from app.platforms.fetchers import (
-    fetch_atcoder,
-    fetch_coding_ninjas,
-    fetch_gfg,
-    fetch_github,
-    fetch_hr_badges,
-    fetch_lc_badges,
-    fetch_leetcode,
-    fetch_leetcode_rating_history,
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
+from app.profile.card_service import CACHE_TTL, get_public_card_image, warm_public_card_cache
+from app.profile.sync_service import (
+    build_sync_platforms_response,
+    clear_profile_caches,
+    sync_user_platforms,
 )
-from app.profile.card_service import CACHE_TTL, get_public_card_image
-from app.utils import ensure_utc_datetime, json_error, json_success, normalize_coding_ninjas_profile_id, utc_now, compute_user_platforms
-from platform_fetcher import run_fetch_jobs
+from app.utils import (
+    compute_in_sheet_platform_counts,
+    get_merged_daily_counts,
+    json_error,
+    json_success,
+    merge_platform_counts,
+    update_computed_stats,
+    utc_now,
+)
 from profile_validation import build_profile_updates
+from streaks import compute_streak
 
 profile_bp = Blueprint("profile", __name__)
 
-__all__ = ["CACHE_TTL", "get_public_card_image"]
+__all__ = ["CACHE_TTL", "build_sync_platforms_response", "get_public_card_image", "warm_public_card_cache"]
+
+UNIVERSITY_SEARCH_TIMEOUT_SECONDS = 5
+HEATMAP_DAYS = 168
 
 
-def build_sync_platforms_response(platform_status: dict):
-    attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
-    synced = sum(1 for value in platform_status.values() if value.get("status") == "synced")
-    failed = sum(1 for value in platform_status.values() if value.get("status") == "failed")
-    partial_success = bool(synced and failed)
-
-    if attempted == 0:
-        return {"success": False, "error": "No platforms provided to sync.", "platforms": platform_status}
-    if synced == 0 and failed > 0:
-        return {"success": False, "error": "Sync failed for all platforms.", "platforms": platform_status}
-
-    return {"success": True, "partial_success": partial_success, "platforms": platform_status}
-
-
-def build_platform_sync_jobs(
-    leetcode_username="",
-    github_username="",
-    gfg_username="",
-    codingninjas_username="",
-    hackerrank_username="",
-    atcoder_username="",
-):
-    jobs = {}
-
-    if leetcode_username:
-        def fetch_leetcode_bundle():
-            result = {"stats": fetch_leetcode(leetcode_username)}
-            try:
-                rating_history = fetch_leetcode_rating_history(leetcode_username)
-                if rating_history:
-                    result["rating_history"] = rating_history
-            except Exception:
-                pass
-            try:
-                result["badges"] = fetch_lc_badges(leetcode_username)
-            except Exception:
-                pass
-            return result
-
-        jobs["leetcode"] = fetch_leetcode_bundle
-
-    if github_username:
-        jobs["github"] = lambda: fetch_github(github_username)
-
-    if gfg_username:
-        jobs["gfg"] = lambda: fetch_gfg(gfg_username)
-
-    if codingninjas_username:
-        jobs["codingninjas"] = lambda: fetch_coding_ninjas(codingninjas_username)
-
-    if hackerrank_username:
-        jobs["hackerrank"] = lambda: fetch_hr_badges(hackerrank_username)
-
-    if atcoder_username:
-        jobs["atcoder"] = lambda: fetch_atcoder(atcoder_username)
-
-    return jobs
+def filter_heatmap_counts(daily_counts, today=None, days=HEATMAP_DAYS):
+    """Return only the daily counts rendered by the profile heatmap."""
+    today = today or utc_now().date()
+    start = today - timedelta(days=days - 1)
+    start_key = start.isoformat()
+    today_key = today.isoformat()
+    return {
+        day: count
+        for day, count in daily_counts.items()
+        if start_key <= day <= today_key
+    }
 
 
 def clear_profile_caches(user_id, cache_client=None):
@@ -417,6 +380,14 @@ def public_card(user_id):
         return "Invalid User ID", 400
 
     try:
+        user_doc = db.user.find_one({"_id": object_id}, {"is_deactivated": 1})
+    except TypeError:
+        # Some lightweight test doubles implement a simpler find_one(query) API.
+        user_doc = db.user.find_one({"_id": object_id})
+    if not user_doc or user_doc.get("is_deactivated"):
+        return "User not found", 404
+
+    try:
         img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
     except LookupError:
         return "User not found", 404
@@ -473,7 +444,7 @@ def search_universities():
         response = requests.get(
             "https://universities.hipolabs.com/search",
             params={"name": query},
-            timeout=5,
+            timeout=UNIVERSITY_SEARCH_TIMEOUT_SECONDS,
         )
         if response.status_code == 200:
             data = response.json()
@@ -542,18 +513,32 @@ def upload_photo():
 @profile_bp.route("/profile")
 @login_required
 def profile():
-    topics = list(db.topic.find().sort("position", 1))
     user = current_user
-
-    all_questions = list(db.question.find())
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
+    dsa_done = len(solved_items)
+    current_streak, longest_streak = compute_streak(user.progress)
 
-    difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
-    
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        topics = pre["topics"]
+        all_questions = pre["all_questions"]
+        difficulty_map = pre["difficulty_map"]
+        topic_question_count = pre["topic_question_count"]
+        total_questions = pre["total_questions"]
+    else:
+        topics = list(db.topic.find().sort("position", 1))
+        all_questions = list(db.question.find())
+        difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
+        topic_question_count = {}
+        for question in all_questions:
+            topic_id = str(question["topic"])
+            topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
+        total_questions = len(all_questions)
+
     dsa_easy = 0
     dsa_medium = 0
     dsa_hard = 0
-    
+
     for q_id in solved_items.keys():
         diff = difficulty_map.get(q_id, "Medium")
         if diff == "Easy":
@@ -562,26 +547,24 @@ def profile():
             dsa_medium += 1
         elif diff == "Hard":
             dsa_hard += 1
+
     platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "Other": 0}
     daily_counts = {}
 
-    topic_question_count = {}
     for question in all_questions:
-        topic_id = str(question["topic"])
-        topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
-
         question_id = str(question["_id"])
         if question_id in solved_items:
             solved_at = solved_items[question_id].get("timestamp") or utc_now()
             day = solved_at.strftime("%Y-%m-%d")
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
-    ext_daily = user.external_daily_counts
+    ext_daily = get_merged_daily_counts(user)
     if ext_daily:
         for day, count in ext_daily.items():
             daily_counts[day] = daily_counts.get(day, 0) + count
 
     total_active_days = len(daily_counts)
+    heatmap_daily_counts = filter_heatmap_counts(daily_counts)
     sorted_dates = sorted(daily_counts.keys())
     cumulative_data = []
     cumulative_sum = 0
@@ -590,15 +573,38 @@ def profile():
         cumulative_data.append({"x": day, "y": cumulative_sum})
 
     topic_progress = []
-    dsa_done = len(solved_items)
 
     ext_platform_totals = user.external_totals or {}
-    platforms = compute_user_platforms(solved_items, ext_platform_totals, all_questions)
+    cached_in_sheet_counts = (
+        user.in_sheet_platform_counts
+        if isinstance(user.in_sheet_platform_counts, dict)
+        else None
+    )
+    if cached_in_sheet_counts is not None:
+        platforms = merge_platform_counts(cached_in_sheet_counts, ext_platform_totals)
+    else:
+        in_sheet_counts = compute_in_sheet_platform_counts(solved_items, all_questions)
+
+        # Avoid clobbering concurrent $inc updates from /update_question by setting only
+        # if the field is still absent at write time.
+        update_result = db.user.update_one(
+            {"_id": user.id, "in_sheet_platform_counts": {"$exists": False}},
+            {"$set": {"in_sheet_platform_counts": in_sheet_counts}},
+        )
+
+        effective_counts = in_sheet_counts
+        if not getattr(update_result, "modified_count", 0):
+            refreshed = db.user.find_one({"_id": user.id}, {"in_sheet_platform_counts": 1}) or {}
+            refreshed_counts = refreshed.get("in_sheet_platform_counts")
+            if isinstance(refreshed_counts, dict):
+                effective_counts = refreshed_counts
+
+        platforms = merge_platform_counts(effective_counts, ext_platform_totals)
 
     lc_easy = dsa_easy
     lc_medium = dsa_medium
     lc_hard = dsa_hard
-    
+
     lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
     lc_rank = ext_platform_totals.get("LeetCode_GlobalRank", 0)
@@ -608,7 +614,6 @@ def profile():
     gh_commits = ext_platform_totals.get("GitHub_Commits", 0)
 
     global_total_solved = sum(platforms.values())
-    total_questions = len(all_questions)
 
     for topic_doc in topics:
         topic_id = str(topic_doc["_id"])
@@ -640,6 +645,11 @@ def profile():
     except (json.JSONDecodeError, ValueError):
         print("Unable to handle hackerrank badges")
 
+    leaderboard_entries = build_leaderboard_data()
+    profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
+
+    update_computed_stats(user.id, user.progress, db, total_questions)
+
     return render_template(
         "profile.html",
         user=user,
@@ -659,10 +669,13 @@ def profile():
         gh_prs=gh_prs,
         gh_merged=gh_merged,
         gh_commits=gh_commits,
-        daily_counts=daily_counts,
+        daily_counts=heatmap_daily_counts,
         cumulative_data=cumulative_data,
         total_active_days=total_active_days,
         rating_history=rating_history,
         lc_badges=lc_badges,
         hr_badges=hr_badges,
+        profile_leaderboard_rank=profile_leaderboard_rank,
+        current_streak=current_streak,
+        longest_streak=longest_streak,
     )

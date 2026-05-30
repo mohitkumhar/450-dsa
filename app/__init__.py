@@ -1,6 +1,6 @@
 import json
 import os
-import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
 
@@ -13,14 +13,38 @@ from flask_login import current_user
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.faq import faq_bp
-from app.extensions import bcrypt, db, limiter, login_manager, mongo, oauth, cache
+from app.extensions import bcrypt, cache, db, limiter, login_manager, mongo, oauth
 from app.leaderboard import leaderboard_bp
 from app.web.routes import public_bp
 from app.profile import profile_bp
-from app.security import build_content_security_policy
+from app.security import (
+    CSRF_PROTECTED_METHODS,
+    build_content_security_policy,
+    csrf_token,
+    validate_csrf_request,
+)
 from app.search import search_bp
 from app.tracker import tracker_bp
-from app.utils import platform_color_filter, platform_name_filter, platform_profile_url
+from app.cohort.routes import cohort_bp
+from app.utils import (
+    platform_color_filter,
+    platform_name_filter,
+    platform_profile_url,
+    question_editorial_links,
+    safe_url_filter,
+)
+
+
+ROUTE_TIMING_ENDPOINTS = {
+    "profile.profile",
+    "profile.sync_platforms",
+    "leaderboard.leaderboard",
+    "leaderboard.api_leaderboard",
+    "search.search",
+    "search.api_search_questions",
+    "tracker.export_csv",
+    "tracker.export_notes",
+}
 
 
 ROUTE_TIMING_ENDPOINTS = {
@@ -55,13 +79,39 @@ def _mongo_client_options(app):
     }
 
 
+def _dedupe_seeded_questions():
+    if not all(hasattr(db.question, attr) for attr in ("aggregate", "delete_many")):
+        return
+
+    duplicate_groups = db.question.aggregate(
+        [
+            {
+                "$group": {
+                    "_id": {
+                        "topic": "$topic",
+                        "problem": "$problem",
+                        "url": "$url",
+                    },
+                    "ids": {"$push": "$_id"},
+                    "count": {"$sum": 1},
+                }
+            },
+            {"$match": {"count": {"$gt": 1}}},
+        ]
+    )
+    for group in duplicate_groups:
+        duplicate_ids = group["ids"][1:]
+        if duplicate_ids:
+            db.question.delete_many({"_id": {"$in": duplicate_ids}})
+
+
 def create_app(config_class=None):
     load_dotenv()
 
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
     config_class = config_class or resolve_config_class()
     app.config.from_object(config_class)
-    # Non-test environments must provide a real SECRET_KEY before the app boots.
+    # Non-test environments without a real SECRET_KEY use a temporary fallback.
     config_class.apply_environment_overrides(app)
     _configure_rate_limit_storage(app, config_class)
     app.config["SESSION_COOKIE_SECURE"] = env_flag(
@@ -127,42 +177,128 @@ def create_app(config_class=None):
         db.topic.create_index("name", unique=True)
         db.topic.create_index("position")
         db.question.create_index("topic")
+        _dedupe_seeded_questions()
+        db.question.create_index([("topic", 1), ("problem", 1), ("url", 1)], unique=True)
         db.question.create_index([("problem", "text")], name="problem_text")
-    except Exception:
-        pass
-
-    # Lightweight schema backfill for legacy user documents.
-    db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
-
+        db.cohort.create_index("join_code", unique=True)
+        db.cohort_membership.create_index([("cohort_id", 1), ("user_id", 1)], unique=True)
+        db.cohort_membership.create_index("user_id")
+        
+        # Lightweight schema backfill for legacy user documents.
+        db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
+    except Exception as exc:
+        app.logger.warning(f"Database indexing or schema backfill failed: {exc}")
     data_path = Path(app.root_path).parent / "data.json"
     app._db_initialized = False
 
     def init_db():
-        if db.topic.count_documents({}) == 0:
-            with data_path.open("r", encoding="utf-8") as file_obj:
-                data = json.load(file_obj)
-            for topic in data:
-                result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})
-                topic_id = result.inserted_id
-                questions = []
-                for question in topic["questions"]:
-                    difficulty = question.get("difficulty", "Medium")
-                    questions.append(
-                        {
-                            "topic": topic_id,
-                            "problem": question["Problem"],
-                            "url": question["URL"],
+        with data_path.open("r", encoding="utf-8") as file_obj:
+            data = json.load(file_obj)
+        if not all(hasattr(collection, "update_one") for collection in (db.topic, db.question)):
+            if db.topic.count_documents({}) == 0:
+                for topic in data:
+                    result = db.topic.insert_one({"name": topic["topicName"], "position": topic["position"]})
+                    topic_id = result.inserted_id
+                    questions = []
+                    for question in topic["questions"]:
+                        difficulty = question.get("difficulty", "Medium")
+                        questions.append(
+                            {
+                                "topic": topic_id,
+                                "problem": question["Problem"],
+                                "url": question["URL"],
+                                "url2": question.get("URL2", ""),
+                                "editorial_links": question_editorial_links(question),
+                                "difficulty": difficulty,
+                            }
+                        )
+                    if questions:
+                        db.question.insert_many(questions)
+            return
+
+        for topic in data:
+            db.topic.update_one(
+                {"name": topic["topicName"]},
+                {"$set": {"position": topic["position"]}},
+                upsert=True,
+            )
+            topic_doc = db.topic.find_one({"name": topic["topicName"]})
+            if not topic_doc:
+                continue
+
+            topic_id = topic_doc["_id"]
+            for question in topic["questions"]:
+                difficulty = question.get("difficulty", "Medium")
+                db.question.update_one(
+                    {
+                        "topic": topic_id,
+                        "problem": question["Problem"],
+                        "url": question["URL"],
+                    },
+                    {
+                        "$set": {
                             "url2": question.get("URL2", ""),
+                            "editorial_links": question_editorial_links(question),
                             "difficulty": difficulty,
                         }
-                    )
-                if questions:
-                    db.question.insert_many(questions)
+                    },
+                    upsert=True,
+                )
+
+    def _precompute_static_data(app):
+        """Precompute static question/topic metadata and store in app config."""
+        try:
+            questions = list(db.question.find())
+            topics = list(db.topic.find().sort("position", 1))
+        except Exception:
+            return
+
+        topic_question_count = {}
+        difficulty_map = {}
+        all_questions_pc = []
+        topic_lookup = {}
+
+        for t in topics:
+            tid = str(t["_id"])
+            topic_lookup[tid] = {"name": t["name"], "position": t["position"]}
+
+        for q in questions:
+            qid = str(q["_id"])
+            tid = str(q["topic"])
+            topic_question_count.setdefault(tid, []).append(qid)
+            difficulty_map[qid] = q.get("difficulty", "Medium")
+            all_questions_pc.append({
+                "_id": qid,
+                "topic": tid,
+                "problem": q.get("problem", ""),
+                "url": q.get("url", ""),
+                "url2": q.get("url2", ""),
+                "difficulty": q.get("difficulty", "Medium"),
+                "editorial_links": q.get("editorial_links", []),
+            })
+
+        topics_pc = [
+            {"_id": str(t["_id"]), "name": t["name"], "position": t["position"]}
+            for t in topics
+        ]
+
+        app.config["_PRECOMPUTED"] = {
+            "all_questions": all_questions_pc,
+            "topics": topics_pc,
+            "topic_lookup": topic_lookup,
+            "topic_question_count": topic_question_count,
+            "difficulty_map": difficulty_map,
+            "total_questions": len(questions),
+        }
 
     @app.before_request
     def ensure_db_initialized():
+        if request.endpoint == "health_check":
+            return None
+
         if not app._db_initialized:
             init_db()
+            _precompute_static_data(app)
             app._db_initialized = True
 
     @app.before_request
@@ -172,43 +308,32 @@ def create_app(config_class=None):
 
     @app.before_request
     def protect_unsafe_requests():
-        if (
-            request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}
-            or request.endpoint in CSRF_EXEMPT_ENDPOINTS
-            or not current_user.is_authenticated
-        ):
+        if request.method not in CSRF_PROTECTED_METHODS:
             return None
 
-        session_token = session.get("csrf_token")
-        request_token = (
-            request.form.get("csrf_token")
-            or request.headers.get("X-CSRFToken")
-            or request.headers.get("X-CSRF-Token")
-        )
-        if not request_token and request.is_json:
-            payload = request.get_json(silent=True) or {}
-            if isinstance(payload, dict):
-                request_token = payload.get("csrf_token")
+        if validate_csrf_request():
+            return None
 
-        if not session_token or not request_token or not secrets.compare_digest(str(session_token), str(request_token)):
-            abort(403)
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "error": "Invalid CSRF token."}), 403
 
-        return None
+        abort(403)
 
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
     app.add_template_filter(platform_profile_url, "platform_url")
+    app.add_template_filter(safe_url_filter, "safe_url")
 
     @app.context_processor
     def inject_csrf_token():
-        def csrf_token():
-            token = session.get("csrf_token")
-            if not token:
-                token = secrets.token_urlsafe(32)
-                session["csrf_token"] = token
-            return token
-
         return {"csrf_token": csrf_token}
+
+    @app.get("/health")
+    def health_check():
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
 
     @app.route("/service-worker.js")
     def service_worker():
@@ -224,6 +349,7 @@ def create_app(config_class=None):
     app.register_blueprint(search_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
+    app.register_blueprint(cohort_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):

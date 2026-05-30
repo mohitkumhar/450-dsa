@@ -33,3 +33,9 @@ Please describe the tests that you ran to verify your changes.
 
 ## Screenshots Or Logs
 Add screenshots, terminal output, or test results if relevant.
+
+## Contributor Confirmation
+
+- [ ] Code follows the style guidelines of this project
+- [ ] I have performed a self-review of my own code
+- [ ] My changes generate no new warnings or errors
