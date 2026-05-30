@@ -1,9 +1,7 @@
 import re
 
-import app.leaderboard.routes as leaderboard_routes
 import app.leaderboard.service as leaderboard_service
 import app.profile.routes as profile_routes
-import app.search.routes as search_routes
 import app.tracker.routes as tracker_routes
 from tests.conftest import build_test_app, login_test_user
 

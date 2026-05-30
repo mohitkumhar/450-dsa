@@ -84,9 +84,10 @@ def build_platform_sync_jobs(
     return jobs
 
 
-def clear_profile_caches(user_id):
+def clear_profile_caches(user_id, cache_client=None):
+    cache_backend = cache_client or cache
     try:
-        cache.delete(f"card_{str(user_id)}")
+        cache_backend.delete(f"card_{str(user_id)}")
     except KeyError:
         pass
 

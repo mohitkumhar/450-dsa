@@ -7,7 +7,8 @@ from time import perf_counter
 from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
-from flask import Flask, g, request, session
+from flask import Flask, abort, g, jsonify, request, session
+from flask_login import current_user
 
 from app.admin import admin_bp
 from app.auth import auth_bp
@@ -31,6 +32,11 @@ ROUTE_TIMING_ENDPOINTS = {
     "search.api_search_questions",
     "tracker.export_csv",
     "tracker.export_notes",
+}
+
+CSRF_EXEMPT_ENDPOINTS = {
+    "admin.delete_user",
+    "auth.delete_account",
 }
 
 
@@ -164,6 +170,31 @@ def create_app(config_class=None):
         if request.endpoint in ROUTE_TIMING_ENDPOINTS:
             g.route_timer_start = perf_counter()
 
+    @app.before_request
+    def protect_unsafe_requests():
+        if (
+            request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}
+            or request.endpoint in CSRF_EXEMPT_ENDPOINTS
+            or not current_user.is_authenticated
+        ):
+            return None
+
+        session_token = session.get("csrf_token")
+        request_token = (
+            request.form.get("csrf_token")
+            or request.headers.get("X-CSRFToken")
+            or request.headers.get("X-CSRF-Token")
+        )
+        if not request_token and request.is_json:
+            payload = request.get_json(silent=True) or {}
+            if isinstance(payload, dict):
+                request_token = payload.get("csrf_token")
+
+        if not session_token or not request_token or not secrets.compare_digest(str(session_token), str(request_token)):
+            abort(403)
+
+        return None
+
     app.add_template_filter(platform_name_filter, "platform_name")
     app.add_template_filter(platform_color_filter, "platform_color")
     app.add_template_filter(platform_profile_url, "platform_url")
@@ -197,7 +228,6 @@ def create_app(config_class=None):
     @app.errorhandler(429)
     def ratelimit_handler(e):
         retry_after = getattr(e, 'retry_after', 60)
-        from flask import jsonify
         response = jsonify({
             'error': 'Too many requests',
             'message': str(e.description),

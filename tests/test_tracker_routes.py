@@ -4,6 +4,12 @@ import app.tracker.routes as tracker_routes
 from conftest import build_test_app, login_test_user
 
 
+def csrf_headers(client, token="test-csrf-token"):
+    with client.session_transaction() as session:
+        session["csrf_token"] = token
+    return {"X-CSRFToken": token}
+
+
 def test_topic_not_found_invalid_id(monkeypatch):
     flask_app, _ = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
 
@@ -122,7 +128,7 @@ def test_update_question_rejects_missing_json_body(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, test_db)
-        response = client.post(f"/update_question/{question_id}")
+        response = client.post(f"/update_question/{question_id}", headers=csrf_headers(client))
 
     assert response.status_code == 400
     assert response.get_json() == {
@@ -141,6 +147,7 @@ def test_update_question_rejects_malformed_json(monkeypatch):
             f"/update_question/{question_id}",
             data="{not-json",
             content_type="application/json",
+            headers=csrf_headers(client),
         )
 
     assert response.status_code == 400
@@ -153,7 +160,7 @@ def test_update_question_rejects_json_array(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, test_db)
-        response = client.post(f"/update_question/{question_id}", json=["done"])
+        response = client.post(f"/update_question/{question_id}", json=["done"], headers=csrf_headers(client))
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Request body must be a JSON object"
@@ -168,6 +175,7 @@ def test_update_question_rejects_non_boolean_done(monkeypatch):
         response = client.post(
             f"/update_question/{question_id}",
             json={"done": "true"},
+            headers=csrf_headers(client),
         )
 
     assert response.status_code == 400
@@ -183,6 +191,7 @@ def test_update_question_rejects_non_boolean_skipped(monkeypatch):
         response = client.post(
             f"/update_question/{question_id}",
             json={"skipped": "true"},
+            headers=csrf_headers(client),
         )
 
     assert response.status_code == 400
@@ -195,7 +204,7 @@ def test_update_question_accepts_valid_boolean_update(monkeypatch):
 
     with flask_app.test_client() as client:
         user_id = login_test_user(client, test_db)
-        response = client.post(f"/update_question/{question_id}", json={"done": True})
+        response = client.post(f"/update_question/{question_id}", json={"done": True}, headers=csrf_headers(client))
 
     assert response.status_code == 200
     assert response.get_json()["success"] is True
@@ -218,7 +227,11 @@ def test_update_question_sets_skipped_and_clears_done(monkeypatch):
 
     with flask_app.test_client() as client:
         login_test_user(client, user_id)
-        response = client.post(f"/update_question/{question_id}", json={"skipped": True})
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"skipped": True},
+            headers=csrf_headers(client),
+        )
 
     assert response.status_code == 200
     user = test_db.user.find_one({"_id": user_id})
