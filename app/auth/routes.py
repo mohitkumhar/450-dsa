@@ -111,6 +111,15 @@ class UserWrapper(UserMixin):
     def is_admin(self):
         return bool(self._doc.get("is_admin", False))
 
+    @property
+    def sync_interval(self):
+        return self._doc.get("sync_interval") or "none"
+
+    @property
+    def sync_notifications(self):
+        val = self._doc.get("sync_notifications")
+        return True if val is None else bool(val)
+
     def __getattr__(self, name):
         if name.startswith("_"):
             raise AttributeError(name)

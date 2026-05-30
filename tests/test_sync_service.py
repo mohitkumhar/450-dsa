@@ -6,6 +6,7 @@ from app.utils import get_merged_daily_counts
 
 class FakeUser:
     def __init__(self, **kwargs):
+        self._doc = kwargs
         self.id = kwargs.get("id", "user-1")
         self.last_sync = kwargs.get("last_sync")
         self.leetcode_username = kwargs.get("leetcode_username", "")
@@ -17,6 +18,20 @@ class FakeUser:
         self.platform_calendars = kwargs.get("platform_calendars", {})
         self.external_daily_counts = kwargs.get("external_daily_counts", {})
         self.reload_calls = 0
+
+    @property
+    def sync_interval(self):
+        return self._doc.get("sync_interval") or "none"
+
+    @property
+    def sync_notifications(self):
+        val = self._doc.get("sync_notifications")
+        return True if val is None else bool(val)
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        return self._doc.get(name)
 
     def reload(self):
         self.reload_calls += 1
@@ -318,3 +333,140 @@ def test_build_sync_platforms_response_all_failed():
     )
     assert result["success"] is False
     assert "all platforms" in result["error"].lower()
+
+
+def test_get_users_due_for_auto_sync():
+    from app.profile.sync_service import get_users_due_for_auto_sync
+    
+    now = datetime.now(timezone.utc)
+    
+    # 1. User not opted in (interval 'none')
+    user_none = {"_id": "none", "sync_interval": "none"}
+    # 2. Daily user, never attempted
+    user_daily_never = {"_id": "daily_never", "sync_interval": "daily"}
+    # 3. Daily user, attempted 25 hours ago (due)
+    user_daily_due = {"_id": "daily_due", "sync_interval": "daily", "last_auto_sync_attempt": now - timedelta(hours=25)}
+    # 4. Daily user, attempted 10 hours ago (not due)
+    user_daily_not_due = {"_id": "daily_not_due", "sync_interval": "daily", "last_auto_sync_attempt": now - timedelta(hours=10)}
+    # 5. Weekly user, never attempted (due)
+    user_weekly_never = {"_id": "weekly_never", "sync_interval": "weekly"}
+    # 6. Weekly user, attempted 8 days ago (due)
+    user_weekly_due = {"_id": "weekly_due", "sync_interval": "weekly", "last_auto_sync_attempt": now - timedelta(days=8)}
+    # 7. Weekly user, attempted 3 days ago (not due)
+    user_weekly_not_due = {"_id": "weekly_not_due", "sync_interval": "weekly", "last_auto_sync_attempt": now - timedelta(days=3)}
+    
+    all_users = [user_none, user_daily_never, user_daily_due, user_daily_not_due, user_weekly_never, user_weekly_due, user_weekly_not_due]
+    
+    class FakeUserCursor:
+        def __init__(self, data):
+            self.data = data
+        def __iter__(self):
+            return iter(self.data)
+            
+    class FakeDB:
+        def __init__(self, data):
+            self.user = self
+            self.data = data
+        def find(self, query):
+            # simulate querying daily/weekly
+            matching = [u for u in self.data if u.get("sync_interval") in query["sync_interval"]["$in"]]
+            return FakeUserCursor(matching)
+            
+    db = FakeDB(all_users)
+    due = get_users_due_for_auto_sync(db, now)
+    
+    due_ids = [u.id for u in due]
+    assert "none" not in due_ids
+    assert "daily_never" in due_ids
+    assert "daily_due" in due_ids
+    assert "daily_not_due" not in due_ids
+    assert "weekly_never" in due_ids
+    assert "weekly_due" in due_ids
+    assert "weekly_not_due" not in due_ids
+
+
+def test_auto_sync_single_user_no_platforms():
+    from app.profile.sync_service import auto_sync_single_user
+    
+    now = datetime.now(timezone.utc)
+    user = FakeUser(id="user-empty")
+    db = FakeDB()
+    cache = FakeCache()
+    
+    auto_sync_single_user(user, db, cache, now)
+    
+    assert db.user.updates == [
+        (
+            {"_id": "user-empty"},
+            {
+                "$set": {
+                    "last_auto_sync_attempt": now,
+                    "last_auto_sync_status": "success",
+                    "last_auto_sync_error": None
+                }
+            }
+        )
+    ]
+
+
+def test_auto_sync_single_user_success(monkeypatch):
+    from app.profile.sync_service import auto_sync_single_user
+    import app.profile.sync_service as profile_sync_service
+    
+    now = datetime.now(timezone.utc)
+    user = FakeUser(id="user-alice", leetcode_username="alice")
+    db = FakeDB()
+    cache = FakeCache()
+    
+    monkeypatch.setattr(
+        profile_sync_service,
+        "sync_user_platforms",
+        lambda user, data, db_handle, cache_backend, now: ({"success": True}, 200)
+    )
+    
+    auto_sync_single_user(user, db, cache, now)
+    
+    assert db.user.updates == [
+        (
+            {"_id": "user-alice"},
+            {
+                "$set": {
+                    "last_auto_sync_attempt": now,
+                    "last_auto_sync_status": "success",
+                    "last_auto_sync_error": None
+                }
+            }
+        )
+    ]
+
+
+def test_auto_sync_single_user_failed(monkeypatch):
+    from app.profile.sync_service import auto_sync_single_user
+    import app.profile.sync_service as profile_sync_service
+    
+    now = datetime.now(timezone.utc)
+    user = FakeUser(id="user-bob", leetcode_username="bob")
+    db = FakeDB()
+    cache = FakeCache()
+    
+    monkeypatch.setattr(
+        profile_sync_service,
+        "sync_user_platforms",
+        lambda user, data, db_handle, cache_backend, now: ({"success": False, "error": "API Rate Limit"}, 200)
+    )
+    
+    auto_sync_single_user(user, db, cache, now)
+    
+    assert db.user.updates == [
+        (
+            {"_id": "user-bob"},
+            {
+                "$set": {
+                    "last_auto_sync_attempt": now,
+                    "last_auto_sync_status": "failed",
+                    "last_auto_sync_error": "API Rate Limit"
+                }
+            }
+        )
+    ]
+

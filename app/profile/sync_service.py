@@ -139,6 +139,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     if "codewars" in data:
         codewars_username = data.get("codewars", "").strip()
         update_fields["codewars_username"] = codewars_username
+    if "sync_interval" in data:
+        sync_interval = data.get("sync_interval", "none")
+        if sync_interval in ("none", "daily", "weekly"):
+            update_fields["sync_interval"] = sync_interval
+    if "sync_notifications" in data:
+        update_fields["sync_notifications"] = bool(data.get("sync_notifications"))
 
     platform_totals = {}
     platform_status = {}
@@ -318,3 +324,98 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     invalidate_leaderboard_cache()
     clear_profile_caches(cache_backend, user_id)
     return build_sync_platforms_response(platform_status), 200
+
+
+def get_users_due_for_auto_sync(db_handle, now):
+    """Retrieve users who are opted into daily or weekly sync and are due."""
+    # Find all users with sync_interval = "daily" or "weekly"
+    users_cursor = db_handle.user.find({
+        "sync_interval": {"$in": ["daily", "weekly"]}
+    })
+    
+    due_users = []
+    from app.auth.routes import UserWrapper
+    
+    for doc in users_cursor:
+        user = UserWrapper(doc)
+        interval = user.sync_interval
+        
+        # Check last attempt or last sync time
+        last_attempt = user.last_auto_sync_attempt
+        if not last_attempt:
+            # Never attempted automatic sync before
+            due_users.append(user)
+            continue
+            
+        last_attempt = ensure_utc_datetime(last_attempt)
+        elapsed_seconds = (now - last_attempt).total_seconds()
+        
+        if interval == "daily" and elapsed_seconds >= 86400:  # 24 hours
+            due_users.append(user)
+        elif interval == "weekly" and elapsed_seconds >= 604800:  # 7 days
+            due_users.append(user)
+            
+    return due_users
+
+
+def auto_sync_single_user(user, db_handle, cache_backend, now):
+    """Perform automatic background sync for a single user, updating auto sync status."""
+    has_platforms = any(getattr(user, attr, "") for attr in (
+        "leetcode_username", "github_username", "gfg_username",
+        "hackerrank_username", "codingninjas_username", "atcoder_username", "codewars_username"
+    ))
+    if not has_platforms:
+        # Nothing to sync, set status to success and return
+        db_handle.user.update_one(
+            {"_id": user.id},
+            {
+                "$set": {
+                    "last_auto_sync_attempt": now,
+                    "last_auto_sync_status": "success",
+                    "last_auto_sync_error": None
+                }
+            }
+        )
+        return
+
+    try:
+        # Bypass cooldown check inside sync_user_platforms by temporarily clearing last_sync in memory
+        original_last_sync = user._doc.get("last_sync")
+        user._doc["last_sync"] = None
+        
+        payload, status_code = sync_user_platforms(user, {}, db_handle, cache_backend, now=now)
+        
+        user._doc["last_sync"] = original_last_sync
+        
+        status = "success" if payload.get("success") else "failed"
+        error_msg = payload.get("error") if not payload.get("success") else None
+        
+        if payload.get("partial_success"):
+            failed_platforms = [p for p, details in payload.get("platforms", {}).items() if details.get("status") == "failed"]
+            if failed_platforms:
+                error_msg = f"Partial success. Failed platforms: {', '.join(failed_platforms)}"
+                status = "failed"
+        
+        db_handle.user.update_one(
+            {"_id": user.id},
+            {
+                "$set": {
+                    "last_auto_sync_attempt": now,
+                    "last_auto_sync_status": status,
+                    "last_auto_sync_error": error_msg
+                }
+            }
+        )
+    except Exception as e:
+        logger.exception(f"Exception occurred during auto sync for user {user.id}")
+        db_handle.user.update_one(
+            {"_id": user.id},
+            {
+                "$set": {
+                    "last_auto_sync_attempt": now,
+                    "last_auto_sync_status": "failed",
+                    "last_auto_sync_error": str(e)
+                }
+            }
+        )
+

@@ -381,6 +381,61 @@ def create_app(config_class=None):
         response.headers["Content-Security-Policy"] = build_content_security_policy()
         return response
 
+    import threading
+    import time
+    from app.utils import utc_now
+    from app.profile.sync_service import get_users_due_for_auto_sync, auto_sync_single_user
 
+    def init_scheduler(app):
+        if app.config.get("TESTING"):
+            return
+        if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+            return
+            
+        def scheduler_loop():
+            time.sleep(5)
+            app.logger.info("Background platform sync scheduler started.")
+            
+            while True:
+                try:
+                    with app.app_context():
+                        from app.extensions import cache
+                        now = utc_now()
+                        due_users = get_users_due_for_auto_sync(db, now)
+                        
+                        if due_users:
+                            app.logger.info("Found %d users due for automatic sync.", len(due_users))
+                            for user in due_users:
+                                app.logger.info("Auto-syncing user: %s (%s)", user.name, user.id)
+                                auto_sync_single_user(user, db, cache, now)
+                                # Respect rate limits by sleeping 10 seconds between users
+                                time.sleep(10)
+                except Exception as exc:
+                    app.logger.error("Error in automatic sync scheduler loop: %s", exc)
+                
+                # Check for due users every 1 hour
+                time.sleep(3600)
+                
+        thread = threading.Thread(target=scheduler_loop, daemon=True)
+        thread.start()
+
+    init_scheduler(app)
+
+    @app.cli.command("sync-auto")
+    def sync_auto_command():
+        """Run the scheduled automatic platform sync task immediately."""
+        from app.extensions import cache
+        from app.profile.sync_service import get_users_due_for_auto_sync, auto_sync_single_user
+        from app.utils import utc_now
+        import click
+        
+        now = utc_now()
+        due_users = get_users_due_for_auto_sync(db, now)
+        click.echo(f"Found {len(due_users)} users due for automatic sync.")
+        
+        for user in due_users:
+            click.echo(f"Auto-syncing user: {user.name} ({user.id})...")
+            auto_sync_single_user(user, db, cache, now)
+            click.echo(f"Successfully synced user {user.name}.")
 
     return app
