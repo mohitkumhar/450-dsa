@@ -4,18 +4,7 @@ from flask import Blueprint, Response, current_app, jsonify, render_template, re
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.leaderboard.cache import invalidate_leaderboard_cache
-from app.profile.card_service import warm_public_card_cache
-from app.utils import (
-    compute_in_sheet_platform_counts,
-    json_error,
-    json_success,
-    platform_from_question_url,
-    question_editorial_links,
-    update_computed_stats,
-    utc_now,
-)
-from calendar_export import build_study_plan_ics
+from app.utils import json_error, json_success, utc_now
 from notes_export import build_all_notes_markdown, build_topic_notes_markdown, topic_notes_filename
 from progress_export import build_progress_csv
 from progress_import import parse_csv_backup, parse_json_backup, process_dry_run
@@ -60,6 +49,7 @@ CSV_EXPORT_QUESTION_PROJECTION = {
     "url2": 1,
 }
 ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
+
 
 @tracker_bp.route("/")
 def index():
@@ -461,149 +451,21 @@ def export_json():
     return response
 
 
-@tracker_bp.route("/progress/import/preview", methods=["POST"])
+@tracker_bp.route("/export/all-notes")
 @login_required
-def import_preview():
-    if 'file' not in request.files:
-        return jsonify({"success": False, "error": "No file uploaded"}), 400
+def export_all_notes():
+    """Download all non-empty notes grouped by topic as a single Markdown file."""
+    topics = list(db.topic.find().sort("position", 1))
+    all_questions = list(db.question.find({}, ALL_NOTES_QUESTION_PROJECTION))
 
-    file = request.files['file']
-    if not file or not file.filename:
-        return jsonify({"success": False, "error": "No file selected"}), 400
+    questions_by_topic = {}
+    for question in all_questions:
+        topic_id = str(question["topic"])
+        questions_by_topic.setdefault(topic_id, []).append(question)
 
-    filename = file.filename.lower()
-    content = file.read()
-    try:
-        content_str = content.decode('utf-8-sig')
-    except Exception:
-        return jsonify({"success": False, "error": "Unable to decode file. Please upload a UTF-8 encoded text file."}), 400
-
-    if filename.endswith('.csv'):
-        parsed_items, err = parse_csv_backup(content_str)
-    elif filename.endswith('.json'):
-        parsed_items, err = parse_json_backup(content_str)
-    else:
-        return jsonify({"success": False, "error": "Unsupported file format. Please upload a .csv or .json file."}), 400
-
-    if err:
-        return jsonify({"success": False, "error": err}), 400
-
-    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
-    summary, changes, conflicts, _ = process_dry_run(parsed_items, questions, current_user.progress)
-
-    return jsonify({
-        "success": True,
-        "summary": summary,
-        "changes": changes[:50],
-        "conflicts": conflicts
-    })
-
-
-@tracker_bp.route("/progress/import/commit", methods=["POST"])
-@login_required
-def import_commit():
-    if 'file' not in request.files:
-        return jsonify({"success": False, "error": "No file uploaded"}), 400
-
-    file = request.files['file']
-    if not file or not file.filename:
-        return jsonify({"success": False, "error": "No file selected"}), 400
-
-    mode = request.form.get("mode", "merge")
-    if mode not in ("merge", "replace"):
-        return jsonify({"success": False, "error": "Invalid import mode"}), 400
-
-    filename = file.filename.lower()
-    content = file.read()
-    try:
-        content_str = content.decode('utf-8-sig')
-    except Exception:
-        return jsonify({"success": False, "error": "Unable to decode file. Please upload a UTF-8 encoded text file."}), 400
-
-    if filename.endswith('.csv'):
-        parsed_items, err = parse_csv_backup(content_str)
-    elif filename.endswith('.json'):
-        parsed_items, err = parse_json_backup(content_str)
-    else:
-        return jsonify({"success": False, "error": "Unsupported file format. Please upload a .csv or .json file."}), 400
-
-    if err:
-        return jsonify({"success": False, "error": err}), 400
-
-    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
-    _, _, _, mapped_progress = process_dry_run(parsed_items, questions, current_user.progress)
-
-    user_id = current_user.id
-    current_db_progress = current_user.progress
-
-    new_progress = {}
-    if mode == "merge":
-        new_progress = dict(current_db_progress)
-        for q_id, imp_val in mapped_progress.items():
-            existing = new_progress.get(q_id, {})
-            done = imp_val["done"] or bool(existing.get("done"))
-            bookmark = imp_val["bookmark"] or bool(existing.get("bookmark"))
-            skipped = imp_val["skipped"] or bool(existing.get("skipped"))
-            if done:
-                skipped = False
-
-            db_notes = existing.get("notes") or ""
-            imp_notes = imp_val["notes"] or ""
-
-            if db_notes and imp_notes and db_notes != imp_notes:
-                notes = f"{db_notes}\n[Imported]: {imp_notes}"
-            else:
-                notes = imp_notes if imp_notes else db_notes
-
-            timestamp = existing.get("timestamp")
-            if imp_val["done"] and not existing.get("done"):
-                timestamp = utc_now()
-            elif not timestamp:
-                timestamp = utc_now()
-
-            new_progress[q_id] = {
-                "done": done,
-                "bookmark": bookmark,
-                "skipped": skipped,
-                "notes": notes,
-                "timestamp": timestamp
-            }
-    else:
-        # Replace mode should overwrite only the mapped/imported questions while
-        # preserving any existing progress entries that were not present (or not matched)
-        # in the import file.
-        new_progress = dict(current_db_progress)
-        for q_id, imp_val in mapped_progress.items():
-            existing = new_progress.get(q_id, {})
-            timestamp = existing.get("timestamp")
-            if imp_val["done"] and not existing.get("done"):
-                timestamp = utc_now()
-            elif not timestamp:
-                timestamp = utc_now()
-
-            new_progress[q_id] = {
-                "done": imp_val["done"],
-                "bookmark": imp_val["bookmark"],
-                "skipped": imp_val["skipped"] if not imp_val["done"] else False,
-                "notes": imp_val["notes"],
-                "timestamp": timestamp
-            }
-
-    solved_items = {q_id: prog for q_id, prog in new_progress.items() if prog.get("done")}
-    in_sheet_counts = compute_in_sheet_platform_counts(solved_items, questions)
-
-    db.user.update_one(
-        {"_id": user_id},
-        {
-            "$set": {
-                "progress": new_progress,
-                "in_sheet_platform_counts": in_sheet_counts
-            }
-        }
+    markdown = build_all_notes_markdown(
+        topics, questions_by_topic, current_user.progress,
     )
-
-    current_user.reload()
-    invalidate_leaderboard_cache()
-    warm_public_card_cache(user_id, db_handle=db)
-
-    return jsonify({"success": True, "message": "Progress imported successfully!"})
+    response = Response(markdown, mimetype="text/markdown")
+    response.headers["Content-Disposition"] = 'attachment; filename=all_notes.md'
+    return response

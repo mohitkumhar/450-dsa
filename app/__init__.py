@@ -7,7 +7,8 @@ from time import perf_counter
 from app.config import resolve_config_class, env_flag, ProductionConfig
 from dotenv import load_dotenv
 from flasgger import Swagger
-from flask import Flask, abort, g, jsonify, request
+from flask import Flask, abort, g, jsonify, request, session
+from flask_login import current_user
 
 from app.admin import admin_bp
 from app.auth import auth_bp
@@ -43,6 +44,23 @@ ROUTE_TIMING_ENDPOINTS = {
     "search.api_search_questions",
     "tracker.export_csv",
     "tracker.export_notes",
+}
+
+
+ROUTE_TIMING_ENDPOINTS = {
+    "profile.profile",
+    "profile.sync_platforms",
+    "leaderboard.leaderboard",
+    "leaderboard.api_leaderboard",
+    "search.search",
+    "search.api_search_questions",
+    "tracker.export_csv",
+    "tracker.export_notes",
+}
+
+CSRF_EXEMPT_ENDPOINTS = {
+    "admin.delete_user",
+    "auth.delete_account",
 }
 
 
@@ -283,19 +301,6 @@ def create_app(config_class=None):
             _precompute_static_data(app)
             app._db_initialized = True
 
-    from app.platforms.metadata import PLATFORM_META
-
-    @app.template_filter("platform_badge")
-    def platform_badge_filter(name):
-        meta = PLATFORM_META.get(name)
-        if meta:
-            return meta["badge_class"]
-        return "badge-link"
-
-    @app.context_processor
-    def inject_platform_metadata():
-        return {"PLATFORM_META": PLATFORM_META}
-
     @app.before_request
     def start_route_timer():
         if request.endpoint in ROUTE_TIMING_ENDPOINTS:
@@ -348,10 +353,7 @@ def create_app(config_class=None):
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        retry_after = getattr(e, 'retry_after', None)
-        if retry_after in (None, "", "None"):
-            retry_after = 60
-        from flask import jsonify
+        retry_after = getattr(e, 'retry_after', 60)
         response = jsonify({
             'error': 'Too many requests',
             'message': str(e.description),

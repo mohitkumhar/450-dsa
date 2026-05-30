@@ -167,6 +167,7 @@
 <script>
   const endpointConfig = {{ {
     "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+    "csrfToken": csrf_token(),
   }|tojson }};
   const csrfToken = {{ csrf_token()|tojson }};
   const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
@@ -197,7 +198,7 @@
   }
 
   function updateQuestion(id, data, callback) {
-    fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify(data) })
+    fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': endpointConfig.csrfToken }, body: JSON.stringify(data) })
       .then(r => r.json()).then(res => { if (res.success) callback(); })
       .catch(() => alert('Error updating.'));
   }
