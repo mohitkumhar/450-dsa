@@ -384,3 +384,7 @@ def create_app(config_class=None):
 
 
     return app
+
+
+# GSSoC Flask Global Error Handler registration
+# Catch 404, 500, and rate-limit HTTP exceptions cleanly.
