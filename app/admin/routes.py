@@ -252,4 +252,3 @@ def save_question():
 
     invalidate_leaderboard_cache()
     return redirect(url_for("admin.dashboard"))
-
