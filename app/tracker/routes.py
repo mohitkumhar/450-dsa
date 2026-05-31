@@ -60,6 +60,7 @@ CSV_EXPORT_QUESTION_PROJECTION = {
     "url2": 1,
 }
 ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
+BULK_QUESTION_PROJECTION = {"url": 1}
 
 @tracker_bp.route("/")
 def index():
@@ -323,6 +324,79 @@ def update_question(question_id):
         return json_success(message=message)
 
     return json_success(message="No changes made")
+
+
+@tracker_bp.route("/update_questions", methods=["POST"])
+@login_required
+def update_questions():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return json_error("Request body must be a JSON object", status_code=400)
+
+    question_ids = data.get("question_ids")
+    action = (data.get("action") or "").strip().lower()
+    allowed_actions = {"done", "skipped", "bookmark", "unbookmark", "clear"}
+
+    if not isinstance(question_ids, list) or not question_ids:
+        return json_error("question_ids must be a non-empty list", status_code=400)
+    if action not in allowed_actions:
+        return json_error("Invalid bulk action", status_code=400)
+
+    valid_question_ids = []
+    for question_id in question_ids:
+        if not isinstance(question_id, str):
+            continue
+        try:
+            ObjectId(question_id)
+        except InvalidId:
+            continue
+        valid_question_ids.append(question_id)
+
+    if not valid_question_ids:
+        return json_error("No valid question ids provided", status_code=400)
+
+    progress = dict(current_user.progress or {})
+    now = utc_now()
+    modified_count = 0
+
+    for question_id in valid_question_ids:
+        existing = dict(progress.get(question_id, {}))
+        if action == "done":
+            if not existing.get("done"):
+                existing["timestamp"] = now
+            existing["done"] = True
+            existing["skipped"] = False
+        elif action == "skipped":
+            existing["done"] = False
+            existing["skipped"] = True
+        elif action == "bookmark":
+            existing["bookmark"] = True
+        elif action == "unbookmark":
+            existing["bookmark"] = False
+        elif action == "clear":
+            existing["done"] = False
+            existing["skipped"] = False
+        progress[question_id] = existing
+        modified_count += 1
+
+    solved_items = {question_id: item for question_id, item in progress.items() if item.get("done")}
+    question_docs = list(db.question.find({}, BULK_QUESTION_PROJECTION))
+    in_sheet_counts = compute_in_sheet_platform_counts(solved_items, question_docs)
+
+    db.user.update_one(
+        {"_id": current_user.id},
+        {
+            "$set": {
+                "progress": progress,
+                "in_sheet_platform_counts": in_sheet_counts,
+            }
+        },
+    )
+    current_user.reload()
+    invalidate_leaderboard_cache()
+    warm_public_card_cache(current_user.id, db_handle=db)
+
+    return json_success(message=f"Updated {modified_count} questions")
 
 
 @tracker_bp.route("/bookmarks")

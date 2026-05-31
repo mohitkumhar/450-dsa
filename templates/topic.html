@@ -34,12 +34,19 @@
     font-weight: 600;
 }
 .topic-status:empty { display: none; }
+.bulk-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.bulk-toolbar .bulk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.bulk-toolbar .bulk-action-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.bulk-toolbar .bulk-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.bulk-toolbar .bulk-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bulk-select-all { display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary); font-weight: 600; }
 .topic-skeleton-shell { grid-template-columns: 1fr; }
 .topic-skeleton-toolbar { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; }
 .topic-skeleton-card { min-height: 420px; }
 .btn-busy { pointer-events: none; opacity: 0.75; }
 .btn-busy::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; animation: topic-spin 0.7s linear infinite; }
 .row-updating { opacity: 0.55; }
+.row-selected { background: rgba(255, 184, 0, 0.08); }
 
 @keyframes topic-spin {
     to { transform: rotate(360deg); }
@@ -126,6 +133,21 @@
     </button>
 </div>
 
+<div class="bulk-toolbar" id="bulkToolbar" aria-label="Bulk actions for selected questions">
+    <label class="bulk-select-all">
+        <input type="checkbox" id="bulkSelectAll" aria-label="Select all questions on this page">
+        Select all
+    </label>
+    <div class="bulk-actions">
+        <button type="button" class="bulk-action-btn" data-bulk-action="done">Mark Done</button>
+        <button type="button" class="bulk-action-btn" data-bulk-action="skipped">Mark Skipped</button>
+        <button type="button" class="bulk-action-btn" data-bulk-action="bookmark">Bookmark</button>
+        <button type="button" class="bulk-action-btn" data-bulk-action="unbookmark">Unbookmark</button>
+        <button type="button" class="bulk-action-btn" data-bulk-action="clear">Clear Progress</button>
+    </div>
+    <div class="topic-subtitle" id="bulkSelectionCount" style="margin:0">0 selected</div>
+</div>
+
 <div class="topic-status" id="topicStatus" role="status" aria-live="polite"></div>
 
 <div class="questions-table-wrap">
@@ -133,6 +155,9 @@
         <caption class="visually-hidden">Questions for {{ topic.name }} topic - {{ total_count }} total questions</caption>
         <thead>
             <tr>
+                <th scope="col">
+                    <input type="checkbox" id="bulkSelectAllHeader" aria-label="Select all questions on this page">
+                </th>
                 <th scope="col">#</th>
                 <th scope="col">Status</th>
                 <th scope="col">Problem</th>
@@ -147,6 +172,9 @@
             {% set p = progress_dict.get(q_id_str) %}
             {% set difficulty = q.get('difficulty', 'Medium') %}
             <tr class="{% if p and p.done %}row-done{% endif %}" id="row-{{ q_id_str }}" data-difficulty="{{ difficulty }}">
+                <td>
+                    <input type="checkbox" class="bulk-select-checkbox" data-id="{{ q_id_str }}" aria-label="Select '{{ q.problem }}' for bulk actions">
+                </td>
                 <td class="q-num">{{ loop.index }}</td>
                 <td>
                     <input type="checkbox" class="q-checkbox status-checkbox"
@@ -217,7 +245,7 @@
             </tr>
             {% endfor %}
             <tr id="empty-state-row" style="display:none;">
-                <td colspan="6" class="text-center" style="padding: 2rem;">
+                <td colspan="7" class="text-center" style="padding: 2rem;">
                     <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
                         No questions match the selected difficulty.
                     </p>
@@ -239,6 +267,7 @@
 <script>
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+    "bulkUpdateQuestions": url_for('tracker.update_questions'),
 }|tojson }};
 const csrfToken = {{ csrf_token()|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
@@ -250,6 +279,42 @@ function showUpdateError(message = 'Unable to save your change. Please try again
     topicStatus._hideTimer = window.setTimeout(() => {
         topicStatus.textContent = '';
     }, 5000);
+}
+
+function getBulkSelectedIds() {
+    return Array.from(document.querySelectorAll('.bulk-select-checkbox:checked')).map(cb => cb.dataset.id);
+}
+
+function syncBulkSelectionState() {
+    const selectedIds = getBulkSelectedIds();
+    const countLabel = document.getElementById('bulkSelectionCount');
+    const bulkButtons = document.querySelectorAll('[data-bulk-action]');
+    const headerCheckboxes = [document.getElementById('bulkSelectAll'), document.getElementById('bulkSelectAllHeader')].filter(Boolean);
+    const allCheckboxes = Array.from(document.querySelectorAll('.bulk-select-checkbox'));
+    const allSelected = allCheckboxes.length > 0 && selectedIds.length === allCheckboxes.length;
+    const someSelected = selectedIds.length > 0 && !allSelected;
+
+    if (countLabel) {
+        countLabel.textContent = `${selectedIds.length} selected`;
+    }
+    bulkButtons.forEach(btn => {
+        btn.disabled = selectedIds.length === 0;
+    });
+    headerCheckboxes.forEach(checkbox => {
+        checkbox.checked = allSelected;
+        checkbox.indeterminate = someSelected;
+    });
+}
+
+function setBulkBusy(isBusy) {
+    document.querySelectorAll('[data-bulk-action]').forEach(btn => {
+        btn.disabled = isBusy || getBulkSelectedIds().length === 0;
+        btn.classList.toggle('btn-busy', isBusy);
+        btn.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+    });
+    [document.getElementById('bulkSelectAll'), document.getElementById('bulkSelectAllHeader')].filter(Boolean).forEach(checkbox => {
+        checkbox.disabled = isBusy;
+    });
 }
 
 function setBookmarkState(btn, isBookmarked) {
@@ -409,6 +474,22 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
     });
 });
 
+    document.querySelectorAll('.bulk-select-checkbox').forEach(cb => {
+        cb.addEventListener('change', syncBulkSelectionState);
+    });
+
+    [document.getElementById('bulkSelectAll'), document.getElementById('bulkSelectAllHeader')].filter(Boolean).forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const checked = this.checked;
+            document.querySelectorAll('.bulk-select-checkbox').forEach(item => {
+                item.checked = checked;
+            });
+            syncBulkSelectionState();
+        });
+    });
+
+    syncBulkSelectionState();
+
 function setSkippedState(btn, isSkipped) {
     const icon = btn.querySelector('i');
     btn.dataset.skipped = isSkipped ? 'true' : 'false';
@@ -471,6 +552,48 @@ document.querySelectorAll('.skip-btn').forEach(btn => {
                 checkbox.disabled = false;
                 row.classList.remove('row-updating');
             });
+    });
+});
+
+document.querySelectorAll('[data-bulk-action]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+
+        const questionIds = getBulkSelectedIds();
+        if (!questionIds.length) {
+            showUpdateError('Select at least one question first.');
+            return;
+        }
+
+        const action = this.dataset.bulkAction;
+        const originalLabel = this.textContent;
+        setBulkBusy(true);
+        this.textContent = 'Applying...';
+        topicStatus.textContent = 'Applying bulk action...';
+
+        fetch(endpointConfig.bulkUpdateQuestions, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({question_ids: questionIds, action: action})
+        })
+        .then(r => {
+            if (!r.ok) throw new Error('Request failed');
+            return r.json();
+        })
+        .then(res => {
+            if (!res.success) throw new Error(res.error || 'Bulk update failed');
+            window.location.reload();
+        })
+        .catch(() => {
+            showUpdateError();
+        })
+        .finally(() => {
+            this.textContent = originalLabel;
+            setBulkBusy(false);
+        });
     });
 });
 
