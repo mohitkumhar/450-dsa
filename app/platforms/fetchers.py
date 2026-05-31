@@ -21,6 +21,7 @@ GFG_PAGE_TIMEOUT_SECONDS = 8
 ATCODER_REQUEST_TIMEOUT_SECONDS = 8
 CODING_NINJAS_REQUEST_TIMEOUT_SECONDS = 8
 CODEWARS_REQUEST_TIMEOUT_SECONDS = 8
+INTERVIEWBIT_REQUEST_TIMEOUT_SECONDS = 8
 
 _session_local = threading.local()
 
@@ -437,4 +438,32 @@ def fetch_codewars(username):
         return {}
     except Exception as exc:
         logger.error(f"Codewars stats fetch failed: {exc}")
+        return {}
+
+
+def fetch_interviewbit(username):
+    """Fetch InterviewBit solved count from the public profile page."""
+    try:
+        response = _get_http_session().get(
+            f"https://www.interviewbit.com/profile/{username}/",
+            timeout=INTERVIEWBIT_REQUEST_TIMEOUT_SECONDS,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        if response.status_code != 200:
+            return {}
+
+        text = response.text or ""
+        patterns = [
+            r"(?is)problems?\s+solved[^\d]{0,40}(\d+)",
+            r"(?is)solved\s+problems[^\d]{0,40}(\d+)",
+            r"(?is)questions?\s+solved[^\d]{0,40}(\d+)",
+            r"(?is)submissions?[^\d]{0,40}(\d+)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return {"total": int(match.group(1))}
+        return {"total": 0}
+    except Exception as exc:
+        logger.error(f"InterviewBit stats fetch failed: {exc}")
         return {}
