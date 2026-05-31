@@ -34,7 +34,8 @@ def test_profile_and_topic_templates_use_button_utilities():
     assert "class=\"filter-btn ui-btn ui-btn-primary ui-btn-pill\"" in topic_template
 
     assert "class=\"pill-btn ui-btn ui-btn-secondary ui-btn-pill\"" in base_template
-    assert "class=\"pill-btn accent ui-btn ui-btn-primary ui-btn-pill\"" in base_template
+    # Yahan update kiya gaya hai taaki naye mobile aur accessibility classes pass ho jayein:
+    assert "class=\"pill-btn accent ui-btn ui-btn-primary ui-btn-pill d-none d-md-flex min-h-[44px]\"" in base_template
     assert "class=\"icon-btn ui-btn ui-btn-secondary ui-btn-icon\"" in base_template
 
 
