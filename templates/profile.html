@@ -136,6 +136,12 @@
         {% if user.codewars_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codewars_username | platform_url('codewars') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Codewars profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Codewars account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
+    <div class="platform-row">
+      <span><i class="bi bi-award" style="color:#2563eb;margin-right:6px" aria-hidden="true"></i>SPOJ</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        {% if user.spoj_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.spoj_username | platform_url('spoj') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="SPOJ profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect SPOJ account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
+      </span>
+    </div>
     <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
@@ -393,6 +399,8 @@
     <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
     <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
     <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-award" style="color:#2563eb;margin-right:4px"></i>SPOJ Username</label>
+    <input class="m-inp" id="spoj_username" placeholder="e.g. tourist" value="{{ user.spoj_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
@@ -598,8 +606,9 @@ window.handleQuickSync = function(btn) {
   const cn = '{{ user.codingninjas_username or "" }}';
   const ac = '{{ user.atcoder_username or "" }}';
   const cw = '{{ user.codewars_username or "" }}';
+  const spoj = '{{ user.spoj_username or "" }}';
   
-  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
+  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw && !spoj){
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
@@ -640,7 +649,8 @@ window.handleSyncProfile = function(btn){
   const cn=document.getElementById('cn_username').value.trim();
   const ac=document.getElementById('ac_username').value.trim();
   const cw=document.getElementById('cw_username').value.trim();
-  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
+  const spoj=document.getElementById('spoj_username').value.trim();
+  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw && !spoj){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
   // Disable button & show spinner
   window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
@@ -658,7 +668,8 @@ window.handleSyncProfile = function(btn){
     {id:'ss_hr', label:'HackerRank', value:hr},
     {id:'ss_cn', label:'Coding Ninjas', value:cn},
     {id:'ss_ac', label:'AtCoder', value:ac},
-    {id:'ss_cw', label:'Codewars', value:cw}
+    {id:'ss_cw', label:'Codewars', value:cw},
+    {id:'ss_spoj', label:'SPOJ', value:spoj}
   ];
   const activeSyncPlatforms=syncPlatforms.filter(platform=>platform.value);
   const stepsContainer=document.getElementById('syncSteps');
@@ -686,7 +697,7 @@ window.handleSyncProfile = function(btn){
   fetch(endpointConfig.syncPlatforms,{
     method:'POST',
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw}),
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw,spoj:spoj}),
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
@@ -745,7 +756,7 @@ const cumData = {{ cumulative_data | tojson }};
 const pData = {{ platforms | tojson }};
 const chartShells=['progressChartShell','platformsChartShell','difficultyChartShell'].map(i=>document.getElementById(i)).filter(Boolean);let chartJsPromise;
 function loadChartJs(){return window.Chart?Promise.resolve(window.Chart):chartJsPromise||(chartJsPromise=new Promise((ok,bad)=>{let add=(src,err)=>{let s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>ok(window.Chart);s.onerror=err||bad;document.head.appendChild(s)};add('https://cdn.jsdelivr.net/npm/chart.js',()=>add('https://unpkg.com/chart.js@4/dist/chart.umd.js'))}))}
-function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
+function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','SPOJ','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.SPOJ,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','{{ PLATFORM_META["SPOJ"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
 if('IntersectionObserver'in window&&chartShells.length){const io=new IntersectionObserver((e,o)=>{if(e.some(x=>x.isIntersecting)){o.disconnect();renderProfileCharts()}},{rootMargin:'160px'});chartShells.forEach(s=>io.observe(s))}else renderProfileCharts();
 
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}

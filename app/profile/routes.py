@@ -77,6 +77,9 @@ def sync_platforms():
             codingninjas:
               type: string
               description: Coding Ninjas profile id or URL.
+            spoj:
+              type: string
+              description: SPOJ username.
     security:
       - SessionAuth: []
     responses:
@@ -376,8 +379,14 @@ def profile():
             dsa_medium += 1
         elif diff == "Hard":
             dsa_hard += 1
-
-    platforms = {"LeetCode": 0, "GFG": 0, "Coding Ninjas": 0, "HackerRank": 0, "Other": 0}
+  platforms = {
+    "LeetCode": 0,
+    "GFG": 0,
+    "Coding Ninjas": 0,
+    "HackerRank": 0,
+    "SPOJ": 0,
+    "Other": 0,
+  }
     daily_counts = {}
 
     for question in all_questions:

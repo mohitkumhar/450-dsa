@@ -88,6 +88,8 @@ def platform_profile_url(username, platform):
         return f"https://atcoder.jp/users/{username}"
     if platform == "codewars":
         return f"https://www.codewars.com/users/{username}"
+    if platform == "spoj":
+        return f"https://www.spoj.com/users/{username}/"
     return "#"
 
 
@@ -133,8 +135,8 @@ def search_dsa_questions(raw_query, limit=40):
     return search_service.search_dsa_questions(raw_query, limit=limit, db_handle=db)
 
 
-EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Codewars")
-PLATFORM_COUNT_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Codewars", "Other")
+EXTERNAL_SOLVED_TOTAL_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Codewars", "SPOJ")
+PLATFORM_COUNT_KEYS = ("LeetCode", "GFG", "Coding Ninjas", "HackerRank", "AtCoder", "Codewars", "SPOJ", "Other")
 
 
 def empty_platform_counts():
@@ -154,6 +156,8 @@ def platform_from_question_url(url):
         return "HackerRank"
     if "atcoder.jp" in url:
         return "AtCoder"
+    if "spoj.com" in url:
+        return "SPOJ"
     return "Other"
 
 
@@ -281,6 +285,7 @@ def compute_c_score(user_doc, all_questions=None):
     hr_total = coerce_non_negative_number(ext.get("HackerRank", 0))
     cn_total = coerce_non_negative_number(ext.get("Coding Ninjas", 0))
     cw_total = coerce_non_negative_number(ext.get("Codewars", 0))
+    spoj_total = coerce_non_negative_number(ext.get("SPOJ", 0))
     external_total = sum(
         coerce_non_negative_number(value)
         for key, value in ext.items()
@@ -307,7 +312,7 @@ def compute_c_score(user_doc, all_questions=None):
     s_lc_total = min(lc_total / 500, 1.0) * 200
     s_lc_diff = min((lc_easy * 1 + lc_medium * 3 + lc_hard * 6) / 1500, 1.0) * 150
     s_lc_rating = min(lc_rating / 2500, 1.0) * 200
-    s_other = min((gfg_total + hr_total + cn_total + cw_total) / 300, 1.0) * 100
+    s_other = min((gfg_total + hr_total + cn_total + cw_total + spoj_total) / 300, 1.0) * 100
     s_consistency = min(active_days / 365, 1.0) * 100
 
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
@@ -367,6 +372,7 @@ def merge_platform_counts(in_sheet_counts, external_totals):
     )
     platforms["AtCoder"] = max(platforms["AtCoder"], coerce_non_negative_number(ext_totals.get("AtCoder", 0)))
     platforms["Codewars"] = max(platforms["Codewars"], coerce_non_negative_number(ext_totals.get("Codewars", 0)))
+    platforms["SPOJ"] = max(platforms["SPOJ"], coerce_non_negative_number(ext_totals.get("SPOJ", 0)))
 
     return platforms
 
