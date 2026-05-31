@@ -86,6 +86,22 @@ def test_topic_page_all_and_filtered_counts(monkeypatch):
     assert "Hard Prob 1" not in html
 
 
+def test_topic_page_exposes_bulk_actions_toolbar(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    test_db.question.insert_one({"topic": topic_id, "problem": "Two Sum", "difficulty": "Easy"})
+
+    with flask_app.test_client() as client:
+        response = client.get(f"/topic/{topic_id}")
+
+    html = response.data.decode("utf-8")
+    assert response.status_code == 200
+    assert 'id="bulkToolbar"' in html
+    assert 'id="bulkSelectAll"' in html
+    assert 'data-bulk-action="done"' in html
+    assert 'data-bulk-action="clear"' in html
+
+
 def test_topic_page_status_filters_include_skipped_counts(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
@@ -190,6 +206,31 @@ def test_update_question_rejects_non_boolean_skipped(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json() == {"success": False, "error": "skipped must be a boolean"}
+
+
+def test_update_questions_bulk_updates_multiple_items(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    question_ids = test_db.question.insert_many([
+        {"problem": "Two Sum", "url": "https://leetcode.com/problems/two-sum/"},
+        {"problem": "Array Practice", "url": "https://www.geeksforgeeks.org/problems/array-practice/"},
+    ]).inserted_ids
+    user_id = test_db.user.insert_one({"email": "user@example.com", "progress": {}, "is_admin": False}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.post(
+            "/update_questions",
+            json={"question_ids": [str(question_ids[0]), str(question_ids[1])], "action": "done"},
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True
+    user = test_db.user.find_one({"_id": user_id})
+    assert user["progress"][str(question_ids[0])]["done"] is True
+    assert user["progress"][str(question_ids[1])]["done"] is True
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 1
+    assert user["in_sheet_platform_counts"]["GFG"] == 1
 
 
 def test_topic_page_accepts_lowercase_difficulty_filter(monkeypatch):
