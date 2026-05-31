@@ -83,6 +83,18 @@ PLATFORM_META = {
         "profile_url_template": "https://www.codewars.com/users/{username}",
         "search_url": ""
     },
+    "InterviewBit": {
+        "id": "interviewbit",
+        "name": "InterviewBit",
+        "aliases": ("interviewbit", "ib"),
+        "domains": ["interviewbit.com"],
+        "color_class": "warning text-dark",
+        "badge_class": "badge-link",
+        "brand_color": "#f59e0b",
+        "icon_class": "bi-mortarboard",
+        "profile_url_template": "https://www.interviewbit.com/profile/{username}/",
+        "search_url": ""
+    },
     "GitHub": {
         "id": "github",
         "name": "GitHub",

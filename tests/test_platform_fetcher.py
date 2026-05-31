@@ -1,7 +1,7 @@
 import time
 from unittest.mock import MagicMock, patch
 
-from app.platforms.fetchers import clear_platform_http_session, fetch_atcoder, run_fetch_jobs
+from app.platforms.fetchers import clear_platform_http_session, fetch_atcoder, fetch_interviewbit, run_fetch_jobs
 
 
 def setup_function():
@@ -41,6 +41,19 @@ def test_fetch_atcoder_returns_empty_on_exception():
         result = fetch_atcoder('tourist')
 
     assert result == {}
+
+
+def test_fetch_interviewbit_returns_total_on_success():
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = '<html><body><div>Problems solved 89</div></body></html>'
+    fake_session = MagicMock()
+    fake_session.get.return_value = mock_response
+
+    with patch('app.platforms.fetchers._get_http_session', return_value=fake_session):
+        result = fetch_interviewbit('example-user')
+
+    assert result == {'total': 89}
 
 
 def test_fetchers_reuse_thread_local_http_session():
