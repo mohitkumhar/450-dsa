@@ -629,7 +629,6 @@ def update_question_tags(question_id):
 
     # Ensure targeted question entry exists in progress map
     progress_key = f"progress.{question_id}.tags"
-    
     db.user.update_one(
         {"_id": current_user.id},
         {"$set": {progress_key: cleaned_tags}}
