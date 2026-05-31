@@ -4,6 +4,8 @@ from datetime import datetime
 
 def award_badge(user_id, badge_key, badge_name):
     """Award a badge to a user. Returns True if newly awarded."""
+    if mongo.db is None:
+        return False
     existing = mongo.db.badges.find_one(
         {"user_id": user_id, "badge_key": badge_key}
     )
@@ -20,6 +22,8 @@ def award_badge(user_id, badge_key, badge_name):
 
 def get_user_badges(user_id):
     """Get all badges earned by a user."""
+    if mongo.db is None:
+        return []
     return list(mongo.db.badges.find(
         {"user_id": user_id},
         {"_id": 0, "badge_key": 1, "badge_name": 1, "earned_at": 1}
