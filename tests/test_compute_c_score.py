@@ -334,3 +334,22 @@ def test_return_keys_present():
         "cw_total", "active_days", "total_solved",
     }
     assert expected_keys == set(result.keys())
+
+
+# --- Regression test for hardcoded 450 fix (Issue #215) ---
+
+def test_c_score_uses_actual_question_count_not_hardcoded_450():
+    all_questions = [{'_id': str(i)} for i in range(448)]
+    progress = {str(i): {'done': True, 'timestamp': None} for i in range(448)}
+    user = make_user(progress=progress)
+    result = compute_c_score(user, all_questions=all_questions)
+    assert result['dsa_done'] == 448
+    assert result['c_score'] >= int(round(min(448 / len(all_questions), 1.0) * 250))
+
+
+def test_c_score_fallback_uses_448_not_450():
+    progress = {str(i): {'done': True, 'timestamp': None} for i in range(448)}
+    user = make_user(progress=progress)
+    result = compute_c_score(user, all_questions=None)
+    assert result['dsa_done'] == 448
+    assert result['c_score'] >= int(round(min(448 / 448, 1.0) * 250))
