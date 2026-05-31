@@ -9,6 +9,7 @@ from app.extensions import cache, db, limiter
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
 from app.profile.card_service import CACHE_TTL, get_public_card_image, warm_public_card_cache
+from app.profile.certificate_service import generate_milestone_certificate
 from app.profile.sync_service import (
     build_sync_platforms_response,
     clear_profile_caches,
@@ -29,6 +30,12 @@ __all__ = ["CACHE_TTL", "build_sync_platforms_response", "get_public_card_image"
 
 UNIVERSITY_SEARCH_TIMEOUT_SECONDS = 5
 HEATMAP_DAYS = 168
+
+MILESTONE_DEFS = {
+  "100-solved": {"label": "100 Problems Solved", "threshold": 100},
+  "250-solved": {"label": "250 Problems Solved", "threshold": 250},
+  "sheet-completed": {"label": "450 DSA Sheet Completed", "threshold": "all"},
+}
 
 
 def filter_heatmap_counts(daily_counts, today=None, days=HEATMAP_DAYS):
@@ -220,7 +227,6 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
-
     try:
         img_io.seek(0)
         response = send_file(img_io, mimetype="image/png")
@@ -233,6 +239,32 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
+
+
+@profile_bp.route("/certificate/<milestone_id>")
+@login_required
+def milestone_certificate(milestone_id):
+    milestone = MILESTONE_DEFS.get(milestone_id)
+    if not milestone:
+        return "Milestone not found", 404
+
+    progress_data = current_user.progress or {}
+    dsa_done = sum(1 for progress_item in progress_data.values() if progress_item.get("done"))
+    total_questions = db.question.count_documents({})
+
+    threshold = milestone["threshold"]
+    if threshold == "all":
+        eligible = total_questions > 0 and dsa_done >= total_questions
+    else:
+        eligible = dsa_done >= int(threshold)
+
+    if not eligible:
+        return "Milestone not reached", 403
+
+    awarded_on = utc_now().date().isoformat()
+    img_io = generate_milestone_certificate(current_user.name, milestone["label"], awarded_on=awarded_on)
+    filename = f"certificate-{milestone_id}.png"
+    return send_file(img_io, mimetype="image/png", as_attachment=True, download_name=filename)
 
 
 @profile_bp.route("/search_universities")
