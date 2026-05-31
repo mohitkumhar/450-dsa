@@ -280,7 +280,23 @@ def fetch_github(username):
                 return {"error": error, "calendar": result_calendar, "stats": None}
             stats[key] = payload.get("total_count", 0)
 
-        return {"calendar": result_calendar, "stats": stats}
+        repos_error, repos_payload = github_search_json(
+            f"https://api.github.com/users/{username}/repos?per_page=6&sort=stars&direction=desc"
+        )
+        repos = []
+        if not repos_error and isinstance(repos_payload, list):
+            for repo in repos_payload:
+                repos.append(
+                    {
+                        "name": repo.get("name", ""),
+                        "html_url": repo.get("html_url", ""),
+                        "description": repo.get("description", ""),
+                        "stargazers_count": repo.get("stargazers_count", 0),
+                        "language": repo.get("language", ""),
+                    }
+                )
+
+        return {"calendar": result_calendar, "stats": stats, "repos": repos}
     except requests.exceptions.RequestException as exc:
         logger.error(f"GitHub contributions fetch failed: {exc}")
         return {}

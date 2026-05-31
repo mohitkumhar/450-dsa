@@ -107,6 +107,30 @@
       </div>
     </div>
 
+    <div class="card">
+      <div class="sec-title">GitHub Repository Showcase</div>
+      {% if github_repositories %}
+      <div style="display:grid;gap:12px">
+        {% for repo in github_repositories %}
+        <a href="{{ repo.html_url }}" target="_blank" rel="noopener noreferrer" class="stat-card" style="display:block;text-decoration:none;color:inherit">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+            <div>
+              <div style="font-weight:800">{{ repo.name }}</div>
+              {% if repo.description %}<div style="margin-top:6px;color:var(--text-secondary);font-size:.82rem">{{ repo.description }}</div>{% endif %}
+            </div>
+            <div style="text-align:right;white-space:nowrap;color:var(--text-secondary);font-size:.78rem">
+              <div>{{ repo.stargazers_count or 0 }} stars</div>
+              {% if repo.language %}<div>{{ repo.language }}</div>{% endif %}
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="color:var(--text-secondary);font-size:.9rem">No public GitHub repositories to show yet.</div>
+      {% endif %}
+    </div>
+
     <div class="card" style="text-align:center;color:var(--text-secondary);font-size:.82rem">
       This is a public profile page.
     </div>

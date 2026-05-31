@@ -10,12 +10,29 @@ if not hasattr(werkzeug, "__version__"):
 
 def test_public_profile_route_is_accessible_without_login(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(public_routes,))
+
+    monkeypatch.setattr(
+        public_routes,
+        "fetch_github",
+        lambda username: {
+            "repos": [
+                {
+                    "name": "dsa-notes",
+                    "html_url": "https://github.com/example/dsa-notes",
+                    "description": "DSA helper repo",
+                    "stargazers_count": 12,
+                    "language": "Python",
+                }
+            ]
+        },
+    )
     user_id = test_db.user.insert_one(
         {
             "name": "Public User",
             "email": "private@example.com",
             "notes": "internal only",
             "profile_photo": "https://example.com/avatar.png",
+            "github_username": "example",
             "progress": {},
             "external_totals": {
                 "LeetCode": 12,
@@ -40,6 +57,8 @@ def test_public_profile_route_is_accessible_without_login(monkeypatch):
     assert "internal only" not in html
     assert "og:title" in html
     assert "og:description" in html
+    assert "GitHub Repository Showcase" in html
+    assert "dsa-notes" in html
     assert "This is a public profile page." in html
 
 

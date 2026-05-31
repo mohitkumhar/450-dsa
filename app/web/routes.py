@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, current_app
 from bson import ObjectId
 from bson.errors import InvalidId
 from app.extensions import db
+from app.platforms.fetchers import fetch_github
 from app.utils import compute_c_score
 
 public_bp = Blueprint("public", __name__)
@@ -24,12 +25,19 @@ def public_profile(user_id):
     public_user_data = {
         "username": user_doc.get("name") or user_doc.get("username", "Unknown User"),
         "avatar_url": user_doc.get("profile_photo") or user_doc.get("avatar_url", ""),
+        "github_username": user_doc.get("github_username", ""),
     }
 
     stats = compute_c_score(user_doc)
+    github_repositories = []
+    github_username = user_doc.get("github_username") or ""
+    if github_username:
+        github_data = fetch_github(github_username)
+        github_repositories = github_data.get("repos") or []
 
     return render_template(
         "public_profile.html",
         user=public_user_data,
-        stats=stats
+        stats=stats,
+        github_repositories=github_repositories,
     )
