@@ -185,12 +185,13 @@ def edit_profile():
       401:
         description: Login required.
     """
-        data = request.get_json()
+    data = request.get_json()
     if not data:
         return json_error("No data", status_code=400)
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
+
 
     if "slug" in data:
         slug = data["slug"].strip().lower()
