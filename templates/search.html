@@ -100,10 +100,25 @@
   padding-top: 14px;
   border-top: 1px solid var(--border-color);
 }
+.saved-searches {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
 .recent-searches[hidden] {
   display: none;
 }
+.saved-searches[hidden] {
+  display: none;
+}
 .recent-searches-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.saved-searches-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,10 +132,71 @@
   color: var(--text-secondary);
   text-transform: uppercase;
 }
+.saved-searches-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
 .recent-searches-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.saved-searches-list {
+  display: grid;
+  gap: 8px;
+}
+.saved-search-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.saved-search-chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.saved-search-chip-main:hover,
+.saved-search-chip-main:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.saved-search-chip-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.saved-search-chip-action {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.saved-search-chip-action:hover,
+.saved-search-chip-action:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .recent-search-chip {
   display: inline-flex;
@@ -314,6 +390,15 @@
       </select>
       {% endif %}
     </div>
+    {% if current_user.is_authenticated %}
+    <div id="savedSearches" class="saved-searches" hidden>
+      <div class="saved-searches-head">
+        <div class="saved-searches-title">Saved searches</div>
+        <button id="saveSearchBtn" class="recent-search-clear" type="button" aria-label="Save the current search">Save current</button>
+      </div>
+      <div id="savedSearchesList" class="saved-searches-list" role="list" aria-label="Saved searches"></div>
+    </div>
+    {% endif %}
     <div id="recentSearches" class="recent-searches" hidden>
       <div class="recent-searches-head">
         <div class="recent-searches-title">Recent searches</div>
@@ -334,11 +419,15 @@
 <script>
 const endpointConfig = {{ {
   "searchQuestions": url_for('search.api_search_questions'),
+  "savedSearches": url_for('search.save_search_query'),
 }|tojson }};
 const input = document.getElementById('searchInput');
 const results = document.getElementById('results');
 const meta = document.getElementById('searchMeta');
 const clearBtn = document.getElementById('clearSearch');
+const saveSearchBtn = document.getElementById('saveSearchBtn');
+const savedSearchesPanel = document.getElementById('savedSearches');
+const savedSearchesList = document.getElementById('savedSearchesList');
 const recentSearchesPanel = document.getElementById('recentSearches');
 const recentSearchesList = document.getElementById('recentSearchesList');
 const clearRecentSearchesBtn = document.getElementById('clearRecentSearches');
@@ -352,6 +441,8 @@ let debounceTimer = null;
 let controller = null;
 const RECENT_SEARCHES_KEY = 'dsa_recent_searches_v1';
 const MAX_RECENT_SEARCHES = 5;
+const initialSavedSearches = {{ saved_searches|default([])|tojson }};
+let savedSearches = Array.isArray(initialSavedSearches) ? initialSavedSearches : [];
 const platformLabels = {
   leetcode: 'LeetCode',
   gfg: 'GFG',
@@ -424,6 +515,26 @@ function currentQuery() {
   return [activeToken, text].filter(Boolean).join(' ');
 }
 
+function currentSearchState() {
+  return {
+    query: input.value.trim(),
+    filters: getFilters()
+  };
+}
+
+function summarizeSavedSearch(state) {
+  const parts = [];
+  if (state.query) {
+    parts.push(state.query);
+  }
+  const filters = state.filters || {};
+  if (filters.topic_id) parts.push(`Topic: ${filters.topic_id}`);
+  if (filters.difficulty) parts.push(`Difficulty: ${filters.difficulty}`);
+  if (filters.platform) parts.push(`Platform: ${filters.platform}`);
+  if (filters.status) parts.push(`Status: ${filters.status}`);
+  return parts.length ? parts.join(' · ') : 'Saved search';
+}
+
 function normalizeRecentSearchText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
@@ -465,6 +576,110 @@ function renderRecentSearches() {
       </button>
     `;
   }).join('');
+}
+
+function renderSavedSearches() {
+  if (!savedSearchesPanel || !savedSearchesList) {
+    return;
+  }
+
+  savedSearchesPanel.hidden = savedSearches.length === 0;
+  if (!savedSearches.length) {
+    savedSearchesList.innerHTML = '';
+    return;
+  }
+
+  savedSearchesList.innerHTML = savedSearches.map(entry => {
+    const label = escapeHtml(entry.name || summarizeSavedSearch(entry));
+    return `
+      <div class="saved-search-item" role="listitem" data-id="${escapeHtml(entry.id || '')}">
+        <button class="saved-search-chip-main" type="button" data-saved-search-action="apply" data-id="${escapeHtml(entry.id || '')}" aria-label="Apply saved search ${label}">
+          <i class="bi bi-bookmark-star" aria-hidden="true"></i>
+          <span class="recent-search-chip-text">${label}</span>
+        </button>
+        <div class="saved-search-chip-actions" aria-label="Saved search actions">
+          <button class="saved-search-chip-action" type="button" data-saved-search-action="rename" data-id="${escapeHtml(entry.id || '')}" aria-label="Rename saved search ${label}">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+          </button>
+          <button class="saved-search-chip-action" type="button" data-saved-search-action="delete" data-id="${escapeHtml(entry.id || '')}" aria-label="Delete saved search ${label}">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function applySavedSearch(entry) {
+  if (!entry) return;
+  input.value = entry.query || '';
+  const filters = entry.filters || {};
+  if (filterTopic) filterTopic.value = filters.topic_id || '';
+  if (filterDifficulty) filterDifficulty.value = filters.difficulty || '';
+  if (filterPlatform) filterPlatform.value = filters.platform || '';
+  if (filterStatus) filterStatus.value = filters.status || '';
+  setFilterActiveStates();
+  setActiveChip('');
+  runSearch();
+}
+
+async function persistSavedSearch(method, payload, searchId) {
+  const url = searchId ? `${endpointConfig.savedSearches}/${encodeURIComponent(searchId)}` : endpointConfig.savedSearches;
+  const response = await fetch(url, {
+    method,
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || 'Saved search update failed');
+  }
+  savedSearches = Array.isArray(result.saved_searches) ? result.saved_searches : savedSearches;
+  renderSavedSearches();
+  return result;
+}
+
+async function saveCurrentSearch() {
+  const state = currentSearchState();
+  if (!state.query && !Object.values(state.filters).some(Boolean)) {
+    showUpdateError('Enter a query or filter before saving.');
+    return;
+  }
+  const defaultName = summarizeSavedSearch(state);
+  const name = window.prompt('Name this saved search', defaultName);
+  if (name === null) return;
+  try {
+    await persistSavedSearch('POST', {...state, name});
+    showUpdateError('Saved search updated.');
+  } catch (error) {
+    showUpdateError(error.message || 'Unable to save search. Please try again.');
+  }
+}
+
+async function renameSavedSearch(entry) {
+  const currentName = entry.name || summarizeSavedSearch(entry);
+  const nextName = window.prompt('Rename saved search', currentName);
+  if (nextName === null) return;
+  if (!nextName.trim()) {
+    showUpdateError('Saved search name cannot be empty.');
+    return;
+  }
+  try {
+    await persistSavedSearch('PATCH', {name: nextName.trim()}, entry.id);
+  } catch (error) {
+    showUpdateError(error.message || 'Unable to rename saved search.');
+  }
+}
+
+async function deleteSavedSearch(entry) {
+  if (!window.confirm(`Delete saved search "${entry.name || summarizeSavedSearch(entry)}"?`)) {
+    return;
+  }
+  try {
+    await persistSavedSearch('DELETE', null, entry.id);
+  } catch (error) {
+    showUpdateError(error.message || 'Unable to delete saved search.');
+  }
 }
 
 function rememberRecentSearch(text, token) {
@@ -618,6 +833,9 @@ clearBtn.addEventListener('click', () => {
   input.focus();
   scheduleSearch();
 });
+if (saveSearchBtn) {
+  saveSearchBtn.addEventListener('click', saveCurrentSearch);
+}
 recentSearchesList.addEventListener('click', (event) => {
   const chip = event.target.closest('.recent-search-chip');
   if (!chip) return;
@@ -627,6 +845,22 @@ clearRecentSearchesBtn.addEventListener('click', () => {
   saveRecentSearches([]);
   renderRecentSearches();
 });
+if (savedSearchesList) {
+  savedSearchesList.addEventListener('click', event => {
+    const button = event.target.closest('button[data-saved-search-action]');
+    if (!button) return;
+    const entry = savedSearches.find(item => String(item.id) === String(button.dataset.id));
+    if (!entry) return;
+    const action = button.dataset.savedSearchAction;
+    if (action === 'apply') {
+      applySavedSearch(entry);
+    } else if (action === 'rename') {
+      renameSavedSearch(entry);
+    } else if (action === 'delete') {
+      deleteSavedSearch(entry);
+    }
+  });
+}
 chips.forEach(chip => {
   chip.addEventListener('click', () => {
     setActiveChip(chip.dataset.token);
@@ -644,6 +878,7 @@ chips.forEach(chip => {
 
 restoreStateFromUrl();
 setActiveChip('');
+renderSavedSearches();
 renderRecentSearches();
 runSearch();
 </script>
