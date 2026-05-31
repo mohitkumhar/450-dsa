@@ -189,22 +189,20 @@ def recent_logs():
 def delete_user(user_id):
     search_term = (request.form.get("q") or request.args.get("q") or "").strip()
     page = max(_safe_int(request.form.get("page") or request.args.get("page"), 1), 1)
-
     form_token = request.form.get("csrf_token", "")
     session_token = session.get("csrf_token", "")
     if not form_token or not session_token or form_token != session_token:
         abort(400)
-
     if not ObjectId.is_valid(user_id):
         flash("Invalid user id.", "danger")
         return redirect(url_for("admin.users", q=search_term, page=page))
-
     log_admin_action(
         action_type="DELETE_USER",
         target_entity="USER",
         target_id=user_id,
         result="SUCCESS"
     )
+
 
 
 
