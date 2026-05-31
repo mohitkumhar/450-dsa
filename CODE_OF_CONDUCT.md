@@ -42,3 +42,7 @@ Enforcement decisions should be based on the impact of the behavior, the safety 
 ## Scope
 
 This Code of Conduct applies in all official project spaces, including GitHub issues, pull requests, discussions, documentation, and community conversations related to the project.
+
+
+### GSSoC Rating System Standards
+- Keep ranking algorithms balanced by resolving ties by submit timestamps.
