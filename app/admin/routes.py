@@ -12,8 +12,8 @@ from flask_login import current_user, login_required
 from app.decorators import admin_required
 from app.extensions import cache, db
 from app.leaderboard.cache import invalidate_leaderboard_cache
-from app.profile.sync_service import clear_profile_caches
-from app.utils import get_merged_daily_counts
+from app.utils import get_merged_daily_counts, log_admin_action
+
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 def log_admin_action(admin_id, action_type, target_entity, target_id, result="success"):
