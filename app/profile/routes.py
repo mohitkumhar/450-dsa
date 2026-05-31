@@ -191,6 +191,19 @@ def edit_profile():
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
+
+
+    if "slug" in data:
+        slug = data["slug"].strip().lower()
+        if slug:
+            import re
+            if not re.match(r"^[a-z0-9\-]+$", slug):
+                return json_error("Slug can only contain lowercase letters, numbers, and hyphens.", status_code=400)
+            existing_slug_owner = db.user.find_one({"slug": slug, "_id": {"$ne": current_user.id}})
+            if existing_slug_owner:
+                return json_error("This unique profile slug is already claimed by another user.", status_code=400)
+            update_fields["slug"] = slug
+
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
@@ -200,24 +213,25 @@ def edit_profile():
     return json_success()
 
 
+
 @profile_bp.route("/u/<user_id>/card.png")
 def public_card(user_id):
     from bson.objectid import ObjectId
+    user_doc = None
     try:
         object_id = ObjectId(user_id)
-    except Exception:
-        return "Invalid User ID", 400
-
-    try:
-        user_doc = db.user.find_one({"_id": object_id}, {"is_deactivated": 1})
-    except TypeError:
-        # Some lightweight test doubles implement a simpler find_one(query) API.
         user_doc = db.user.find_one({"_id": object_id})
+    except Exception:
+        user_doc = db.user.find_one({"slug": user_id.lower()})
+
     if not user_doc or user_doc.get("is_deactivated"):
         return "User not found", 404
 
+    actual_user_id = str(user_doc["_id"])
+    actual_object_id = user_doc["_id"]
+
     try:
-        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
+        img_io, etag, last_modified = get_public_card_image(actual_user_id, actual_object_id, db_handle=db)
     except LookupError:
         return "User not found", 404
     except Exception:
@@ -236,6 +250,7 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
+
 
 
 @profile_bp.route("/search_universities")
