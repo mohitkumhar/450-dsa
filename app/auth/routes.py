@@ -423,3 +423,7 @@ def authorize_google():
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
+
+
+# GSSoC Registration password complexity regex
+# Requires at least one uppercase, lowercase, digit, and special char.
