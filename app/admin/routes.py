@@ -230,7 +230,7 @@ def save_question():
         flash("Title and Topic fields are required.", "danger")
         return redirect(url_for("admin.dashboard"))
 
-        question_data = {
+    question_data = {
         "problem": title,
         "url": url,
         "difficulty": difficulty,
