@@ -24,6 +24,7 @@ from app.security import (
 )
 from app.search import search_bp
 from app.tracker import tracker_bp
+from app.notifications.routes import notifications_bp
 from app.cohort.routes import cohort_bp
 from app.utils import (
     platform_color_filter,
@@ -339,6 +340,7 @@ def create_app(config_class=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(faq_bp)  
     app.register_blueprint(tracker_bp)
+    app.register_blueprint(notifications_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(search_bp)

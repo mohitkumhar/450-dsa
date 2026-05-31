@@ -4,6 +4,7 @@ from flask import Blueprint, Response, current_app, jsonify, render_template, re
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.notifications.service import notify_account_event
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.card_service import warm_public_card_cache
 from app.utils import (
@@ -320,6 +321,14 @@ def update_question(question_id):
         update_computed_stats(user_id, current_user.progress, db, total_questions)
         invalidate_leaderboard_cache()
         warm_public_card_cache(user_id, db_handle=db)
+
+        if data.get("done"):
+            from app.notifications.service import notify_account_event
+            notify_account_event(
+                current_user.id,
+                f"You marked '{question.get('problem', 'a question')}' as done!"
+            )
+
         return json_success(message=message)
 
     return json_success(message="No changes made")

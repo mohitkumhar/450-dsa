@@ -1,180 +1,464 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>450 DSA Tracker</title>
-    <meta name="description"
-        content="Track your 450 DSA progress, connect coding platforms, and visualize your growth.">
-    <meta name="theme-color" content="#111111">
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
-    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}" sizes="192x192" type="image/svg+xml">
-    <link rel="icon" href="{{ url_for('static', filename='icons/icon-512.svg') }}" sizes="512x512" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.svg') }}">
+    <meta
+      name="description"
+      content="Track your 450 DSA progress, connect coding platforms, and visualize your growth."
+    />
+    <meta name="theme-color" content="#111111" />
+    <link
+      rel="manifest"
+      href="{{ url_for('static', filename='manifest.webmanifest') }}"
+    />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='icons/icon-192.svg') }}"
+      sizes="192x192"
+      type="image/svg+xml"
+    />
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='icons/icon-512.svg') }}"
+      sizes="512x512"
+      type="image/svg+xml"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="{{ url_for('static', filename='icons/icon-192.svg') }}"
+    />
     <script>
-        document.documentElement.classList.add('page-loading');
+      document.documentElement.classList.add("page-loading");
 
-        (function registerPageLoadingRelease() {
-            let pageLoadingReleased = false;
-            const releasePageLoading = () => {
-                if (pageLoadingReleased) {
-                    return;
-                }
-                pageLoadingReleased = true;
-                document.documentElement.classList.remove('page-loading');
-            };
+      (function registerPageLoadingRelease() {
+        let pageLoadingReleased = false;
+        const releasePageLoading = () => {
+          if (pageLoadingReleased) {
+            return;
+          }
+          pageLoadingReleased = true;
+          document.documentElement.classList.remove("page-loading");
+        };
 
-            window.releasePageLoading = releasePageLoading;
+        window.releasePageLoading = releasePageLoading;
 
-            document.addEventListener('DOMContentLoaded', () => {
-                window.requestAnimationFrame(releasePageLoading);
-            }, { once: true });
+        document.addEventListener(
+          "DOMContentLoaded",
+          () => {
+            window.requestAnimationFrame(releasePageLoading);
+          },
+          { once: true },
+        );
 
-            window.addEventListener('load', releasePageLoading, { once: true });
-            window.setTimeout(releasePageLoading, 2500);
-        })();
+        window.addEventListener("load", releasePageLoading, { once: true });
+        window.setTimeout(releasePageLoading, 2500);
+      })();
     </script>
-   
+
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main.css') }}"
+    />
+    <script
+      src="{{ url_for('static', filename='js/pwa-install.js') }}"
+      defer
+    ></script>
     {% block head %}{% endblock %}
     <script>
-        if (localStorage.getItem('theme') === 'light') {
-            document.documentElement.style.setProperty('--bg-primary', '#f0f2f5');
-            document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
-            document.documentElement.style.setProperty('--bg-card', '#ffffff');
-            document.documentElement.style.setProperty('--text-primary', '#111111');
-            document.documentElement.style.setProperty('--text-secondary', '#555555');
-            document.documentElement.style.setProperty('--border-color', '#e0e0e0');
-        }
+      if (localStorage.getItem("theme") === "light") {
+        document.documentElement.style.setProperty("--bg-primary", "#f0f2f5");
+        document.documentElement.style.setProperty("--bg-secondary", "#ffffff");
+        document.documentElement.style.setProperty("--bg-card", "#ffffff");
+        document.documentElement.style.setProperty("--text-primary", "#111111");
+        document.documentElement.style.setProperty(
+          "--text-secondary",
+          "#555555",
+        );
+        document.documentElement.style.setProperty("--border-color", "#e0e0e0");
+      }
     </script>
-</head>
+  </head>
 
-<body>
-
+  <body>
     <!-- Skip to main content link - Accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <!-- ─── Left Sidebar ─── -->
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
-        <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
-        <nav class="sidebar-nav">
-            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
-                <i class="bi bi-house-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Home</span>
-            </a>
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
-                <i class="bi bi-person-circle" aria-hidden="true"></i>
-                <span class="tooltip-label">Profile</span>
-            </a>
-            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
-                <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Bookmarks</span>
-            </a>
-            <a href="{{ url_for('cohort.index') }}" class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}" id="nav-cohorts" aria-label="Cohorts">
-                <i class="bi bi-people-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Cohorts</span>
-            </a>
-            {% endif %}
-            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
-                <i class="bi bi-search" aria-hidden="true"></i>
-                <span class="tooltip-label">Search</span>
-            </a>
-            <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
-                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Stats</span>
-            </a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
-                <i class="bi bi-trophy-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Leaderboard</span>
-            </a>
-            {% if current_user.is_authenticated and current_user.is_admin %}
-            <a href="{{ url_for('admin.dashboard') }}"
-                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
-                <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-                <span class="tooltip-label">Admin</span>
-            </a>
-            {% endif %}
-        </nav>
-        <div class="sidebar-bottom">
-            {% if current_user.is_authenticated %}
-            <form method="post" action="{{ url_for('auth.logout') }}" class="sidebar-logout-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="sidebar-link" title="Logout" id="nav-logout" aria-label="Logout">
-                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                    <span class="tooltip-label">Logout</span>
-                </button>
-            </form>
-            {% else %}
-            <a href="{{ url_for('auth.login') }}" class="sidebar-link" id="nav-login" aria-label="Login">
-                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                <span class="tooltip-label">Login</span>
-            </a>
-            {% endif %}
+      <a
+        href="{{ url_for('tracker.index') }}"
+        class="sidebar-logo"
+        title="450 DSA"
+        aria-label="Home"
+        >D</a
+      >
+      <nav class="sidebar-nav">
+        <a
+          href="{{ url_for('tracker.index') }}"
+          class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}"
+          id="nav-home"
+          aria-label="Home"
+        >
+          <i class="bi bi-house-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Home</span>
+        </a>
+        {% if current_user.is_authenticated %}
+        <a
+          href="{{ url_for('profile.profile') }}"
+          class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}"
+          id="nav-profile"
+          aria-label="Profile"
+        >
+          <i class="bi bi-person-circle" aria-hidden="true"></i>
+          <span class="tooltip-label">Profile</span>
+        </a>
+        <a href="#" class="sidebar-link" id="notif-btn" title="Notifications">
+          <i class="bi bi-bell-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Notifications</span>
+          <span id="notif-badge" class="notif-count" style="display: none"
+            >0</span
+          >
+        </a>
+
+        <!-- Notification Dropdown -->
+        <div
+          id="notif-dropdown"
+          style="
+            display: none;
+            position: fixed;
+            left: 70px;
+            top: 120px;
+            width: 320px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            max-height: 400px;
+            overflow-y: auto;
+          "
+        >
+          <div
+            style="
+              padding: 10px 16px;
+              border-bottom: 1px solid var(--border);
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <strong>Notifications</strong>
+            <button
+              onclick="markAllRead()"
+              style="
+                background: none;
+                border: none;
+                color: var(--accent);
+                cursor: pointer;
+                font-size: 0.8rem;
+              "
+            >
+              Mark all read
+            </button>
+          </div>
+          <div id="notif-list">
+            <p style="padding: 16px; color: var(--text-muted)">Loading...</p>
+          </div>
         </div>
+
+        <script>
+          const notifBtn = document.getElementById("notif-btn");
+          const notifDropdown = document.getElementById("notif-dropdown");
+          const notifBadge = document.getElementById("notif-badge");
+
+          function loadUnreadCount() {
+            fetch("/api/notifications/unread-count")
+              .then((r) => r.json())
+              .then((data) => {
+                if (data.count > 0) {
+                  notifBadge.textContent = data.count;
+                  notifBadge.style.display = "inline-block";
+                } else {
+                  notifBadge.style.display = "none";
+                }
+              })
+              .catch(() => {});
+          }
+
+          function loadNotifications() {
+            fetch("/api/notifications")
+              .then((r) => r.json())
+              .then((notifications) => {
+                const list = document.getElementById("notif-list");
+                if (notifications.length === 0) {
+                  list.innerHTML =
+                    '<p style="padding:16px; color:var(--text-muted);">No notifications yet.</p>';
+                  return;
+                }
+                list.innerHTML = notifications
+                  .map(
+                    (n) => `
+                <div style="padding:12px 16px; border-bottom:1px solid var(--border);
+                     background:${n.read ? "transparent" : "var(--hover-bg)"};
+                     cursor:pointer;" onclick="markRead('${n.id}', this)">
+                    <div style="font-size:0.9rem;">${n.message}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                        ${new Date(n.created_at).toLocaleString()}
+                    </div>
+                </div>
+            `,
+                  )
+                  .join("");
+              })
+              .catch(() => {});
+          }
+
+          function markAllRead() {
+            fetch("/api/notifications/mark-all-read", {
+              method: "POST",
+              headers: {
+                "X-CSRFToken": "{{ csrf_token() }}",
+                "X-Requested-With": "XMLHttpRequest",
+              },
+            }).then(() => {
+              loadUnreadCount();
+              loadNotifications();
+            });
+          }
+
+          function markRead(id, el) {
+            fetch(`/api/notifications/${id}/read`, {
+              method: "POST",
+              headers: {
+                "X-CSRFToken": "{{ csrf_token() }}",
+                "X-Requested-With": "XMLHttpRequest",
+              },
+            }).then(() => {
+              el.style.background = "transparent";
+              loadUnreadCount();
+            });
+          }
+
+          notifBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (notifDropdown.style.display === "none") {
+              notifDropdown.style.display = "block";
+              loadNotifications();
+              markAllRead();
+            } else {
+              notifDropdown.style.display = "none";
+            }
+          });
+
+          document.addEventListener("click", function (e) {
+            if (
+              !notifBtn.contains(e.target) &&
+              !notifDropdown.contains(e.target)
+            ) {
+              notifDropdown.style.display = "none";
+            }
+          });
+
+          loadUnreadCount();
+          setInterval(loadUnreadCount, 60000);
+        </script>
+        <a
+          href="{{ url_for('tracker.bookmarks') }}"
+          class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}"
+          id="nav-bookmarks"
+          aria-label="Bookmarks"
+        >
+          <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Bookmarks</span>
+        </a>
+        <a
+          href="{{ url_for('cohort.index') }}"
+          class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}"
+          id="nav-cohorts"
+          aria-label="Cohorts"
+        >
+          <i class="bi bi-people-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Cohorts</span>
+        </a>
+        {% endif %}
+        <a
+          href="{{ url_for('search.search') }}"
+          class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}"
+          id="nav-search"
+          aria-label="Search"
+        >
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <span class="tooltip-label">Search</span>
+        </a>
+        <a href="#" class="sidebar-link" id="nav-stats" aria-label="Statistics">
+          <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Stats</span>
+        </a>
+        <a
+          href="{{ url_for('leaderboard.leaderboard') }}"
+          class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}"
+          id="nav-leaderboard"
+          aria-label="Leaderboard"
+        >
+          <i class="bi bi-trophy-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Leaderboard</span>
+        </a>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <a
+          href="{{ url_for('admin.dashboard') }}"
+          class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}"
+          id="nav-admin"
+          aria-label="Admin Dashboard"
+        >
+          <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+          <span class="tooltip-label">Admin</span>
+        </a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-bottom">
+        {% if current_user.is_authenticated %}
+        <form
+          method="post"
+          action="{{ url_for('auth.logout') }}"
+          class="sidebar-logout-form"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button
+            type="submit"
+            class="sidebar-link"
+            title="Logout"
+            id="nav-logout"
+            aria-label="Logout"
+          >
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+            <span class="tooltip-label">Logout</span>
+          </button>
+        </form>
+        {% else %}
+        <a
+          href="{{ url_for('auth.login') }}"
+          class="sidebar-link"
+          id="nav-login"
+          aria-label="Login"
+        >
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          <span class="tooltip-label">Login</span>
+        </a>
+        {% endif %}
+      </div>
     </aside>
 
     <!-- ─── Top Bar ─── -->
     <header class="topbar" role="banner">
-        <div class="topbar-left">
-            <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
-        </div>
-        <div class="topbar-right">
-            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
-                <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
-                <span>Monthly Rewind</span>
-            </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
-                <i class="bi bi-briefcase-fill"></i>
-                <span>Company Wise Kit</span>
-            </a>
-            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle" aria-label="Toggle dark/light theme">
-                <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
-            </button>
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
-                {{ current_user.name[0]|upper }}
-            </a>
-            {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" aria-label="Login">
-                <i class="bi bi-person" aria-hidden="true"></i>
-                <span>Login</span>
-            </a>
-            {% endif %}
-        </div>
+      <div class="topbar-left">
+        <a href="{{ url_for('tracker.index') }}" class="topbar-brand"
+          >450 DSA Cracker</a
+        >
+      </div>
+      <div class="topbar-right">
+        <a
+          href="/monthly-rewind"
+          class="pill-btn ui-btn ui-btn-secondary ui-btn-pill"
+          id="monthly-rewind-btn"
+          aria-label="Monthly Rewind"
+        >
+          <i
+            class="bi bi-rewind-fill"
+            style="color: var(--accent)"
+            aria-hidden="true"
+          ></i>
+          <span>Monthly Rewind</span>
+        </a>
+        <a
+          href="https://github.com/mohitkumhar/companywise-dsa-interview-question"
+          class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill"
+          id="company-kit-btn"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i class="bi bi-briefcase-fill"></i>
+          <span>Company Wise Kit</span>
+        </a>
+        <button
+          class="icon-btn ui-btn ui-btn-secondary ui-btn-icon"
+          id="theme-toggle"
+          aria-label="Toggle dark/light theme"
+        >
+          <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
+        </button>
+        {% if current_user.is_authenticated %}
+        <a
+          href="{{ url_for('profile.profile') }}"
+          class="user-avatar-sm"
+          title="{{ current_user.name }}"
+          aria-label="Profile: {{ current_user.name }}"
+        >
+          {{ current_user.name[0]|upper }}
+        </a>
+        {% else %}
+        <a
+          href="{{ url_for('auth.login') }}"
+          class="pill-btn ui-btn ui-btn-secondary ui-btn-pill"
+          aria-label="Login"
+        >
+          <i class="bi bi-person" aria-hidden="true"></i>
+          <span>Login</span>
+        </a>
+        {% endif %}
+      </div>
     </header>
 
     <!-- ─── Toast Container (TOP RIGHT) ─── -->
-    <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
+    <div
+      class="toast-container"
+      id="toastContainer"
+      role="status"
+      aria-live="polite"
+    ></div>
 
     <!-- ─── Flash Messages (legacy) ─── -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
-        {% for category, message in messages %}
-        <div class="flash-alert {{ category }}" role="alert">
-            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
-            {{ message }}
-        </div>
-        {% endfor %}
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div
+      class="flash-messages"
+      id="flash-container"
+      role="alert"
+      aria-live="polite"
+    >
+      {% for category, message in messages %}
+      <div class="flash-alert {{ category }}" role="alert">
+        <i
+          class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"
+          aria-hidden="true"
+        ></i>
+        {{ message }}
+      </div>
+      {% endfor %}
     </div>
-    {% endif %}
-    {% endwith %}
+    {% endif %} {% endwith %}
 
     <!-- ─── Main Content ─── -->
     <main class="main-wrapper" id="main-content" tabindex="-1">
-        {% block content %}{% endblock %}
+      {% block content %}{% endblock %}
     </main>
 
     <!-- ─── Footer ─── -->
@@ -183,148 +467,149 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        
-        // Theme Toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
-        const root = document.documentElement;
+      // Theme Toggle
+      const themeToggle = document.getElementById("theme-toggle");
+      const themeIcon = document.getElementById("theme-icon");
+      const root = document.documentElement;
 
-        const toastConfig = {
-            success: { title: 'Success', icon: 'bi-check-circle-fill' },
-            error: { title: 'Error', icon: 'bi-x-circle-fill' },
-            danger: { title: 'Error', icon: 'bi-x-circle-fill' },
-            warning: { title: 'Warning', icon: 'bi-exclamation-triangle-fill' },
-            info: { title: 'Info', icon: 'bi-info-circle-fill' },
+      const toastConfig = {
+        success: { title: "Success", icon: "bi-check-circle-fill" },
+        error: { title: "Error", icon: "bi-x-circle-fill" },
+        danger: { title: "Error", icon: "bi-x-circle-fill" },
+        warning: { title: "Warning", icon: "bi-exclamation-triangle-fill" },
+        info: { title: "Info", icon: "bi-info-circle-fill" },
+      };
+
+      window.showToast = function (message, type = "info", timeout = 4000) {
+        const container = document.getElementById("toastContainer");
+        if (!container) return;
+
+        const normalizedType = type === "danger" ? "error" : type;
+        const variant = toastConfig[normalizedType] || toastConfig.info;
+        const toast = document.createElement("div");
+        toast.className = `toast-notification ${normalizedType}`;
+        toast.setAttribute("role", "alert");
+
+        const icon = document.createElement("i");
+        icon.className = `bi ${variant.icon} toast-icon`;
+
+        const content = document.createElement("div");
+        content.className = "toast-content";
+
+        const title = document.createElement("div");
+        title.className = "toast-title";
+        title.textContent = variant.title;
+
+        const body = document.createElement("div");
+        body.className = "toast-message";
+        body.textContent = message;
+
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "toast-close";
+        close.setAttribute("aria-label", "Dismiss notification");
+        close.innerHTML = '<i class="bi bi-x-lg"></i>';
+
+        content.append(title, body);
+        toast.append(icon, content, close);
+        container.appendChild(toast);
+
+        const removeToast = () => {
+          toast.style.animation = "toastSlideOut 0.25s ease forwards";
+          setTimeout(() => toast.remove(), 250);
         };
 
-        window.showToast = function(message, type = 'info', timeout = 4000) {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
+        close.addEventListener("click", (event) => {
+          event.stopPropagation();
+          removeToast();
+        });
+        toast.addEventListener("click", removeToast);
+        setTimeout(removeToast, timeout);
+      };
 
-            const normalizedType = type === 'danger' ? 'error' : type;
-            const variant = toastConfig[normalizedType] || toastConfig.info;
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${normalizedType}`;
-            toast.setAttribute('role', 'alert');
+      window.setButtonBusyState = function (button, contentEl, options = {}) {
+        if (!button || !contentEl) return;
 
-            const icon = document.createElement('i');
-            icon.className = `bi ${variant.icon} toast-icon`;
+        const {
+          busy = false,
+          busyLabel = "Working...",
+          idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
+        } = options;
 
-            const content = document.createElement('div');
-            content.className = 'toast-content';
-
-            const title = document.createElement('div');
-            title.className = 'toast-title';
-            title.textContent = variant.title;
-
-            const body = document.createElement('div');
-            body.className = 'toast-message';
-            body.textContent = message;
-
-            const close = document.createElement('button');
-            close.type = 'button';
-            close.className = 'toast-close';
-            close.setAttribute('aria-label', 'Dismiss notification');
-            close.innerHTML = '<i class="bi bi-x-lg"></i>';
-
-            content.append(title, body);
-            toast.append(icon, content, close);
-            container.appendChild(toast);
-
-            const removeToast = () => {
-                toast.style.animation = 'toastSlideOut 0.25s ease forwards';
-                setTimeout(() => toast.remove(), 250);
-            };
-
-            close.addEventListener('click', (event) => {
-                event.stopPropagation();
-                removeToast();
-            });
-            toast.addEventListener('click', removeToast);
-            setTimeout(removeToast, timeout);
-        };
-
-        window.setButtonBusyState = function(button, contentEl, options = {}) {
-            if (!button || !contentEl) return;
-
-            const {
-                busy = false,
-                busyLabel = 'Working...',
-                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
-            } = options;
-
-            if (!contentEl.dataset.idleHtml) {
-                contentEl.dataset.idleHtml = idleHTML;
-            }
-
-            if (busy) {
-                button.disabled = true;
-                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
-                return;
-            }
-
-            button.disabled = false;
-            contentEl.innerHTML = contentEl.dataset.idleHtml;
-        };
-
-        window.setIconBusyState = function(icon, options = {}) {
-            if (!icon) return;
-
-            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
-            if (!icon.dataset.idleClassName) {
-                icon.dataset.idleClassName = idleClassName;
-            }
-
-            icon.className = options.busy
-                ? `${icon.dataset.idleClassName} btn-spinner`
-                : icon.dataset.idleClassName;
-        };
-
-        function applyTheme(theme) {
-            if (theme === 'light') {
-                root.style.setProperty('--bg-primary', '#f0f2f5');
-                root.style.setProperty('--bg-secondary', '#ffffff');
-                root.style.setProperty('--bg-card', '#ffffff');
-                root.style.setProperty('--bg-card-hover', '#f5f5f5');
-                root.style.setProperty('--border-color', '#e0e0e0');
-                root.style.setProperty('--border-subtle', '#ececec');
-                root.style.setProperty('--text-primary', '#111111');
-                root.style.setProperty('--text-secondary', '#555555');
-                root.style.setProperty('--text-muted', '#6b7280');
-                themeIcon.className = 'bi bi-sun-fill';
-            } else {
-                root.style.setProperty('--bg-primary', '#111111');
-                root.style.setProperty('--bg-secondary', '#1a1a1a');
-                root.style.setProperty('--bg-card', '#1e1e1e');
-                root.style.setProperty('--bg-card-hover', '#252525');
-                root.style.setProperty('--border-color', '#2a2a2a');
-                root.style.setProperty('--border-subtle', '#222222');
-                root.style.setProperty('--text-primary', '#f0f0f0');
-                root.style.setProperty('--text-secondary', '#a0a0a0');
-                root.style.setProperty('--text-muted', '#8a8a8a');
-                themeIcon.className = 'bi bi-moon-fill';
-            }
+        if (!contentEl.dataset.idleHtml) {
+          contentEl.dataset.idleHtml = idleHTML;
         }
 
-        const saved = localStorage.getItem('theme') || 'dark';
-        applyTheme(saved);
+        if (busy) {
+          button.disabled = true;
+          contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+          return;
+        }
 
-        themeToggle.addEventListener('click', () => {
-            const curr = localStorage.getItem('theme') || 'dark';
-            const next = curr === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('theme', next);
-            applyTheme(next);
-            showToast(`Switched to ${next} mode`, 'info');
-        });
+        button.disabled = false;
+        contentEl.innerHTML = contentEl.dataset.idleHtml;
+      };
 
-        // Auto-dismiss flash messages
-        setTimeout(() => {
-            const fc = document.getElementById('flash-container');
-            if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
-        }, 4000);
+      window.setIconBusyState = function (icon, options = {}) {
+        if (!icon) return;
 
+        const idleClassName =
+          options.idleClassName || icon.dataset.idleClassName || icon.className;
+        if (!icon.dataset.idleClassName) {
+          icon.dataset.idleClassName = idleClassName;
+        }
+
+        icon.className = options.busy
+          ? `${icon.dataset.idleClassName} btn-spinner`
+          : icon.dataset.idleClassName;
+      };
+
+      function applyTheme(theme) {
+        if (theme === "light") {
+          root.style.setProperty("--bg-primary", "#f0f2f5");
+          root.style.setProperty("--bg-secondary", "#ffffff");
+          root.style.setProperty("--bg-card", "#ffffff");
+          root.style.setProperty("--bg-card-hover", "#f5f5f5");
+          root.style.setProperty("--border-color", "#e0e0e0");
+          root.style.setProperty("--border-subtle", "#ececec");
+          root.style.setProperty("--text-primary", "#111111");
+          root.style.setProperty("--text-secondary", "#555555");
+          root.style.setProperty("--text-muted", "#6b7280");
+          themeIcon.className = "bi bi-sun-fill";
+        } else {
+          root.style.setProperty("--bg-primary", "#111111");
+          root.style.setProperty("--bg-secondary", "#1a1a1a");
+          root.style.setProperty("--bg-card", "#1e1e1e");
+          root.style.setProperty("--bg-card-hover", "#252525");
+          root.style.setProperty("--border-color", "#2a2a2a");
+          root.style.setProperty("--border-subtle", "#222222");
+          root.style.setProperty("--text-primary", "#f0f0f0");
+          root.style.setProperty("--text-secondary", "#a0a0a0");
+          root.style.setProperty("--text-muted", "#8a8a8a");
+          themeIcon.className = "bi bi-moon-fill";
+        }
+      }
+
+      const saved = localStorage.getItem("theme") || "dark";
+      applyTheme(saved);
+
+      themeToggle.addEventListener("click", () => {
+        const curr = localStorage.getItem("theme") || "dark";
+        const next = curr === "dark" ? "light" : "dark";
+        localStorage.setItem("theme", next);
+        applyTheme(next);
+        showToast(`Switched to ${next} mode`, "info");
+      });
+
+      // Auto-dismiss flash messages
+      setTimeout(() => {
+        const fc = document.getElementById("flash-container");
+        if (fc)
+          ((fc.style.opacity = "0"),
+            (fc.style.transition = "0.5s"),
+            setTimeout(() => fc.remove(), 500));
+      }, 4000);
     </script>
     {% block scripts %}{% endblock %}
-</body>
-
+  </body>
 </html>
