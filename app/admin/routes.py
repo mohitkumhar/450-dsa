@@ -229,11 +229,22 @@ def save_question():
         flash("Title and Topic fields are required.", "danger")
         return redirect(url_for("admin.dashboard"))
 
+    # FIX: Reject invalid topics completely instead of falling back to a string
+    if not ObjectId.is_valid(topic):
+        flash("Invalid Topic ID layout pattern.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    # Confirm the topic actually exists in the database
+    topic_exists = db.topics.find_one({"_id": ObjectId(topic)}) if hasattr(db, 'topics') else db.topic.find_one({"_id": ObjectId(topic)})
+    if not topic_exists:
+        flash("Topic does not exist in the collection.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
     question_data = {
         "problem": title,
         "url": url,
         "difficulty": difficulty,
-        "topic": ObjectId(topic) if ObjectId.is_valid(topic) else topic,
+        "topic": ObjectId(topic),
         "position": position,
         "updated_at": datetime.now(timezone.utc)
     }
