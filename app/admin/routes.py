@@ -208,7 +208,6 @@ def delete_user(user_id):
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
 
 
-
 @admin_bp.route("/questions/save", methods=["POST"])
 @login_required
 @admin_required
@@ -234,11 +233,10 @@ def save_question():
         "problem": title,
         "url": url,
         "difficulty": difficulty,
-        "topic": ObjectId(topic),
+        "topic": ObjectId(topic) if ObjectId.is_valid(topic) else topic,
         "position": position,
         "updated_at": datetime.now(timezone.utc)
     }
-
 
     if question_id:
         if not ObjectId.is_valid(question_id):
