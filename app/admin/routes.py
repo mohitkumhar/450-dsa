@@ -18,7 +18,7 @@ from app.utils.helpers import log_admin_action
 
 admin_bp = Blueprint("admin", __name__, template_folder="templates")
 
-def _safe_int(value, default):
+def _safe_int(value, default=0):
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -45,7 +45,7 @@ def delete_user(user_id):
 
     if not ObjectId.is_valid(user_id):
         flash("Invalid user id.", "danger")
-        return redirect(url_for("admin.users", q=search_term, page=page))
+        return redirect(url_for("admin.dashboard", q=search_term, page=page))
 
     log_admin_action(
         action_type="DELETE_USER",
@@ -55,7 +55,8 @@ def delete_user(user_id):
     )
 
     db.users.delete_one({"_id": ObjectId(user_id)})
-    clear_profile_caches(user_id)
+    if 'clear_profile_caches' in globals():
+        clear_profile_caches(user_id)
     
     flash("User deleted successfully.", "success")
-    return redirect(url_for("admin.users", q=search_term, page=page))
+    return redirect(url_for("admin.dashboard", q=search_term, page=page))
