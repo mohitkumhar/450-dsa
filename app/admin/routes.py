@@ -13,7 +13,23 @@ from app.decorators import admin_required
 from app.extensions import cache, db
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.sync_service import clear_profile_caches
-from app.utils import get_merged_daily_counts, log_admin_action
+from app.utils import get_merged_daily_counts
+from app.utils.helpers import log_admin_action
+
+admin_bp = Blueprint("admin", __name__, template_folder="templates")
+
+def _safe_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+@admin_bp.route("/dashboard", methods=["GET"])
+@login_required
+@admin_required
+def dashboard():
+    """Admin control panel interface metric layout render."""
+    return render_template("admin/dashboard.html")
 
 @admin_bp.route("/users/<user_id>/delete", methods=["POST"])
 @login_required
@@ -37,3 +53,9 @@ def delete_user(user_id):
         target_id=user_id,
         result="SUCCESS"
     )
+
+    db.users.delete_one({"_id": ObjectId(user_id)})
+    clear_profile_caches(user_id)
+    
+    flash("User deleted successfully.", "success")
+    return redirect(url_for("admin.users", q=search_term, page=page))
