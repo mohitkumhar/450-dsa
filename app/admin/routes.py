@@ -15,8 +15,21 @@ from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.sync_service import clear_profile_caches
 from app.utils import get_merged_daily_counts
 
-
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+def log_admin_action(admin_id, action_type, target_entity, target_id, result="success"):
+    """Helper function to record administrative actions into the audit collection for Issue #294."""
+    try:
+        audit_entry = {
+            "admin_id": str(admin_id),
+            "action": action_type,
+            "target_entity": target_entity,
+            "target_id": str(target_id),
+            "timestamp": datetime.now(timezone.utc),
+            "result": result
+        }
+        db.audit_log.insert_one(audit_entry)
+    except Exception:
+        pass
 
 
 def _safe_int(value, default):
