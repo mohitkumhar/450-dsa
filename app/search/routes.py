@@ -3,7 +3,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request
 from flask_login import current_user
 
 from app.extensions import db, limiter
-from app.utils import json_error, json_success, utc_now
+# Import app utilities lazily inside functions to avoid circular imports
 from app.search.service import search_dsa_questions
 
 
@@ -82,8 +82,10 @@ def search():
 
 @search_bp.route("/api/saved_searches", methods=["POST"])
 def save_search_query():
-    if not current_user.is_authenticated:
-        return json_error("Login required", status_code=401)
+  from app.utils import json_error, json_success, utc_now
+
+  if not current_user.is_authenticated:
+    return json_error("Login required", status_code=401)
 
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -134,8 +136,10 @@ def save_search_query():
 
 @search_bp.route("/api/saved_searches/<search_id>", methods=["PATCH", "DELETE"])
 def update_saved_search_query(search_id):
-    if not current_user.is_authenticated:
-        return json_error("Login required", status_code=401)
+  from app.utils import json_error, json_success, utc_now
+
+  if not current_user.is_authenticated:
+    return json_error("Login required", status_code=401)
 
     user_doc = db.user.find_one({"_id": current_user.id}) or {}
     saved_searches = list(user_doc.get("saved_searches") or [])
