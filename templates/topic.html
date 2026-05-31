@@ -243,8 +243,6 @@ function showUpdateError(message = 'Unable to save your change. Please try again
     showToast(message, 'danger');
 }
 
-}
-
 function setBookmarkState(btn, isBookmarked) {
     const icon = btn.querySelector('i');
     btn.dataset.bookmarked = isBookmarked ? 'true' : 'false';
