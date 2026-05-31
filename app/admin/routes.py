@@ -230,14 +230,15 @@ def save_question():
         flash("Title and Topic fields are required.", "danger")
         return redirect(url_for("admin.dashboard"))
 
-    question_data = {
-        "title": title,
+        question_data = {
+        "problem": title,
         "url": url,
         "difficulty": difficulty,
-        "topic": topic,
+        "topic": ObjectId(topic),
         "position": position,
         "updated_at": datetime.now(timezone.utc)
     }
+
 
     if question_id:
         if not ObjectId.is_valid(question_id):
