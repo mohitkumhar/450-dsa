@@ -336,7 +336,6 @@ def create_app(config_class=None):
         response.mimetype = "application/javascript"
         return response
 
-    from app.tracker import tracker_bp
     from app.badges.routes import badges_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(faq_bp)  
