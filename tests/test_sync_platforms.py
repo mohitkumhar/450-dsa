@@ -75,6 +75,7 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
             hackerrank_username="",
             codingninjas_username="",
             atcoder_username="",
+            spoj_username="",
             reload=lambda: None,
         ),
     )
@@ -109,6 +110,7 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
                 "codingninjas": {"total": 12},
                 "hackerrank": ([{"name": "Problem Solving", "stars": 5}], 44),
                 "atcoder": {"total": 8},
+                "spoj": {"total": 33},
             },
             {},
         )
@@ -124,13 +126,14 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
             "codingninjas": "cn-user",
             "hackerrank": "hr-user",
             "atcoder": "ac-user",
+            "spoj": "spoj-user",
         },
     )
 
     payload = response.get_json()
 
     assert response.status_code == 200
-    assert captured["job_names"] == ["atcoder", "codingninjas", "gfg", "github", "hackerrank", "leetcode"]
+    assert captured["job_names"] == ["atcoder", "codingninjas", "gfg", "github", "hackerrank", "leetcode", "spoj"]
     assert captured["max_workers"] == 4
     assert payload["success"] is True
     assert payload["platforms"]["leetcode"]["status"] == "synced"
@@ -145,6 +148,7 @@ def test_sync_platforms_runs_selected_platform_jobs_concurrently(monkeypatch):
     assert update_fields["external_totals"]["Coding Ninjas"] == 12
     assert update_fields["external_totals"]["HackerRank"] == 44
     assert update_fields["external_totals"]["AtCoder"] == 8
+    assert update_fields["external_totals"]["SPOJ"] == 33
     assert update_fields["rating_history"] == [{"x": "2026-05-25", "y": 1800}]
     assert update_fields["lc_badges_json"] == '[{"name": "Knight"}]'
     assert update_fields["hr_badges_json"] == '[{"name": "Problem Solving", "stars": 5}]'
@@ -167,6 +171,7 @@ def test_sync_platforms_tolerates_missing_cache_extension(monkeypatch):
             hackerrank_username="",
             codingninjas_username="",
             atcoder_username="",
+            spoj_username="",
             reload=lambda: None,
         ),
     )
@@ -217,6 +222,7 @@ def test_sync_platforms_marks_github_rate_limit_payload_failed(monkeypatch):
             hackerrank_username="",
             codingninjas_username="",
             atcoder_username="",
+            spoj_username="",
             reload=lambda: None,
         ),
     )

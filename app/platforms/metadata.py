@@ -83,6 +83,18 @@ PLATFORM_META = {
         "profile_url_template": "https://www.codewars.com/users/{username}",
         "search_url": ""
     },
+    "SPOJ": {
+        "id": "spoj",
+        "name": "SPOJ",
+        "aliases": ("spoj", "sphere online judge"),
+        "domains": ["spoj.com"],
+        "color_class": "primary",
+        "badge_class": "badge-link",
+        "brand_color": "#2563eb",
+        "icon_class": "bi-award",
+        "profile_url_template": "https://www.spoj.com/users/{username}/",
+        "search_url": ""
+    },
     "GitHub": {
         "id": "github",
         "name": "GitHub",

@@ -12,6 +12,7 @@ from app.platforms.fetchers import (
     fetch_lc_badges,
     fetch_leetcode,
     fetch_leetcode_rating_history,
+    fetch_spoj,
     run_fetch_jobs,
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
@@ -49,6 +50,7 @@ def build_platform_sync_jobs(
     hackerrank_username="",
     atcoder_username="",
     codewars_username="",
+    spoj_username="",
 ):
     jobs = {}
 
@@ -88,6 +90,9 @@ def build_platform_sync_jobs(
     if codewars_username:
         jobs["codewars"] = lambda: fetch_codewars(codewars_username)
 
+    if spoj_username:
+        jobs["spoj"] = lambda: fetch_spoj(spoj_username)
+
     return jobs
 
 
@@ -117,6 +122,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     codingninjas_username = user.codingninjas_username or ""
     atcoder_username = user.atcoder_username or ""
     codewars_username = getattr(user, "codewars_username", "") or ""
+    spoj_username = getattr(user, "spoj_username", "") or ""
 
     if "leetcode" in data:
         leetcode_username = data.get("leetcode", "").strip()
@@ -139,6 +145,9 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     if "codewars" in data:
         codewars_username = data.get("codewars", "").strip()
         update_fields["codewars_username"] = codewars_username
+    if "spoj" in data:
+        spoj_username = data.get("spoj", "").strip()
+        update_fields["spoj_username"] = spoj_username
 
     platform_totals = {}
     platform_status = {}
@@ -163,6 +172,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         hackerrank_username=hackerrank_username,
         atcoder_username=atcoder_username,
         codewars_username=codewars_username,
+        spoj_username=spoj_username,
     )
     platform_results, platform_errors = run_fetch_jobs(platform_jobs, max_workers=4)
 
@@ -284,30 +294,58 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     else:
         _mark("codewars", "skipped")
 
+    if spoj_username:
+        spoj_data = platform_results.get("spoj")
+        if platform_errors.get("spoj"):
+            _mark("spoj", "failed", "Failed to fetch SPOJ stats.")
+        elif not spoj_data:
+            _mark("spoj", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            _mark("spoj", "synced")
+            if spoj_data.get("total") is not None:
+                platform_totals["SPOJ"] = int(spoj_data.get("total", 0))
+    else:
+        _mark("spoj", "skipped")
+
     # Backfill or remove ``_legacy`` depending on whether the current sync
-    # covered every platform the user has configured.  During the migration
+    # covered every platform the user has configured. During the migration
     # from the old flat ``external_daily_counts`` format to per-platform
     # calendars, ``_legacy`` preserves dates from platforms not yet re-synced.
-    PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
-                     "codingninjas", "atcoder", "codewars"}
+    PLATFORM_KEYS = {
+        "leetcode",
+        "github",
+        "gfg",
+        "hackerrank",
+        "codingninjas",
+        "atcoder",
+        "codewars",
+        "spoj",
+    }
     requested_platforms = {k for k in data if k in PLATFORM_KEYS}
     legacy_counts = getattr(user, "external_daily_counts", {})
     has_legacy = isinstance(legacy_counts, dict) and bool(legacy_counts)
 
     if has_legacy:
         user_platforms = set()
-        for attr in ("leetcode_username", "github_username", "gfg_username",
-                     "hackerrank_username", "codingninjas_username",
-                     "atcoder_username", "codewars_username"):
+        for attr in (
+            "leetcode_username",
+            "github_username",
+            "gfg_username",
+            "hackerrank_username",
+            "codingninjas_username",
+            "atcoder_username",
+            "codewars_username",
+            "spoj_username",
+        ):
             if getattr(user, attr, ""):
                 platform_name = attr.replace("_username", "")
                 user_platforms.add(platform_name)
 
         if user_platforms and requested_platforms and user_platforms.issubset(requested_platforms):
-            # All user platforms were included in this sync → migration done
+            # All user platforms were included in this sync -> migration done
             platform_calendars.pop("_legacy", None)
         else:
-            # Partial sync — preserve legacy data for platforms not yet re-synced
+            # Partial sync - preserve legacy data for platforms not yet re-synced
             platform_calendars["_legacy"] = dict(legacy_counts)
 
     update_fields["platform_calendars"] = platform_calendars

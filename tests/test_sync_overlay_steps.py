@@ -14,6 +14,7 @@ def test_sync_overlay_includes_all_submitted_platforms():
     assert "{id:'ss_cn', label:'Coding Ninjas', value:cn}" in template
     assert "{id:'ss_ac', label:'AtCoder', value:ac}" in template
     assert "{id:'ss_cw', label:'Codewars', value:cw}" in template
+    assert "{id:'ss_spoj', label:'SPOJ', value:spoj}" in template
 
 
 def test_sync_overlay_steps_are_built_from_active_values():
@@ -33,4 +34,6 @@ def test_sync_profile_template_wires_platforms_into_sync_requests():
     assert "const ac = '{{ user.atcoder_username or \"\" }}';" in template
     assert 'id="cw_username"' in template
     assert "const cw = '{{ user.codewars_username or \"\" }}';" in template
-    assert "body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})" in template
+    assert 'id="spoj_username"' in template
+    assert "const spoj = '{{ user.spoj_username or \"\" }}';" in template
+    assert "body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw,spoj:spoj})" in template
