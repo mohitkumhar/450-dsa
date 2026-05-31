@@ -336,5 +336,12 @@
   "searchQuestions": url_for('search.api_search_questions'),
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/search.js') }}"></script>
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const s = document.createElement('script');
+        s.src = "{{ url_for('static', filename='js/search.js') }}";
+        s.defer = true;
+        document.head.appendChild(s);
+    });
+</script>
 {% endblock %}

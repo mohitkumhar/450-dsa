@@ -1,7 +1,7 @@
 from bson import ObjectId
 
 import app.leaderboard.service as leaderboard_service
-from tests.conftest import build_test_app, login_test_user
+from conftest import build_test_app, login_test_user
 
 
 def test_compare_requires_authentication(monkeypatch):

@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 PROFILE_TEMPLATE = Path("templates/profile.html").read_text(encoding="utf-8")
+PROFILE_JS = Path("static/js/profile.js").read_text(encoding="utf-8")
 
 
 def test_profile_does_not_eager_load_chartjs_in_head():
@@ -12,6 +13,6 @@ def test_profile_does_not_eager_load_chartjs_in_head():
 
 
 def test_profile_lazy_loads_charts_on_intersection():
-    assert "function loadChartJs()" in PROFILE_TEMPLATE
-    assert "new IntersectionObserver" in PROFILE_TEMPLATE
-    assert "renderProfileCharts()" in PROFILE_TEMPLATE
+    assert "function loadChartJs()" in PROFILE_JS
+    assert "new IntersectionObserver" in PROFILE_JS
+    assert "renderProfileCharts()" in PROFILE_JS

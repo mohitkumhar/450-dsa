@@ -273,5 +273,12 @@
   "compareBase": url_for('leaderboard.compare', user_id='__USER_ID__')
 }|tojson }}
 </script>
-<script src="{{ url_for('static', filename='js/leaderboard.js') }}"></script>
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const s = document.createElement('script');
+        s.src = "{{ url_for('static', filename='js/leaderboard.js') }}";
+        s.defer = true;
+        document.head.appendChild(s);
+    });
+</script>
 {% endblock %}
