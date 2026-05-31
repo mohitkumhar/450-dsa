@@ -3,19 +3,17 @@ from datetime import datetime
 
 
 def award_badge(user_id, badge_key, badge_name):
-    """Award a badge to a user. Returns True if newly awarded, False if already exists."""
-    existing = mongo.db.badges.find_one({
-        "user_id": user_id,
-        "badge_key": badge_key
-    })
+    """Award a badge to a user. Returns True if newly awarded."""
+    existing = mongo.db.badges.find_one(
+        {"user_id": user_id, "badge_key": badge_key}
+    )
     if existing:
         return False
-
     mongo.db.badges.insert_one({
-        "user_id":    user_id,
-        "badge_key":  badge_key,
+        "user_id": user_id,
+        "badge_key": badge_key,
         "badge_name": badge_name,
-        "earned_at":  datetime.utcnow()
+        "earned_at": datetime.utcnow()
     })
     return True
 

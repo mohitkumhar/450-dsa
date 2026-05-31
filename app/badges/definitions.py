@@ -1,16 +1,20 @@
 BADGES = [
-    # Based on problems solved
-    {"key": "first_solve",    "name": "First Blood",       "condition": "solved >= 1"},
-    {"key": "solve_10",       "name": "Getting Started",   "condition": "solved >= 10"},
-    {"key": "solve_50",       "name": "Half Century",      "condition": "solved >= 50"},
-    {"key": "solve_100",      "name": "Century Club",      "condition": "solved >= 100"},
-    {"key": "solve_200",      "name": "Problem Crusher",   "condition": "solved >= 200"},
-
-    # Based on streaks
-    {"key": "streak_7",       "name": "Week Warrior",      "condition": "streak >= 7"},
-    {"key": "streak_14",      "name": "Fortnight Fighter", "condition": "streak >= 14"},
-    {"key": "streak_30",      "name": "Monthly Master",    "condition": "streak >= 30"},
-
-    # Based on platforms connected
-    {"key": "multi_platform", "name": "Platform Hopper",   "condition": "platforms >= 2"},
+    {"key": "first_solve", "name": "First Blood",
+     "condition": "solved >= 1"},
+    {"key": "solve_10", "name": "Getting Started",
+     "condition": "solved >= 10"},
+    {"key": "solve_50", "name": "Half Century",
+     "condition": "solved >= 50"},
+    {"key": "solve_100", "name": "Century Club",
+     "condition": "solved >= 100"},
+    {"key": "solve_200", "name": "Problem Crusher",
+     "condition": "solved >= 200"},
+    {"key": "streak_7", "name": "Week Warrior",
+     "condition": "streak >= 7"},
+    {"key": "streak_14", "name": "Fortnight Fighter",
+     "condition": "streak >= 14"},
+    {"key": "streak_30", "name": "Monthly Master",
+     "condition": "streak >= 30"},
+    {"key": "multi_platform", "name": "Platform Hopper",
+     "condition": "platforms >= 2"},
 ]
