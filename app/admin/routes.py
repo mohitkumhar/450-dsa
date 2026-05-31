@@ -197,14 +197,15 @@ def delete_user(user_id):
 
     if not ObjectId.is_valid(user_id):
         flash("Invalid user id.", "danger")
-        return redirect(url_for("admin.manage_users", q=search_term, page=page))
+        return redirect(url_for("admin.users", q=search_term, page=page))
 
     log_admin_action(
-        admin_id=current_user.id,
-        action="DELETE_USER",
-        target=f"User ID: {user_id}",
-        status="success"
+        action_type="DELETE_USER",
+        target_entity="USER",
+        target_id=user_id,
+        result="SUCCESS"
     )
+
 
 
     target_id = ObjectId(user_id)
