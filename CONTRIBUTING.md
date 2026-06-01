@@ -258,3 +258,44 @@ Thanks for contributing! 🙌
 
 ### GSSoC Fetchers Testing Rules
 - Mock external DSA platform response payloads.
+
+## Adding a New Platform Integration
+
+To add a new competitive programming platform:
+
+1. **Add a fetcher** in `app/platforms/fetchers.py`:
+   - Handle rate limiting gracefully (catch 429, return cached data)
+   - Always return a typed dict with default values for missing fields
+   - Add retry logic with exponential backoff
+
+2. **Register the platform** in `app/platforms/metadata.py`:
+   - Add the platform name, icon URL, and profile URL template
+
+3. **Update the C-Score formula** in `app/leaderboard/service.py`:
+   - Document the weight assigned to the new platform
+   - Ensure null/zero stats don't break the calculation
+
+4. **Write tests** in the appropriate test file:
+   - Mock the platform API response
+   - Test with missing/null fields
+   - Test rate limit handling
+
+## Testing Requirements
+
+All PRs must include or update tests:
+
+- **Unit tests**: Cover all new functions and methods
+- **Integration tests**: Test API endpoints with realistic payloads
+- **Edge cases**: Empty data, null values, rate limit responses
+
+Run tests before submitting:
+```bash
+pytest tests/ -v --cov=app --cov-report=term-missing
+```
+
+## Code Style
+
+- Follow PEP 8 for Python
+- Use type hints for all function signatures
+- Add docstrings to all public functions
+- Maximum line length: 100 characters
