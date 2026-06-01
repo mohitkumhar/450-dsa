@@ -423,12 +423,17 @@ def export_all_notes():
 @tracker_bp.route("/export/json")
 @login_required
 def export_json():
-    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
-    topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
-    topic_lookup = {
-        topic['_id']: topic.get('name', 'Unknown')
-        for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
-    }
+    pre = current_app.config.get("_PRECOMPUTED")
+    if pre:
+        questions = pre["all_questions"]
+        topic_lookup = {tid: t["name"] for tid, t in pre["topic_lookup"].items()}
+    else:
+        questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+        topic_ids = list({q.get('topic') for q in questions if q.get('topic')})
+        topic_lookup = {
+            topic['_id']: topic.get('name', 'Unknown')
+            for topic in db.topic.find({'_id': {'$in': topic_ids}}, {'name': 1})
+        }
 
     progress = current_user.progress
     exported_progress = []
@@ -488,7 +493,8 @@ def import_preview():
     if err:
         return jsonify({"success": False, "error": err}), 400
 
-    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+    pre = current_app.config.get("_PRECOMPUTED")
+    questions = pre["all_questions"] if pre else list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
     summary, changes, conflicts, _ = process_dry_run(parsed_items, questions, current_user.progress)
 
     return jsonify({
@@ -530,7 +536,8 @@ def import_commit():
     if err:
         return jsonify({"success": False, "error": err}), 400
 
-    questions = list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
+    pre = current_app.config.get("_PRECOMPUTED")
+    questions = pre["all_questions"] if pre else list(db.question.find({}, CSV_EXPORT_QUESTION_PROJECTION))
     _, _, _, mapped_progress = process_dry_run(parsed_items, questions, current_user.progress)
 
     user_id = current_user.id
