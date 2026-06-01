@@ -114,7 +114,10 @@ def sync_platforms():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return json_error("Request body must be a JSON object.", status_code=400)
-    payload, status_code = sync_user_platforms(current_user, data, db, cache)
+    try:
+        payload, status_code = sync_user_platforms(current_user, data, db, cache)
+    except ValueError as e:
+        return json_error(str(e), status_code=400)
     if payload.get("success"):
         warm_public_card_cache(current_user.id, db_handle=db)
     return jsonify(payload), status_code

@@ -118,26 +118,35 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     atcoder_username = user.atcoder_username or ""
     codewars_username = getattr(user, "codewars_username", "") or ""
 
+
+def _get_str_field(data, key):
+    value = data.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError(f"Field '{key}' must be a string, got {type(value).__name__}")
+    return value.strip()
+
     if "leetcode" in data:
-        leetcode_username = data.get("leetcode", "").strip()
+        leetcode_username = _get_str_field(data, "leetcode")
         update_fields["leetcode_username"] = leetcode_username
     if "github" in data:
-        github_username = data.get("github", "").strip()
+        github_username = _get_str_field(data, "github")
         update_fields["github_username"] = github_username
     if "gfg" in data:
-        gfg_username = data.get("gfg", "").strip()
+        gfg_username = _get_str_field(data, "gfg")
         update_fields["gfg_username"] = gfg_username
     if "hackerrank" in data:
-        hackerrank_username = data.get("hackerrank", "").strip()
+        hackerrank_username = _get_str_field(data, "hackerrank")
         update_fields["hackerrank_username"] = hackerrank_username
     if "codingninjas" in data:
         codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
         update_fields["codingninjas_username"] = codingninjas_username
     if "atcoder" in data:
-        atcoder_username = data.get("atcoder", "").strip()
+        atcoder_username = _get_str_field(data, "atcoder")
         update_fields["atcoder_username"] = atcoder_username
     if "codewars" in data:
-        codewars_username = data.get("codewars", "").strip()
+        codewars_username = _get_str_field(data, "codewars")
         update_fields["codewars_username"] = codewars_username
 
     platform_totals = {}
