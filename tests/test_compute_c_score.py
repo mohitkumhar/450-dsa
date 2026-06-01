@@ -352,4 +352,4 @@ def test_c_score_fallback_uses_448_not_450():
     user = make_user(progress=progress)
     result = compute_c_score(user, all_questions=None)
     assert result['dsa_done'] == 448
-    assert result["c_score"] == int(round(min(225 / 450, 1.0) * 250))
+    assert result["c_score"] == int(round(min(448 / 450, 1.0) * 250))
