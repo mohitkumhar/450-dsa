@@ -17,6 +17,8 @@ leaderboard_bp = Blueprint("leaderboard", __name__)
 @leaderboard_bp.route("/leaderboard")
 @limiter.limit("20 per minute")
 @cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=leaderboard_page_cache_key)
+# TODO: Cache this response for 15 minutes using app/leaderboard/cache.py
+# This avoids fetching all platform stats on every page load
 def leaderboard():
     entries = build_leaderboard_data()
 
