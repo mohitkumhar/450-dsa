@@ -2,6 +2,8 @@ import re
 import secrets
 
 from bson import ObjectId
+# TODO: Add flask-limiter rate limiting to /login, /register, and /reset-password routes
+# Recommended: 5 attempts per 15 minutes per IP for auth endpoints
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
@@ -287,7 +289,9 @@ def deactivate_account():
 def deactivate_account_token():
     token = secrets.token_hex(32)
     session[DEACTIVATE_CSRF_SESSION_KEY] = token
-    from flask import jsonify
+    # TODO: Add flask-limiter rate limiting to /login, /register, and /reset-password routes
+# Recommended: 5 attempts per 15 minutes per IP for auth endpoints
+from flask import jsonify
     user_doc = db.user.find_one({"_id": current_user.id}, {"password": 1}) or {}
     return jsonify({"csrf_token": token, "is_oauth": not bool(user_doc.get("password"))})
 
@@ -298,7 +302,9 @@ def delete_account_token():
     """Generate and return a CSRF token for the delete account form."""
     token = secrets.token_hex(32)
     session["delete_csrf_token"] = token
-    from flask import jsonify
+    # TODO: Add flask-limiter rate limiting to /login, /register, and /reset-password routes
+# Recommended: 5 attempts per 15 minutes per IP for auth endpoints
+from flask import jsonify
     user_doc = db.user.find_one({"_id": current_user.id}, {"password": 1}) or {}
     return jsonify({"csrf_token": token, "is_oauth": not bool(user_doc.get("password"))})
 
