@@ -302,19 +302,21 @@ def update_question(question_id):
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
 
     if update_fields:
-        inc_fields = {
-            field: update_fields.pop(field)
-            for field in list(update_fields)
-            if field.startswith("in_sheet_platform_counts.")
-        }
+        for field in list(update_fields):
+            if field.startswith("in_sheet_platform_counts."):
+                del update_fields[field]
         update_doc = {}
         if update_fields:
             update_doc["$set"] = update_fields
-        if inc_fields:
-            update_doc["$inc"] = inc_fields
-        db.user.update_one({"_id": user_id}, update_doc)
+        if update_doc:
+            db.user.update_one({"_id": user_id}, update_doc)
         current_user.reload()
         pre = current_app.config.get("_PRECOMPUTED")
+        all_questions = (pre["all_questions"] if pre
+                         else list(db.question.find({}, {"_id": 1, "url": 1})))
+        solved_items = {q_id: p for q_id, p in current_user.progress.items() if p.get("done")}
+        in_sheet_counts = compute_in_sheet_platform_counts(solved_items, all_questions)
+        db.user.update_one({"_id": user_id}, {"$set": {"in_sheet_platform_counts": in_sheet_counts}})
         total_questions = (pre["total_questions"] if pre
                            else db.question.count_documents({}))
         update_computed_stats(user_id, current_user.progress, db, total_questions)
