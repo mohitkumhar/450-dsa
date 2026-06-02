@@ -254,13 +254,15 @@ def get_merged_daily_counts(user_doc):
             if coerce_non_negative_number(count) > 0:
                 merged[date] = max(merged.get(date, 0), count)
 
+        legacy = _get_field(user_doc, "external_daily_counts", {})
+        if isinstance(legacy, dict):
+            for date, count in legacy.items():
+                if coerce_non_negative_number(count) > 0:
+                    merged[date] = max(merged.get(date, 0), count)
+
         if merged:
-            legacy = _get_field(user_doc, "external_daily_counts", {})
-            if isinstance(legacy, dict):
-                for date, count in legacy.items():
-                    if coerce_non_negative_number(count) > 0:
-                        merged[date] = max(merged.get(date, 0), count)
             return merged
+        return legacy if legacy else {}
     return _get_field(user_doc, "external_daily_counts", {})
 
 
