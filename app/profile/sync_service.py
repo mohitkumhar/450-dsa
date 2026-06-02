@@ -15,6 +15,7 @@ from app.platforms.fetchers import (
     run_fetch_jobs,
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
+from profile_validation import validate_username
 
 logger = logging.getLogger("flask.app")
 
@@ -118,27 +119,30 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     atcoder_username = user.atcoder_username or ""
     codewars_username = getattr(user, "codewars_username", "") or ""
 
-    if "leetcode" in data:
-        leetcode_username = data.get("leetcode", "").strip()
-        update_fields["leetcode_username"] = leetcode_username
-    if "github" in data:
-        github_username = data.get("github", "").strip()
-        update_fields["github_username"] = github_username
-    if "gfg" in data:
-        gfg_username = data.get("gfg", "").strip()
-        update_fields["gfg_username"] = gfg_username
-    if "hackerrank" in data:
-        hackerrank_username = data.get("hackerrank", "").strip()
-        update_fields["hackerrank_username"] = hackerrank_username
-    if "codingninjas" in data:
-        codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
-        update_fields["codingninjas_username"] = codingninjas_username
-    if "atcoder" in data:
-        atcoder_username = data.get("atcoder", "").strip()
-        update_fields["atcoder_username"] = atcoder_username
-    if "codewars" in data:
-        codewars_username = data.get("codewars", "").strip()
-        update_fields["codewars_username"] = codewars_username
+    try:
+        if "leetcode" in data:
+            leetcode_username = data.get("leetcode", "").strip()
+            update_fields["leetcode_username"] = validate_username(leetcode_username)
+        if "github" in data:
+            github_username = data.get("github", "").strip()
+            update_fields["github_username"] = validate_username(github_username)
+        if "gfg" in data:
+            gfg_username = data.get("gfg", "").strip()
+            update_fields["gfg_username"] = validate_username(gfg_username)
+        if "hackerrank" in data:
+            hackerrank_username = data.get("hackerrank", "").strip()
+            update_fields["hackerrank_username"] = validate_username(hackerrank_username)
+        if "codingninjas" in data:
+            codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
+            update_fields["codingninjas_username"] = validate_username(codingninjas_username)
+        if "atcoder" in data:
+            atcoder_username = data.get("atcoder", "").strip()
+            update_fields["atcoder_username"] = validate_username(atcoder_username)
+        if "codewars" in data:
+            codewars_username = data.get("codewars", "").strip()
+            update_fields["codewars_username"] = validate_username(codewars_username)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}, 400
 
     platform_totals = {}
     platform_status = {}
