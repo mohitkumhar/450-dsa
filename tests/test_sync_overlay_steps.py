@@ -30,7 +30,7 @@ def test_sync_profile_template_wires_platforms_into_sync_requests():
     template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
 
     assert 'id="ac_username"' in template
-    assert "const ac = '{{ user.atcoder_username or \"\" }}';" in template
+    assert "const ac = {{ user.atcoder_username|tojson }};" in template
     assert 'id="cw_username"' in template
-    assert "const cw = '{{ user.codewars_username or \"\" }}';" in template
+    assert "const cw = {{ user.codewars_username|tojson }};" in template
     assert "body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})" in template
