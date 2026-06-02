@@ -4,7 +4,6 @@ from flask import Blueprint, Response, current_app, jsonify, render_template, re
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.notifications.service import notify_account_event
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.card_service import warm_public_card_cache
 from app.utils import (
