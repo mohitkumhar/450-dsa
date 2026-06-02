@@ -1724,7 +1724,8 @@ header_style='flex-shrink:0;display:flex;justify-content:space-between;align-ite
           id="importModeHelp"
         >
           Merge will add new progress and combine note differences. Replace will
-          overwrite only the questions found in your import file (unmatched existing progress is preserved).
+          overwrite only the questions found in your import file (unmatched
+          existing progress is preserved).
         </div>
       </div>
 
@@ -1820,37 +1821,16 @@ header_style='flex-shrink:0;display:flex;justify-content:space-between;align-ite
   ></div>
 </div>
 
-<!-- Badge Display Section -->
-<div class="badges-section mt-4">
-  <h5>🏅 Achievements</h5>
-  <div id="badges-container" class="d-flex flex-wrap gap-2">
-    <p class="text-muted">Loading badges...</p>
+<!-- DSA Achievement Badges -->
+<div class="card mt-3">
+  <div style="font-weight: 700; margin-bottom: 12px">🏅 DSA Achievements</div>
+  <div id="badges-container" class="awards-grid">
+    <p style="color: var(--text-muted); font-size: 0.8rem">Loading...</p>
   </div>
 </div>
+
 {% endblock %} {% block scripts %}
 <script>
-    fetch('/api/badges')
-      .then(r => r.json())
-      .then(badges => {
-        const container = document.getElementById('badges-container');
-        if (badges.length === 0) {
-          container.innerHTML = '<p class="text-muted">No badges yet. Keep solving! 💪</p>';
-          return;
-        }
-        container.innerHTML = '';
-        badges.forEach(b => {
-          container.innerHTML += `
-            <span class="badge bg-warning text-dark p-2 fs-6"
-                  title="Earned on: ${new Date(b.earned_at).toLocaleDateString()}">
-              🏆 ${b.name}
-            </span>`;
-        });
-      })
-      .catch(() => {
-        document.getElementById('badges-container').innerHTML =
-          '<p class="text-danger">Could not load badges.</p>';
-      });
-
   const endpointConfig = {{ {
     "editProfile": url_for('profile.edit_profile'),
     "syncPlatforms": url_for('profile.sync_platforms'),
@@ -2160,23 +2140,19 @@ header_style='flex-shrink:0;display:flex;justify-content:space-between;align-ite
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
 <style>
-  @media screen and (max-width:768px)
-  {
-    .prof-layout
-    {
-      display:flex;
-      flex-direction:column;
-      gap:20px;
-      padding:10px;
+  @media screen and (max-width: 768px) {
+    .prof-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 10px;
     }
-    .card
-    {
-      width:100%;
-      border-radius:12px;
+    .card {
+      width: 100%;
+      border-radius: 12px;
       margin-bottom: 15px;
     }
-    img
-    {
+    img {
       max-width: 100%;
       height: auto;
     }
