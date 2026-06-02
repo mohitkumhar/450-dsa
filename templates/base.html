@@ -185,7 +185,9 @@
           </div>
         </div>
 
+        {% if current_user.is_authenticated %}
         <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+        {% endif %}
 
         <a
           href="{{ url_for('tracker.bookmarks') }}"
