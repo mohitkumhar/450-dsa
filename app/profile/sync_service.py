@@ -140,7 +140,10 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         codewars_username = data.get("codewars", "").strip()
         update_fields["codewars_username"] = codewars_username
 
-    platform_totals = {}
+    existing_totals = getattr(user, "external_totals", {}) or {}
+    if not isinstance(existing_totals, dict):
+        existing_totals = {}
+    platform_totals = dict(existing_totals)
     platform_status = {}
 
     def _mark(platform_key: str, status: str, error: str = None):
