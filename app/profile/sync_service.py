@@ -204,9 +204,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             _mark("leetcode", "failed", "No data returned (username may be invalid or rate-limited).")
         else:
             _mark("leetcode", "synced")
-            new_calendar = leetcode_data.get("calendar", {})
-            if new_calendar:
-                platform_calendars["leetcode"] = new_calendar
+            platform_calendars["leetcode"] = leetcode_data.get("calendar", {})
             if leetcode_data.get("total") is not None:
                 platform_totals["LeetCode"] = leetcode_data.get("total")
             if leetcode_data.get("difficulty"):
@@ -239,9 +237,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
                 _mark("github", "failed", "GitHub API returned an error. Please try again later.")
         else:
             _mark("github", "synced")
-            new_calendar = github_data.get("calendar", {})
-            if new_calendar:
-                platform_calendars["github"] = new_calendar
+            platform_calendars["github"] = github_data.get("calendar", {})
             if github_data.get("stats"):
                 platform_totals["GitHub_Issues"] = github_data["stats"]["issues"]
                 platform_totals["GitHub_PRs"] = github_data["stats"]["prs"]
