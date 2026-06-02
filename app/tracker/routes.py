@@ -613,4 +613,9 @@ def import_commit():
     invalidate_leaderboard_cache()
     warm_public_card_cache(user_id, db_handle=db)
 
+    pre = current_app.config.get("_PRECOMPUTED")
+    total_questions = (pre["total_questions"] if pre
+                       else db.question.count_documents({}))
+    update_computed_stats(user_id, new_progress, db, total_questions)
+
     return jsonify({"success": True, "message": "Progress imported successfully!"})
