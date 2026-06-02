@@ -345,7 +345,8 @@ def profile():
     user = current_user
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
     dsa_done = len(solved_items)
-    current_streak, longest_streak = compute_streak(user.progress)
+    merged_daily_counts = get_merged_daily_counts(user)
+    current_streak, longest_streak = compute_streak(user.progress, external_daily_counts=merged_daily_counts)
 
     pre = current_app.config.get("_PRECOMPUTED")
     if pre:
@@ -387,9 +388,8 @@ def profile():
             day = solved_at.strftime("%Y-%m-%d")
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
-    ext_daily = get_merged_daily_counts(user)
-    if ext_daily:
-        for day, count in ext_daily.items():
+    if merged_daily_counts:
+        for day, count in merged_daily_counts.items():
             daily_counts[day] = daily_counts.get(day, 0) + count
 
     total_active_days = len(daily_counts)
@@ -477,7 +477,7 @@ def profile():
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
-    update_computed_stats(user.id, user.progress, db, total_questions)
+    update_computed_stats(user.id, user.progress, db, total_questions, user)
 
     return render_template(
         "profile.html",
