@@ -22,10 +22,11 @@ def compute_streak(progress, today=None, external_daily_counts=None):
     }
 
     if external_daily_counts:
-        for date_str in external_daily_counts:
+        for date_str, count in external_daily_counts.items():
             try:
-                d = date.fromisoformat(date_str)
-                solved_dates.add(d)
+                if count and int(count) > 0:
+                    d = date.fromisoformat(date_str)
+                    solved_dates.add(d)
             except (ValueError, TypeError):
                 pass
 
