@@ -1,8 +1,8 @@
 # Race condition between profile page GET and question toggle POST corrupts platform submission counts
 
-**Severity:** High  
-**Type:** Bug — Race Condition / Data Integrity  
-**Filed:** No  
+**Severity:** High
+**Type:** Bug — Race Condition / Data Integrity
+**Filed:** No
 
 ---
 

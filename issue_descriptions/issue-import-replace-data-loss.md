@@ -1,8 +1,8 @@
 # Progress import replace mode silently deletes all unmatched question progress
 
-**Severity:** Critical  
-**Type:** Bug — Data Loss  
-**Filed:** No  
+**Severity:** Critical
+**Type:** Bug — Data Loss
+**Filed:** No
 
 ---
 

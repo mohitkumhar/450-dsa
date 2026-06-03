@@ -1,8 +1,8 @@
 # `get_merged_daily_counts` undercounts active days after `_legacy` migration completes
 
-**Severity:** High  
-**Type:** Bug — Data Integrity / C-Score Regression  
-**Filed:** No  
+**Severity:** High
+**Type:** Bug — Data Integrity / C-Score Regression
+**Filed:** No
 
 ---
 

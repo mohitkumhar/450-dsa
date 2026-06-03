@@ -1,8 +1,8 @@
 # Account deletion and deactivation leave stale data in leaderboard and card caches
 
-**Severity:** High  
-**Type:** Bug — Data Privacy / Cache Staleness  
-**Filed:** No  
+**Severity:** High
+**Type:** Bug — Data Privacy / Cache Staleness
+**Filed:** No
 
 ---
 
