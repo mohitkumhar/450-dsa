@@ -253,9 +253,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         elif not gfg_data:
             _mark("gfg", "failed", "No data returned (username may be invalid or rate-limited).")
         else:
-            _mark("gfg", "synced")
-            if gfg_data.get("total") is not None:
-                platform_totals["GFG"] = int(gfg_data.get("total", 0))
+            gfg_total = gfg_data.get("total")
+            if gfg_total is not None and int(gfg_total) > 0:
+                platform_totals["GFG"] = int(gfg_total)
+                _mark("gfg", "synced")
+            else:
+                _mark("gfg", "failed", "No solved problems found (username may be invalid).")
     else:
         _mark("gfg", "skipped")
 
@@ -266,9 +269,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         elif not codingninjas_data:
             _mark("codingninjas", "failed", "No data returned (username may be invalid or rate-limited).")
         else:
-            _mark("codingninjas", "synced")
-            if codingninjas_data.get("total") is not None:
-                platform_totals["Coding Ninjas"] = int(codingninjas_data.get("total", 0))
+            cn_total = codingninjas_data.get("total")
+            if cn_total is not None and int(cn_total) > 0:
+                platform_totals["Coding Ninjas"] = int(cn_total)
+                _mark("codingninjas", "synced")
+            else:
+                _mark("codingninjas", "failed", "No solved problems found (username may be invalid).")
     else:
         _mark("codingninjas", "skipped")
 
@@ -283,7 +289,9 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             update_fields["hr_badges_json"] = json.dumps(hr_badges)
             if hr_solved > 0:
                 platform_totals["HackerRank"] = hr_solved
-            _mark("hackerrank", "synced")
+                _mark("hackerrank", "synced")
+            else:
+                _mark("hackerrank", "failed", "No solved problems found (username may be invalid).")
     else:
         _mark("hackerrank", "skipped")
 
@@ -294,9 +302,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         elif not atcoder_data:
             _mark("atcoder", "failed", "No data returned (handle may be invalid or rate-limited).")
         else:
-            _mark("atcoder", "synced")
-            if atcoder_data.get("total") is not None:
-                platform_totals["AtCoder"] = int(atcoder_data.get("total", 0))
+            atcoder_total = atcoder_data.get("total")
+            if atcoder_total is not None and int(atcoder_total) > 0:
+                platform_totals["AtCoder"] = int(atcoder_total)
+                _mark("atcoder", "synced")
+            else:
+                _mark("atcoder", "failed", "No solved problems found (handle may be invalid).")
     else:
         _mark("atcoder", "skipped")
 
@@ -307,9 +318,12 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         elif not codewars_data:
             _mark("codewars", "failed", "No data returned (username may be invalid or rate-limited).")
         else:
-            _mark("codewars", "synced")
-            if codewars_data.get("total") is not None:
-                platform_totals["Codewars"] = int(codewars_data.get("total", 0))
+            cw_total = codewars_data.get("total")
+            if cw_total is not None and int(cw_total) > 0:
+                platform_totals["Codewars"] = int(cw_total)
+                _mark("codewars", "synced")
+            else:
+                _mark("codewars", "failed", "No solved problems found (username may be invalid).")
     else:
         _mark("codewars", "skipped")
 
