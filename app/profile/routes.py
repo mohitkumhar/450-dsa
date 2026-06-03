@@ -192,9 +192,9 @@ def edit_profile():
       401:
         description: Login required.
     """
-    data = request.get_json()
-    if not data:
-        return json_error("No data", status_code=400)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
