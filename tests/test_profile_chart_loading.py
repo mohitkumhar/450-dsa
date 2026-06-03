@@ -1,5 +1,11 @@
 from pathlib import Path
 
+from bson import ObjectId
+
+import app.leaderboard.service as leaderboard_service
+import app.profile.routes as profile_routes
+from conftest import build_test_app, login_test_user
+
 
 PROFILE_TEMPLATE = Path("templates/profile.html").read_text(encoding="utf-8")
 
@@ -15,3 +21,87 @@ def test_profile_lazy_loads_charts_on_intersection():
     assert "function loadChartJs()" in PROFILE_TEMPLATE
     assert "new IntersectionObserver" in PROFILE_TEMPLATE
     assert "renderProfileCharts()" in PROFILE_TEMPLATE
+
+
+def test_profile_difficulty_chart_uses_synced_leetcode_totals(monkeypatch):
+    flask_app, test_db = build_test_app(
+        monkeypatch,
+        extra_db_targets=(profile_routes, leaderboard_service),
+    )
+
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    easy_id = test_db.question.insert_one(
+        {
+            "_id": ObjectId(),
+            "topic": topic_id,
+            "problem": "Reverse Array",
+            "difficulty": "Easy",
+        }
+    ).inserted_id
+    medium_id = test_db.question.insert_one(
+        {
+            "_id": ObjectId(),
+            "topic": topic_id,
+            "problem": "Merge Intervals",
+            "difficulty": "Medium",
+        }
+    ).inserted_id
+
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Synced User",
+            "email": "synced@example.com",
+            "progress": {
+                str(easy_id): {"done": True},
+                str(medium_id): {"done": True},
+            },
+            "external_totals": {
+                "LeetCode": 42,
+                "LeetCode_Easy": 11,
+                "LeetCode_Medium": 22,
+                "LeetCode_Hard": 9,
+            },
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get("/profile")
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[11,22,9]" in html
+
+
+def test_profile_difficulty_chart_defaults_unsynced_leetcode_totals_to_zero(monkeypatch):
+    flask_app, test_db = build_test_app(
+        monkeypatch,
+        extra_db_targets=(profile_routes, leaderboard_service),
+    )
+
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    easy_id = test_db.question.insert_one(
+        {
+            "_id": ObjectId(),
+            "topic": topic_id,
+            "problem": "Reverse Array",
+            "difficulty": "Easy",
+        }
+    ).inserted_id
+
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Unsynced User",
+            "email": "unsynced@example.com",
+            "progress": {str(easy_id): {"done": True}},
+            "external_totals": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get("/profile")
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[0,0,0]" in html

@@ -462,9 +462,9 @@ def profile():
 
         platforms = merge_platform_counts(effective_counts, ext_platform_totals)
 
-    lc_easy = dsa_easy
-    lc_medium = dsa_medium
-    lc_hard = dsa_hard
+    lc_easy = ext_platform_totals.get("LeetCode_Easy", 0)
+    lc_medium = ext_platform_totals.get("LeetCode_Medium", 0)
+    lc_hard = ext_platform_totals.get("LeetCode_Hard", 0)
 
     lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
