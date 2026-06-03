@@ -19,6 +19,8 @@
 .topic-header-main { min-width: 0; }
 .export-notes-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; text-decoration: none; white-space: nowrap; transition: all 0.2s; }
 .export-notes-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.reset-progress-btn { color: var(--danger); }
+.reset-progress-btn:hover { border-color: var(--danger); color: var(--danger); }
 
 .bookmark-btn { color: var(--text-muted); }
 .bookmark-btn:hover { color: var(--accent); }
@@ -83,9 +85,14 @@
         </div>
     </div>
     {% if current_user.is_authenticated %}
-    <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
-        <i class="bi bi-download" aria-hidden="true"></i> Export Notes
-    </a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+        <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
+            <i class="bi bi-download" aria-hidden="true"></i> Export Notes
+        </a>
+        <button type="button" class="export-notes-btn reset-progress-btn" id="resetTopicProgressBtn" aria-label="Reset progress for this topic">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset Progress
+        </button>
+    </div>
     {% endif %}
 </div>
 
@@ -239,6 +246,7 @@
 <script>
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+    "resetTopicProgress": url_for('tracker.reset_topic_progress', topic_id=topic._id|string),
 }|tojson }};
 const csrfToken = {{ csrf_token()|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
@@ -504,6 +512,44 @@ document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
         emptyRow.style.display = '';
     }
 })();
+
+const resetTopicProgressBtn = document.getElementById('resetTopicProgressBtn');
+if (resetTopicProgressBtn) {
+    resetTopicProgressBtn.addEventListener('click', async function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+
+        if (!window.confirm('Reset all done and skipped progress for this topic?')) {
+            return;
+        }
+
+        const previousLabel = this.innerHTML;
+        this.disabled = true;
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
+
+        try {
+            const response = await fetch(endpointConfig.resetTopicProgress, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Reset failed');
+            }
+            window.location.reload();
+        } catch (error) {
+            showUpdateError('Unable to reset topic progress. Please try again.');
+        } finally {
+            this.disabled = false;
+            this.classList.remove('btn-busy');
+            this.removeAttribute('aria-busy');
+            this.innerHTML = previousLabel;
+        }
+    });
+}
 
 // Notes Modal with focus trap
 const modal = document.getElementById('notesModal');

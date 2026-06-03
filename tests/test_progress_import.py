@@ -182,6 +182,10 @@ def test_import_commit_route_merge(monkeypatch):
     assert "Existing notes" in progress["notes"]
     assert "Imported notes" in progress["notes"]
     assert user["in_sheet_platform_counts"]["LeetCode"] == 1
+    # Regression: import commit must update computed stats
+    assert user["dsa_progress"] == 100.0
+    assert user["current_streak"] >= 1
+    assert user["longest_streak"] >= 1
 
 
 def test_import_commit_route_replace(monkeypatch):
@@ -240,3 +244,7 @@ def test_import_commit_route_replace(monkeypatch):
     assert untouched_progress["notes"] == "Keep me"
     # Preserve existing done entries, so counts reflect both solved questions.
     assert user["in_sheet_platform_counts"]["LeetCode"] == 2
+    # Regression: import commit must update computed stats
+    assert user["dsa_progress"] == 100.0
+    assert user["current_streak"] >= 1
+    assert user["longest_streak"] >= 1

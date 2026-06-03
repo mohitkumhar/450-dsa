@@ -16,6 +16,7 @@ class FakeUser:
         self.atcoder_username = kwargs.get("atcoder_username", "")
         self.platform_calendars = kwargs.get("platform_calendars", {})
         self.external_daily_counts = kwargs.get("external_daily_counts", {})
+        self.external_totals = kwargs.get("external_totals", {})
         self.reload_calls = 0
 
     def reload(self):
@@ -307,6 +308,82 @@ def test_get_merged_daily_counts_falls_back_to_legacy():
     )
     merged = get_merged_daily_counts(user)
     assert merged == {"2026-05-25": 3}
+
+
+def test_sync_clears_stale_totals_when_platform_fails_or_username_cleared(monkeypatch):
+    """When a sync is requested for a platform and the sync fails or the username
+    is cleared, old external_totals for that platform must be removed so stale
+    stats do not persist. Totals for platforms not part of this sync are preserved."""
+    now = datetime.now(timezone.utc)
+    user = FakeUser(
+        leetcode_username="alice",
+        github_username="octocat",
+        external_totals={
+            "LeetCode": 25,
+            "LeetCode_Easy": 10,
+            "LeetCode_Medium": 12,
+            "LeetCode_Hard": 3,
+            "LeetCode_Contests": 4,
+            "LeetCode_Rating": 1725,
+            "LeetCode_GlobalRank": 3210,
+            "GitHub_Issues": 5,
+            "GitHub_PRs": 3,
+            "GitHub_Merged_PRs": 2,
+            "GitHub_Commits": 100,
+        },
+    )
+    db = FakeDB()
+    cache = FakeCache()
+
+    # Sync both platforms — the fetch will return data for leetcode but fail for
+    # github (simulated by not adding a github entry to platform_results).
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_leetcode",
+        lambda username: {
+            "calendar": {"2026-05-24": 3},
+            "total": 30,
+            "difficulty": {"Easy": 15, "Medium": 12, "Hard": 3},
+            "contest": {"attendedContestsCount": 5, "rating": 1800, "globalRanking": 2500},
+        },
+    )
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_leetcode_rating_history",
+        lambda username: [],
+    )
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_lc_badges",
+        lambda username: [],
+    )
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_github",
+        lambda username: None,
+    )
+    monkeypatch.setattr("app.profile.sync_service.invalidate_leaderboard_cache", lambda: None)
+
+    payload, status_code = sync_user_platforms(
+        user,
+        {"leetcode": "alice", "github": "octocat"},
+        db,
+        cache,
+        now=now,
+    )
+
+    assert status_code == 200
+    # leetcode succeeds, github returns None → fails
+    assert payload["platforms"]["leetcode"]["status"] == "synced"
+    assert payload["platforms"]["github"]["status"] == "failed"
+
+    update_doc = db.user.updates[0][1]
+    totals = update_doc["$set"]["external_totals"]
+
+    # LeetCode totals should be updated with new sync values
+    assert totals["LeetCode"] == 30
+
+    # GitHub totals must be gone because the sync failed
+    assert "GitHub_Issues" not in totals
+    assert "GitHub_PRs" not in totals
+    assert "GitHub_Merged_PRs" not in totals
+    assert "GitHub_Commits" not in totals
 
 
 def test_build_sync_platforms_response_all_failed():

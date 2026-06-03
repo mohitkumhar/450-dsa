@@ -130,3 +130,7 @@ CONFIG_BY_ENV = {
 
 def resolve_config_class():
     return CONFIG_BY_ENV.get(current_environment_name(), BaseConfig)
+
+
+# GSSoC Flask CORS Setup Rules
+# Allow origin requests only from trusted subdomains.

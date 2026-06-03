@@ -47,7 +47,10 @@
           if (typeof showToast === 'function') {
             showToast('Could not copy automatically. The URL is selected below.', 'warning');
           }
+
         }
+
+       
 
         function copyProgressCardUrl() {
           const url = window.location.origin + endpointConfig.publicCardPath;
@@ -787,6 +790,7 @@ header_style='flex-shrink:0;display:flex;justify-content:space-between;align-ite
       }).catch(e => {
         showToast('❌ Network error');
         window.setButtonBusyState(btn, contentEl, { busy: false });
+
       });
   };
 
@@ -801,6 +805,7 @@ header_style='flex-shrink:0;display:flex;justify-content:space-between;align-ite
     const cn = '{{ user.codingninjas_username or "" }}';
     const ac = '{{ user.atcoder_username or "" }}';
     const cw = '{{ user.codewars_username or "" }}';
+
 
     if (!lc && !gh && !gfg && !hr && !cn && !ac && !cw) {
       showToast('⚠️ No platforms connected to sync!');
@@ -1055,4 +1060,30 @@ header_style='flex-shrink:0;display:flex;justify-content:space-between;align-ite
   })();
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
+
+<style>
+  @media screen and (max-width:768px)
+  {
+    .prof-layout
+    {
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+      padding:10px;
+    }
+    .card
+    {
+      width:100%;
+      border-radius:12px;
+      margin-bottom: 15px;
+    }
+    img
+    {
+      max-width: 100%;
+      height: auto;
+    }
+  }
+</style>
+
 {% endblock %}
+
