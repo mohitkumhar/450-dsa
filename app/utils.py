@@ -1,6 +1,6 @@
 import re
 from math import isfinite
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask import jsonify
 
@@ -11,6 +11,24 @@ from app.search import service as search_service
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+def normalize_timestamp(timestamp):
+    """Convert a progress timestamp to a date string (YYYY-MM-DD).
+
+    Accepts datetime, date, or ISO-format string.  Returns None for
+    unparseable or missing values so callers can skip the entry safely.
+    """
+    if isinstance(timestamp, datetime):
+        return timestamp.strftime("%Y-%m-%d")
+    if isinstance(timestamp, date):
+        return timestamp.isoformat()
+    if isinstance(timestamp, str):
+        try:
+            return date.fromisoformat(timestamp[:10]).isoformat()
+        except (ValueError, TypeError):
+            return None
+    return None
 
 
 def json_response(payload=None, status_code=200, **fields):

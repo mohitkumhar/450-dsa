@@ -21,6 +21,7 @@ from app.utils import (
     json_error,
     json_success,
     merge_platform_counts,
+    normalize_timestamp,
     update_computed_stats,
     utc_now,
 )
@@ -416,8 +417,9 @@ def profile():
     for question in all_questions:
         question_id = str(question["_id"])
         if question_id in solved_items:
-            solved_at = solved_items[question_id].get("timestamp") or utc_now()
-            day = solved_at.strftime("%Y-%m-%d")
+            day = normalize_timestamp(solved_items[question_id].get("timestamp"))
+            if day is None:
+                continue
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
     if merged_daily_counts:
