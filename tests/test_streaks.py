@@ -49,3 +49,23 @@ def test_compute_streak_treats_naive_datetimes_as_utc():
     progress = {'a': solved_on(datetime(2026, 5, 20))}
 
     assert compute_streak(progress, today=date(2026, 5, 20)) == (1, 1)
+
+
+def test_compute_streak_filters_zero_invalid_external_counts():
+    progress = {
+        'a': solved_on(datetime(2026, 5, 18, tzinfo=timezone.utc)),
+        'b': solved_on(datetime(2026, 5, 19, tzinfo=timezone.utc)),
+    }
+    external_counts = {
+        "2026-05-20": 3,
+        "2026-05-21": 0,
+        "2026-05-22": -1,
+        "bad-date": 5,
+        "2026-05-23": None,
+    }
+
+    current, longest = compute_streak(
+        progress, today=date(2026, 5, 20), external_daily_counts=external_counts
+    )
+    assert current == 3
+    assert longest == 3

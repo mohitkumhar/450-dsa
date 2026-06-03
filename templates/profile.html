@@ -591,13 +591,13 @@ window.handleQuickSync = function(btn) {
   const icon = document.getElementById('quickSyncIcon');
   if (btn.disabled) return;
   
-  const lc = '{{ user.leetcode_username or "" }}';
-  const gh = '{{ user.github_username or "" }}';
-  const gfg = '{{ user.gfg_username or "" }}';
-  const hr = '{{ user.hackerrank_username or "" }}';
-  const cn = '{{ user.codingninjas_username or "" }}';
-  const ac = '{{ user.atcoder_username or "" }}';
-  const cw = '{{ user.codewars_username or "" }}';
+  const lc = {{ (user.leetcode_username or "")|tojson }};
+  const gh = {{ (user.github_username or "")|tojson }};
+  const gfg = {{ (user.gfg_username or "")|tojson }};
+  const hr = {{ (user.hackerrank_username or "")|tojson }};
+  const cn = {{ (user.codingninjas_username or "")|tojson }};
+  const ac = {{ (user.atcoder_username or "")|tojson }};
+  const cw = {{ (user.codewars_username or "")|tojson }};
   
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
     showToast('⚠️ No platforms connected to sync!');

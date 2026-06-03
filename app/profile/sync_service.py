@@ -15,11 +15,26 @@ from app.platforms.fetchers import (
     run_fetch_jobs,
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
+from profile_validation import validate_username
 
 logger = logging.getLogger("flask.app")
 
 
 SYNC_COOLDOWN_SECONDS = 600
+
+PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
+                 "codingninjas", "atcoder", "codewars"}
+
+PLATFORM_TOTAL_KEYS = {
+    "leetcode": {"LeetCode", "LeetCode_Easy", "LeetCode_Medium", "LeetCode_Hard",
+                 "LeetCode_Contests", "LeetCode_Rating", "LeetCode_GlobalRank"},
+    "github": {"GitHub_Issues", "GitHub_PRs", "GitHub_Merged_PRs", "GitHub_Commits"},
+    "gfg": {"GFG"},
+    "codingninjas": {"Coding Ninjas"},
+    "hackerrank": {"HackerRank"},
+    "atcoder": {"AtCoder"},
+    "codewars": {"Codewars"},
+}
 
 
 def build_sync_platforms_response(platform_status: dict):
@@ -297,8 +312,6 @@ def _get_str_field(data, key):
     # covered every platform the user has configured.  During the migration
     # from the old flat ``external_daily_counts`` format to per-platform
     # calendars, ``_legacy`` preserves dates from platforms not yet re-synced.
-    PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
-                     "codingninjas", "atcoder", "codewars"}
     requested_platforms = {k for k in data if k in PLATFORM_KEYS}
     legacy_counts = getattr(user, "external_daily_counts", {})
     has_legacy = isinstance(legacy_counts, dict) and bool(legacy_counts)
