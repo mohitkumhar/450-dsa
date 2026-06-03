@@ -51,6 +51,10 @@
             <i class="bi bi-github" style="font-size:1.1rem;"></i> GitHub
         </a>
 
+         <a href="{{ url_for('auth.login_google') }}" class="oauth-btn">
+            <i class="bi bi-google" style="font-size:1.1rem;"></i> Google
+        </a>
+
         <div class="auth-footer">
             Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a>
         </div>
