@@ -53,4 +53,3 @@ def mark_one_read(user_id, notification_id):
         {"_id": ObjectId(notification_id), "user_id": user_id},
         {"$set": {"read": True}}
     )
-    

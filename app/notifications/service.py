@@ -44,4 +44,3 @@ def notify_account_event(user_id, event):
         notif_type="account",
         message=event
     )
-    

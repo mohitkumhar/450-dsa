@@ -23,16 +23,39 @@ function loadNotifications() {
                 list.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No notifications yet.</p>';
                 return;
             }
-            list.innerHTML = notifications.map(n => `
-                <div style="padding:12px 16px; border-bottom:1px solid var(--border);
-                     background:${n.read ? 'transparent' : 'var(--hover-bg)'};
-                     cursor:pointer;" onclick="markRead('${n.id}', this)">
-                    <div style="font-size:0.9rem;">${n.message}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
-                        ${new Date(n.created_at).toLocaleString()}
-                    </div>
-                </div>
-            `).join('');
+            function loadNotifications() {
+    fetch('/api/notifications')
+        .then(r => r.json())
+        .then(notifications => {
+            const list = document.getElementById('notif-list');
+            if (!list) return;
+            list.innerHTML = '';
+            if (notifications.length === 0) {
+                const p = document.createElement('p');
+                p.style.cssText = 'padding:16px;color:var(--text-muted)';
+                p.textContent = 'No notifications yet.';
+                list.appendChild(p);
+                return;
+            }
+            notifications.forEach(n => {
+                const div = document.createElement('div');
+                div.style.cssText = `padding:12px 16px;border-bottom:1px solid var(--border);background:${n.read ? 'transparent' : 'var(--hover-bg)'};cursor:pointer;`;
+                div.onclick = () => markRead(n.id, div);
+
+                const msg = document.createElement('div');
+                msg.style.fontSize = '0.9rem';
+                msg.textContent = n.message;
+
+                const time = document.createElement('div');
+                time.style.cssText = 'font-size:0.75rem;color:var(--text-muted);margin-top:4px';
+                time.textContent = new Date(n.created_at).toLocaleString();
+
+                div.appendChild(msg);
+                div.appendChild(time);
+                list.appendChild(div);
+            });
+        }).catch(() => {});
+}
         }).catch(() => {});
 }
 
