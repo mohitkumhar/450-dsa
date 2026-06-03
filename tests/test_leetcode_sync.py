@@ -9,10 +9,7 @@ Covers:
 """
 
 from datetime import datetime, timezone
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch, call
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from leetcode_sync import (
     SyncReport,
@@ -23,7 +20,6 @@ from leetcode_sync import (
     fetch_accepted_slugs,
     sync_leetcode_progress,
     _SUBMISSIONS_PER_PAGE,
-    _MAX_PAGES,
 )
 
 
@@ -282,7 +278,7 @@ class TestApplySync:
         slug_index = build_slug_index(questions)
         user_progress = {"q1": {"done": False, "bookmark": True, "notes": "review later"}}
 
-        report = apply_sync(user_progress, slug_index, {"two-sum"})
+        apply_sync(user_progress, slug_index, {"two-sum"})
 
         assert user_progress["q1"]["done"] is True
         assert user_progress["q1"]["bookmark"] is True
