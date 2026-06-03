@@ -1,4 +1,3 @@
-from bson import ObjectId
 import app.tracker.routes as tracker_routes
 from conftest import build_test_app
 
@@ -40,7 +39,7 @@ def test_questions_with_and_without_hints(monkeypatch):
 
     # Verify that the question with hints does render the hints UI elements
     assert f"hints-container-{q_with_hints_id}" in html
-    assert f'data-hints-total="2"' in html
-    assert f'data-hints-revealed="0"' in html
+    assert 'data-hints-total="2"' in html
+    assert 'data-hints-revealed="0"' in html
     assert "Hint A" in html
     assert "Hint B" in html
