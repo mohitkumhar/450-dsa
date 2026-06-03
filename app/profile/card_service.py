@@ -10,7 +10,7 @@ from cachetools import TTLCache
 import card_generator
 
 from app.extensions import db
-from app.utils import compute_c_score, compute_user_platforms, ensure_utc_datetime, merge_platform_counts
+from app.utils import compute_c_score, compute_user_platforms, ensure_utc_datetime, get_merged_daily_counts, merge_platform_counts
 from streaks import compute_streak
 
 
@@ -73,7 +73,8 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     dsa_progress = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
 
     progress_data = user.get("progress", {})
-    current_streak, _ = compute_streak(progress_data)
+    merged_counts = get_merged_daily_counts(user)
+    current_streak, _ = compute_streak(progress_data, external_daily_counts=merged_counts)
 
     if user.get("in_sheet_platform_counts"):
         platforms = merge_platform_counts(user.get("in_sheet_platform_counts"), user.get("external_totals", {}))

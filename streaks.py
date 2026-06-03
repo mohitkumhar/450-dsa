@@ -11,7 +11,7 @@ def _to_utc_date(value):
     return None
 
 
-def compute_streak(progress, today=None):
+def compute_streak(progress, today=None, external_daily_counts=None):
     today = today or datetime.now(timezone.utc).date()
     solved_dates = {
         solved_date
@@ -20,6 +20,15 @@ def compute_streak(progress, today=None):
         for solved_date in (_to_utc_date(item.get('timestamp')),)
         if solved_date
     }
+
+    if external_daily_counts:
+        for date_str, count in external_daily_counts.items():
+            try:
+                if count and int(count) > 0:
+                    d = date.fromisoformat(date_str)
+                    solved_dates.add(d)
+            except (ValueError, TypeError):
+                pass
 
     if not solved_dates:
         return 0, 0

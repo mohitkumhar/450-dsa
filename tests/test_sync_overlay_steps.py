@@ -32,9 +32,7 @@ def test_sync_profile_template_wires_platforms_into_sync_requests():
     js_content = PROFILE_JS.read_text(encoding="utf-8")
 
     assert 'id="ac_username"' in template
-    assert '"atcoder": user.atcoder_username or ""' in template
+    assert "const ac = '{{ user.atcoder_username or \"\" }}';" in template
     assert 'id="cw_username"' in template
-    assert '"codewars": user.codewars_username or ""' in template
-    assert "const ac = userPlatforms.atcoder;" in js_content
-    assert "const cw = userPlatforms.codewars;" in js_content
-    assert "body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})" in js_content
+    assert "const cw = '{{ user.codewars_username or \"\" }}';" in template
+    assert "body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})" in template
