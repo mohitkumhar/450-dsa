@@ -1,0 +1,60 @@
+<div class="card onboarding-checklist" id="onboardingChecklist">
+  <h3 class="och-title" style="margin:0 0 12px;font-size:1rem;display:flex;align-items:center;gap:8px">
+    <span>Getting Started</span>
+    <span class="och-progress" style="font-size:0.8rem;color:var(--text-muted)">
+      {{ done_count }}/{{ total_count }}
+    </span>
+  </h3>
+  <div class="och-progress-bar" style="height:4px;background:var(--bg-inset);border-radius:2px;margin-bottom:12px;overflow:hidden">
+    <div style="height:100%;width:{% if total_count > 0 %}{{ (done_count / total_count * 100)|int }}{% else %}0{% endif %}%;background:var(--accent);border-radius:2px;transition:width .3s"></div>
+  </div>
+  <ul class="och-list" style="list-style:none;padding:0;margin:0">
+    {% for item in checklist_items %}
+    <li class="och-item" data-key="{{ item.key }}" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-color)">
+      <input type="checkbox" class="och-checkbox" data-key="{{ item.key }}" {% if item.done %}checked{% endif %}
+        style="accent-color:var(--accent);width:16px;height:16px;cursor:pointer;flex-shrink:0">
+      <span style="{% if item.done %}text-decoration:line-through;color:var(--text-muted){% endif %}">{{ item.label }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  <p style="margin:8px 0 0;font-size:0.8rem;color:var(--text-muted);text-align:center">
+    Complete all steps to hide this checklist.
+  </p>
+</div>
+
+<script>
+(function() {
+  var list = document.getElementById('onboardingChecklist');
+  if (!list) return;
+  list.querySelectorAll('.och-checkbox').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var key = this.dataset.key;
+      var done = this.checked;
+      fetch('/api/profile/onboarding/check', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key: key, done: done})
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+          var span = cb.parentElement.querySelector('span');
+          if (cb.checked) {
+            span.style.textDecoration = 'line-through';
+            span.style.color = 'var(--text-muted)';
+          } else {
+            span.style.textDecoration = 'none';
+            span.style.color = '';
+          }
+          if (data.all_done) {
+            list.style.display = 'none';
+          } else {
+            var bar = list.querySelector('.och-progress-bar div');
+            if (bar) bar.style.width = data.percent + '%';
+            var prog = list.querySelector('.och-progress');
+            if (prog) prog.textContent = data.done_count + '/' + data.total_count;
+          }
+        }
+      });
+    });
+  });
+})();
+</script>
