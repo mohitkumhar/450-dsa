@@ -181,6 +181,10 @@
   </div>
 </div>
 
+{% if not onboarding_hidden %}
+  {% include 'partials/onboarding_checklist.html' %}
+{% endif %}
+
 <!-- ── MIDDLE / MAIN ── -->
 <div class="prof-main">
 
