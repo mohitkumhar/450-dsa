@@ -105,3 +105,30 @@ def test_profile_difficulty_chart_defaults_unsynced_leetcode_totals_to_zero(monk
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[0,0,0]" in html
+
+
+def test_profile_difficulty_chart_coerces_none_and_missing_leetcode_totals_to_zero(monkeypatch):
+    flask_app, test_db = build_test_app(
+        monkeypatch,
+        extra_db_targets=(profile_routes, leaderboard_service),
+    )
+
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Partial Totals User",
+            "email": "partial@example.com",
+            "progress": {},
+            "external_totals": {
+                "LeetCode_Easy": None,
+                "LeetCode_Medium": 2,
+            },
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get("/profile")
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[0,2,0]" in html
