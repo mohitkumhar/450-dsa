@@ -310,6 +310,18 @@ def test_get_merged_daily_counts_falls_back_to_legacy():
     assert merged == {"2026-05-25": 3}
 
 
+def test_get_merged_daily_counts_empty_platform_calendars_with_string_legacy():
+    """Empty platform calendars must not prevent merging of string-typed legacy
+    external_daily_counts; the string must be coerced via
+    coerce_non_negative_number before being passed to max()."""
+    user = FakeUser(
+        platform_calendars={"leetcode": {}},
+        external_daily_counts={"2026-05-25": "3", "2026-05-26": 2},
+    )
+    merged = get_merged_daily_counts(user)
+    assert merged == {"2026-05-25": 3, "2026-05-26": 2}
+
+
 def test_sync_clears_stale_totals_when_platform_fails_or_username_cleared(monkeypatch):
     """When a sync is requested for a platform and the sync fails or the username
     is cleared, old external_totals for that platform must be removed so stale

@@ -16,11 +16,13 @@ from app.profile.sync_service import (
     sync_user_platforms,
 )
 from app.utils import (
+    coerce_non_negative_number,
     compute_in_sheet_platform_counts,
     get_merged_daily_counts,
     json_error,
     json_success,
     merge_platform_counts,
+    normalize_timestamp,
     update_computed_stats,
     utc_now,
 )
@@ -192,9 +194,9 @@ def edit_profile():
       401:
         description: Login required.
     """
-    data = request.get_json()
-    if not data:
-        return json_error("No data", status_code=400)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
@@ -416,8 +418,9 @@ def profile():
     for question in all_questions:
         question_id = str(question["_id"])
         if question_id in solved_items:
-            solved_at = solved_items[question_id].get("timestamp") or utc_now()
-            day = solved_at.strftime("%Y-%m-%d")
+            day = normalize_timestamp(solved_items[question_id].get("timestamp"))
+            if day is None:
+                continue
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
     if merged_daily_counts:
@@ -462,9 +465,9 @@ def profile():
 
         platforms = merge_platform_counts(effective_counts, ext_platform_totals)
 
-    lc_easy = dsa_easy
-    lc_medium = dsa_medium
-    lc_hard = dsa_hard
+    lc_easy = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Easy", 0))
+    lc_medium = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Medium", 0))
+    lc_hard = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Hard", 0))
 
     lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
