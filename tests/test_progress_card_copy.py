@@ -2,30 +2,33 @@ from pathlib import Path
 
 
 PROFILE_TEMPLATE = Path(__file__).resolve().parents[1] / "templates" / "profile.html"
+PROFILE_JS = Path(__file__).resolve().parents[1] / "static" / "js" / "profile.js"
 
 
 def test_progress_card_copy_handles_clipboard_rejection():
-    template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
+    js_content = PROFILE_JS.read_text(encoding="utf-8")
 
-    assert "navigator.clipboard.writeText(url).then" in template
-    assert ".catch(() =>" in template
-    assert "showProgressCardUrlFallback(url)" in template
+    assert "navigator.clipboard.writeText(url).then" in js_content
+    assert ".catch(() =>" in js_content
+    assert "showProgressCardUrlFallback(url)" in js_content
 
 
 def test_progress_card_copy_fallback_exposes_readonly_url_field():
     template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
+    js_content = PROFILE_JS.read_text(encoding="utf-8")
 
     assert 'id="progress-card-copy-fallback"' in template
     assert 'id="progress-card-copy-url"' in template
     assert 'aria-label="Progress image URL"' in template
-    assert "input.select()" in template
+    assert "input.select()" in js_content
 
 
 def test_profile_template_uses_shared_toast_and_button_busy_helpers():
     template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
+    js_content = PROFILE_JS.read_text(encoding="utf-8")
 
-    assert "window.setButtonBusyState(" in template
-    assert "window.setIconBusyState(" in template
+    assert "window.setButtonBusyState(" in js_content
+    assert "window.setIconBusyState(" in js_content
     assert 'id="toast"' not in template
     assert "function showToast(msg)" not in template
 

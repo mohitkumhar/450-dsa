@@ -253,7 +253,6 @@
 </div>
 </div>
 
-<!-- Notes Modal -->
 {{ notes_modal(textarea_label='Notes for this question') }}
 {% endblock %}
 
@@ -262,7 +261,6 @@
 <script>
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
-    "resetTopicProgress": url_for('tracker.reset_topic_progress', topic_id=topic._id|string),
 }|tojson }};
 const csrfToken = {{ csrf_token()|tojson }};
 const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' }};
@@ -529,44 +527,6 @@ document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
     }
 })();
 
-const resetTopicProgressBtn = document.getElementById('resetTopicProgressBtn');
-if (resetTopicProgressBtn) {
-    resetTopicProgressBtn.addEventListener('click', async function() {
-        if (!isAuthenticated) {
-            window.location.href = "{{ url_for('auth.login') }}";
-            return;
-        }
-
-        if (!window.confirm('Reset all done and skipped progress for this topic?')) {
-            return;
-        }
-
-        const previousLabel = this.innerHTML;
-        this.disabled = true;
-        this.classList.add('btn-busy');
-        this.setAttribute('aria-busy', 'true');
-
-        try {
-            const response = await fetch(endpointConfig.resetTopicProgress, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-            });
-            const result = await response.json();
-            if (!response.ok || !result.success) {
-                throw new Error(result.error || 'Reset failed');
-            }
-            window.location.reload();
-        } catch (error) {
-            showUpdateError('Unable to reset topic progress. Please try again.');
-        } finally {
-            this.disabled = false;
-            this.classList.remove('btn-busy');
-            this.removeAttribute('aria-busy');
-            this.innerHTML = previousLabel;
-        }
-    });
-}
-
 // Notes Modal with focus trap
 const modal = document.getElementById('notesModal');
 const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
@@ -660,4 +620,5 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
 });
 
 </script>
+<script src="{{ url_for('static', filename='js/topic.js') }}"></script>
 {% endblock %}
