@@ -1,6 +1,5 @@
+import re
 from pathlib import Path
-
-from bson import ObjectId
 
 import app.leaderboard.service as leaderboard_service
 import app.profile.routes as profile_routes
@@ -8,6 +7,17 @@ from conftest import build_test_app, login_test_user
 
 
 PROFILE_TEMPLATE = Path("templates/profile.html").read_text(encoding="utf-8")
+DIFFICULTY_CHART_PATTERN = re.compile(
+    r"\[\s*'difficultyChart'\s*,\s*'difficultyChartShell'\s*,"
+    r"\s*\[\s*'Easy'\s*,\s*'Medium'\s*,\s*'Hard'\s*\]\s*,"
+    r"\s*\[(?P<values>[^\]]+)\]"
+)
+
+
+def extract_difficulty_chart_values(html):
+    match = DIFFICULTY_CHART_PATTERN.search(html)
+    assert match is not None
+    return [float(value.strip()) for value in match.group("values").split(",")]
 
 
 def test_profile_does_not_eager_load_chartjs_in_head():
@@ -32,7 +42,6 @@ def test_profile_difficulty_chart_uses_synced_leetcode_totals(monkeypatch):
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
     easy_id = test_db.question.insert_one(
         {
-            "_id": ObjectId(),
             "topic": topic_id,
             "problem": "Reverse Array",
             "difficulty": "Easy",
@@ -40,7 +49,6 @@ def test_profile_difficulty_chart_uses_synced_leetcode_totals(monkeypatch):
     ).inserted_id
     medium_id = test_db.question.insert_one(
         {
-            "_id": ObjectId(),
             "topic": topic_id,
             "problem": "Merge Intervals",
             "difficulty": "Medium",
@@ -70,7 +78,7 @@ def test_profile_difficulty_chart_uses_synced_leetcode_totals(monkeypatch):
 
     html = response.get_data(as_text=True)
     assert response.status_code == 200
-    assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[11,22,9]" in html
+    assert extract_difficulty_chart_values(html) == [11, 22, 9]
 
 
 def test_profile_difficulty_chart_defaults_unsynced_leetcode_totals_to_zero(monkeypatch):
@@ -82,7 +90,6 @@ def test_profile_difficulty_chart_defaults_unsynced_leetcode_totals_to_zero(monk
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
     easy_id = test_db.question.insert_one(
         {
-            "_id": ObjectId(),
             "topic": topic_id,
             "problem": "Reverse Array",
             "difficulty": "Easy",
@@ -104,7 +111,30 @@ def test_profile_difficulty_chart_defaults_unsynced_leetcode_totals_to_zero(monk
 
     html = response.get_data(as_text=True)
     assert response.status_code == 200
-    assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[0,0,0]" in html
+    assert extract_difficulty_chart_values(html) == [0, 0, 0]
+
+
+def test_profile_difficulty_chart_defaults_missing_external_totals_to_zero(monkeypatch):
+    flask_app, test_db = build_test_app(
+        monkeypatch,
+        extra_db_targets=(profile_routes, leaderboard_service),
+    )
+
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Missing Totals User",
+            "email": "missing@example.com",
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get("/profile")
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert extract_difficulty_chart_values(html) == [0, 0, 0]
 
 
 def test_profile_difficulty_chart_coerces_none_and_missing_leetcode_totals_to_zero(monkeypatch):
@@ -131,4 +161,4 @@ def test_profile_difficulty_chart_coerces_none_and_missing_leetcode_totals_to_ze
 
     html = response.get_data(as_text=True)
     assert response.status_code == 200
-    assert "['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[0,2,0]" in html
+    assert extract_difficulty_chart_values(html) == [0, 2, 0]
