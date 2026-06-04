@@ -131,10 +131,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     hackerrank_username = user.hackerrank_username or ""
     codingninjas_username = user.codingninjas_username or ""
     atcoder_username = user.atcoder_username or ""
-    codewars_username = getattr(user, "codewars_username", "") or ""
-
-
-def _get_str_field(data, key):
+    def _get_str_field(data, key):
     value = data.get(key)
     if value is None:
         return ""
@@ -142,7 +139,11 @@ def _get_str_field(data, key):
         raise ValueError(f"Field '{key}' must be a string, got {type(value).__name__}")
     return value.strip()
 
-    if "leetcode" in data:
+
+def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
+    now = now or utc_now()
+    user_id = user.id
+    ... (rest of the function)
         leetcode_username = _get_str_field(data, "leetcode")
         update_fields["leetcode_username"] = leetcode_username
     if "github" in data:
