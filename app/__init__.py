@@ -184,16 +184,17 @@ def create_app(config_class=None):
                     questions = []
                     for question in topic["questions"]:
                         difficulty = question.get("difficulty", "Medium")
-                        questions.append(
-                            {
-                                "topic": topic_id,
-                                "problem": question["Problem"],
-                                "url": question["URL"],
-                                "url2": question.get("URL2", ""),
-                                "editorial_links": question_editorial_links(question),
-                                "difficulty": difficulty,
-                            }
-                        )
+                        q_data = {
+                            "topic": topic_id,
+                            "problem": question["Problem"],
+                            "url": question["URL"],
+                            "url2": question.get("URL2", ""),
+                            "editorial_links": question_editorial_links(question),
+                            "difficulty": difficulty,
+                        }
+                        if "hints" in question:
+                            q_data["hints"] = question["hints"]
+                        questions.append(q_data)
                     if questions:
                         db.question.insert_many(questions)
             return
@@ -211,6 +212,13 @@ def create_app(config_class=None):
             topic_id = topic_doc["_id"]
             for question in topic["questions"]:
                 difficulty = question.get("difficulty", "Medium")
+                set_fields = {
+                    "url2": question.get("URL2", ""),
+                    "editorial_links": question_editorial_links(question),
+                    "difficulty": difficulty,
+                }
+                if "hints" in question:
+                    set_fields["hints"] = question["hints"]
                 db.question.update_one(
                     {
                         "topic": topic_id,
@@ -218,11 +226,7 @@ def create_app(config_class=None):
                         "url": question["URL"],
                     },
                     {
-                        "$set": {
-                            "url2": question.get("URL2", ""),
-                            "editorial_links": question_editorial_links(question),
-                            "difficulty": difficulty,
-                        }
+                        "$set": set_fields
                     },
                     upsert=True,
                 )

@@ -192,6 +192,22 @@ def test_update_question_rejects_non_boolean_skipped(monkeypatch):
     assert response.get_json() == {"success": False, "error": "skipped must be a boolean"}
 
 
+def test_update_question_rejects_non_boolean_bookmark(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"bookmark": "true"},
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"success": False, "error": "bookmark must be a boolean"}
+
+
 def test_topic_page_accepts_lowercase_difficulty_filter(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id

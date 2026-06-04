@@ -21,6 +21,7 @@ from app.utils import (
     json_error,
     json_success,
     merge_platform_counts,
+    normalize_timestamp,
     update_computed_stats,
     utc_now,
 )
@@ -192,9 +193,9 @@ def edit_profile():
       401:
         description: Login required.
     """
-    data = request.get_json()
-    if not data:
-        return json_error("No data", status_code=400)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
@@ -416,8 +417,9 @@ def profile():
     for question in all_questions:
         question_id = str(question["_id"])
         if question_id in solved_items:
-            solved_at = solved_items[question_id].get("timestamp") or utc_now()
-            day = solved_at.strftime("%Y-%m-%d")
+            day = normalize_timestamp(solved_items[question_id].get("timestamp"))
+            if day is None:
+                continue
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
     if merged_daily_counts:

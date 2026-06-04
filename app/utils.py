@@ -1,6 +1,6 @@
 import re
 from math import isfinite
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask import jsonify
 
@@ -11,6 +11,24 @@ from app.search import service as search_service
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+def normalize_timestamp(timestamp):
+    """Convert a progress timestamp to a date string (YYYY-MM-DD).
+
+    Accepts datetime, date, or ISO-format string.  Returns None for
+    unparseable or missing values so callers can skip the entry safely.
+    """
+    if isinstance(timestamp, datetime):
+        return timestamp.strftime("%Y-%m-%d")
+    if isinstance(timestamp, date):
+        return timestamp.isoformat()
+    if isinstance(timestamp, str):
+        try:
+            return date.fromisoformat(timestamp[:10]).isoformat()
+        except (ValueError, TypeError):
+            return None
+    return None
 
 
 def json_response(payload=None, status_code=200, **fields):
@@ -247,20 +265,25 @@ def get_merged_daily_counts(user_doc):
         for _platform, counts in calendars.items():
             if isinstance(counts, dict):
                 for date, count in counts.items():
-                    if coerce_non_negative_number(count) > 0:
-                        merged[date] = merged.get(date, 0) + count
+                    safe = coerce_non_negative_number(count)
+                    if safe > 0:
+                        merged[date] = merged.get(date, 0) + safe
 
         for date, count in legacy_fallback.items():
-            if coerce_non_negative_number(count) > 0:
-                merged[date] = max(merged.get(date, 0), count)
+            safe = coerce_non_negative_number(count)
+            if safe > 0:
+                merged[date] = max(merged.get(date, 0), safe)
+
+        legacy = _get_field(user_doc, "external_daily_counts", {})
+        if isinstance(legacy, dict):
+            for date, count in legacy.items():
+                safe = coerce_non_negative_number(count)
+                if safe > 0:
+                    merged[date] = max(merged.get(date, 0), safe)
 
         if merged:
-            legacy = _get_field(user_doc, "external_daily_counts", {})
-            if isinstance(legacy, dict):
-                for date, count in legacy.items():
-                    if coerce_non_negative_number(count) > 0:
-                        merged[date] = max(merged.get(date, 0), count)
             return merged
+        return legacy if legacy else {}
     return _get_field(user_doc, "external_daily_counts", {})
 
 
