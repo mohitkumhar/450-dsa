@@ -272,9 +272,10 @@ const endpointConfig = {{ {
   "publicProfileBase": url_for('public.public_profile', user_id='__USER_ID__'),
   "compareBase": url_for('leaderboard.compare', user_id='__USER_ID__'),
 }|tojson }};
+const VALID_MODES = ['cscore', 'questions', 'rating', 'college'];
 const urlParams = new URLSearchParams(window.location.search);
-let activeMode = urlParams.get('mode') || 'cscore';
-let currentPage = parseInt(urlParams.get('page'), 10) || 1;
+let activeMode = VALID_MODES.includes(urlParams.get('mode')) ? urlParams.get('mode') : 'cscore';
+let currentPage = Math.max(1, parseInt(urlParams.get('page'), 10) || 1);
 let totalPages = 1;
 let currentUserRank = null;
 let isLoading = false;
@@ -477,7 +478,7 @@ function switchTab(mode) {
   url.searchParams.set('mode', mode);
   url.searchParams.delete('page');
   window.history.replaceState({}, '', url);
-  
+
   loadLeaderboard(1);
 }
 
