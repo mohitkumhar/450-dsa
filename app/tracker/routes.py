@@ -72,11 +72,21 @@ def index():
     else:
         topics = list(db.topic.find().sort("position", 1))
         total_questions = db.question.count_documents({})
-        all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
+        
+        # Use MongoDB aggregation pipeline to count and group questions by topic
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$topic",
+                    "question_ids": {"$push": "$_id"}
+                }
+            }
+        ]
+        results = list(db.question.aggregate(pipeline))
         topic_question_count = {}
-        for question in all_questions:
-            topic_id = str(question["topic"])
-            topic_question_count.setdefault(topic_id, []).append(str(question["_id"]))
+        for row in results:
+            if row["_id"]:
+                topic_question_count[str(row["_id"])] = [str(qid) for qid in row["question_ids"]]
 
     if current_user.is_authenticated:
         progress = current_user.progress
@@ -656,3 +666,47 @@ def import_commit():
     update_computed_stats(user_id, new_progress, db, total_questions)
 
     return jsonify({"success": True, "message": "Progress imported successfully!"})
+
+
+@tracker_bp.route("/report_question", methods=["POST"])
+@login_required
+def report_question():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object"}), 400
+
+    q_id_str = data.get("question_id")
+    report_type = data.get("report_type")
+    description = data.get("description")
+
+    if not q_id_str or not report_type or not description:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    if report_type not in ["broken_link", "typo", "wrong_difficulty", "duplicate", "other"]:
+        return jsonify({"success": False, "error": "Invalid report type"}), 400
+
+    if not isinstance(description, str) or not description.strip():
+        return jsonify({"success": False, "error": "Description cannot be empty"}), 400
+
+    try:
+        q_id = ObjectId(q_id_str)
+    except InvalidId:
+        return jsonify({"success": False, "error": "Invalid question ID"}), 400
+
+    question = db.question.find_one({"_id": q_id})
+    if not question:
+        return jsonify({"success": False, "error": "Question not found"}), 404
+
+    report_doc = {
+        "question_id": q_id,
+        "question_name": question.get("problem", "Unknown Question"),
+        "report_type": report_type,
+        "description": description.strip(),
+        "reporter_id": current_user.id,
+        "reporter_name": current_user.name or current_user.email or "Anonymous",
+        "created_at": utc_now(),
+        "status": "pending"
+    }
+
+    db.reports.insert_one(report_doc)
+    return jsonify({"success": True, "message": "Report submitted successfully!"})

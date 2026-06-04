@@ -1,3 +1,4 @@
+from collections import defaultdict
 from types import SimpleNamespace
 
 from bson import ObjectId
@@ -20,12 +21,19 @@ def _apply_projection(document, projection):
     projected = {key: value for key, value in document.items() if key in included_keys or key == "_id"}
     return projected
 
-
 class RecordingQuestionCollection:
     def __init__(self, documents):
         self.documents = list(documents)
         self.find_calls = []
         self.find_one_calls = []
+        self.aggregate_calls = []
+
+    def aggregate(self, pipeline):
+        self.aggregate_calls.append(pipeline)
+        grouped = defaultdict(list)
+        for doc in self.documents:
+            grouped[doc["topic"]].append(doc["_id"])
+        return [{"_id": topic, "question_ids": q_ids} for topic, q_ids in grouped.items()]
 
     def count_documents(self, query):
         return len(self._filter(query))
@@ -120,7 +128,15 @@ def test_index_uses_question_topic_projection(monkeypatch):
     with flask_app.test_request_context("/"):
         tracker_routes.index()
 
-    assert question_collection.find_calls == [({}, tracker_routes.INDEX_QUESTION_PROJECTION)]
+    assert len(question_collection.aggregate_calls) == 1
+    assert question_collection.aggregate_calls[0] == [
+        {
+            "$group": {
+                "_id": "$topic",
+                "question_ids": {"$push": "$_id"}
+            }
+        }
+    ]
     assert captured["template"] == "index.html"
 
 
