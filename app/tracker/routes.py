@@ -219,6 +219,10 @@ def reset_topic_progress(topic_id):
 
     invalidate_leaderboard_cache()
     warm_public_card_cache(current_user.id, db_handle=db)
+    pre = current_app.config.get("_PRECOMPUTED")
+    total_questions = (pre["total_questions"] if pre
+                       else db.question.count_documents({}))
+    update_computed_stats(current_user.id, current_user.progress, db, total_questions)
     return json_success(message=f"Reset progress for '{topic_doc.get('name', 'this topic')}'")
 
 
