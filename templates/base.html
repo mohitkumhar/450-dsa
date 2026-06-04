@@ -327,9 +327,6 @@
 
     </script>
     {% block scripts %}{% endblock %}
-    {% if current_user.is_authenticated %}
-    <script src="{{ url_for('static', filename='js/notification-center.js') }}" defer></script>
-    {% endif %}
 </body>
 
 </html>

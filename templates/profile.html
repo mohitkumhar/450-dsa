@@ -562,6 +562,11 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
+{% if current_user.is_authenticated %}
+<script src="{{ url_for('static', filename='js/notification-center.js') }}" defer></script>
+{% endif %}
+{% endblock %}
 <script>
 const endpointConfig = {{ {
   "editProfile": url_for('profile.edit_profile'),
@@ -894,5 +899,3 @@ function handlePhotoUpload(e){
     }
   }
 </style>
-
-{% endblock %}
