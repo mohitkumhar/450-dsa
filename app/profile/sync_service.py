@@ -15,26 +15,11 @@ from app.platforms.fetchers import (
     run_fetch_jobs,
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
-from profile_validation import validate_username
 
 logger = logging.getLogger("flask.app")
 
 
 SYNC_COOLDOWN_SECONDS = 600
-
-PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
-                 "codingninjas", "atcoder", "codewars"}
-
-PLATFORM_TOTAL_KEYS = {
-    "leetcode": {"LeetCode", "LeetCode_Easy", "LeetCode_Medium", "LeetCode_Hard",
-                 "LeetCode_Contests", "LeetCode_Rating", "LeetCode_GlobalRank"},
-    "github": {"GitHub_Issues", "GitHub_PRs", "GitHub_Merged_PRs", "GitHub_Commits"},
-    "gfg": {"GFG"},
-    "codingninjas": {"Coding Ninjas"},
-    "hackerrank": {"HackerRank"},
-    "atcoder": {"AtCoder"},
-    "codewars": {"Codewars"},
-}
 
 
 def build_sync_platforms_response(platform_status: dict):
@@ -131,38 +116,28 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     hackerrank_username = user.hackerrank_username or ""
     codingninjas_username = user.codingninjas_username or ""
     atcoder_username = user.atcoder_username or ""
-    def _get_str_field(data, key):
-    value = data.get(key)
-    if value is None:
-        return ""
-    if not isinstance(value, str):
-        raise ValueError(f"Field '{key}' must be a string, got {type(value).__name__}")
-    return value.strip()
+    codewars_username = getattr(user, "codewars_username", "") or ""
 
-
-def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
-    now = now or utc_now()
-    user_id = user.id
-    ... (rest of the function)
-        leetcode_username = _get_str_field(data, "leetcode")
+    if "leetcode" in data:
+        leetcode_username = data.get("leetcode", "").strip()
         update_fields["leetcode_username"] = leetcode_username
     if "github" in data:
-        github_username = _get_str_field(data, "github")
+        github_username = data.get("github", "").strip()
         update_fields["github_username"] = github_username
     if "gfg" in data:
-        gfg_username = _get_str_field(data, "gfg")
+        gfg_username = data.get("gfg", "").strip()
         update_fields["gfg_username"] = gfg_username
     if "hackerrank" in data:
-        hackerrank_username = _get_str_field(data, "hackerrank")
+        hackerrank_username = data.get("hackerrank", "").strip()
         update_fields["hackerrank_username"] = hackerrank_username
     if "codingninjas" in data:
         codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
         update_fields["codingninjas_username"] = codingninjas_username
     if "atcoder" in data:
-        atcoder_username = _get_str_field(data, "atcoder")
+        atcoder_username = data.get("atcoder", "").strip()
         update_fields["atcoder_username"] = atcoder_username
     if "codewars" in data:
-        codewars_username = _get_str_field(data, "codewars")
+        codewars_username = data.get("codewars", "").strip()
         update_fields["codewars_username"] = codewars_username
 
     platform_totals = {}
@@ -313,6 +288,8 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     # covered every platform the user has configured.  During the migration
     # from the old flat ``external_daily_counts`` format to per-platform
     # calendars, ``_legacy`` preserves dates from platforms not yet re-synced.
+    PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
+                     "codingninjas", "atcoder", "codewars"}
     requested_platforms = {k for k in data if k in PLATFORM_KEYS}
     legacy_counts = getattr(user, "external_daily_counts", {})
     has_legacy = isinstance(legacy_counts, dict) and bool(legacy_counts)
