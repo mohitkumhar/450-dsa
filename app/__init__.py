@@ -23,6 +23,7 @@ from app.security import (
     validate_csrf_request,
 )
 from app.search import search_bp
+from app.notification_center.routes import notification_center_bp
 from app.tracker import tracker_bp
 from app.cohort.routes import cohort_bp
 from app.utils import (
@@ -165,6 +166,8 @@ def create_app(config_class=None):
         db.cohort.create_index("join_code", unique=True)
         db.cohort_membership.create_index([("cohort_id", 1), ("user_id", 1)], unique=True)
         db.cohort_membership.create_index("user_id")
+        db.notification.create_index([("user_id", 1), ("is_read", 1)])
+        db.notification.create_index([("user_id", 1), ("created_at", -1)])
         
         # Lightweight schema backfill for legacy user documents.
         db.user.update_many({"is_admin": {"$exists": False}}, {"$set": {"is_admin": False}})
@@ -342,6 +345,7 @@ def create_app(config_class=None):
     app.register_blueprint(profile_bp)
     app.register_blueprint(leaderboard_bp)
     app.register_blueprint(search_bp)
+    app.register_blueprint(notification_center_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(cohort_bp)
