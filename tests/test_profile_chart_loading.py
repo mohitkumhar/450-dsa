@@ -1,4 +1,9 @@
+import re
 from pathlib import Path
+
+import app.leaderboard.service as leaderboard_service
+import app.profile.routes as profile_routes
+from conftest import build_test_app, login_test_user
 
 
 PROFILE_TEMPLATE = Path("templates/profile.html").read_text(encoding="utf-8")
