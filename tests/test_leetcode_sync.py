@@ -67,31 +67,30 @@ def _make_question(q_id, slug, problem_name=None):
 # ---------------------------------------------------------------------------
 
 class TestBuildPayload:
-    def test_default_offset_is_zero(self):
+    def test_default_limit(self):
         payload = _build_recent_ac_payload("alice")
-        assert payload["variables"]["offset"] == 0
         assert payload["variables"]["limit"] == _SUBMISSIONS_PER_PAGE
         assert payload["variables"]["username"] == "alice"
+        assert "offset" not in payload["variables"]
 
-    def test_custom_offset(self):
-        payload = _build_recent_ac_payload("bob", limit=10, offset=40)
-        assert payload["variables"]["offset"] == 40
+    def test_custom_limit(self):
+        payload = _build_recent_ac_payload("bob", limit=10)
         assert payload["variables"]["limit"] == 10
+        assert "offset" not in payload["variables"]
 
-    def test_query_contains_offset_variable(self):
+    def test_query_does_not_contain_offset_variable(self):
         payload = _build_recent_ac_payload("alice")
-        assert "$offset: Int!" in payload["query"]
-        assert "offset: $offset" in payload["query"]
+        assert "$offset" not in payload["query"]
+        assert "offset:" not in payload["query"]
 
 
 # ---------------------------------------------------------------------------
-# 2. fetch_accepted_slugs – pagination
+# 2. fetch_accepted_slugs – single page query
 # ---------------------------------------------------------------------------
 
 class TestFetchAcceptedSlugs:
     @patch("leetcode_sync.requests.post")
-    def test_single_page_under_limit(self, mock_post):
-        """When the API returns fewer items than limit, stop after 1 call."""
+    def test_successful_fetch(self, mock_post):
         subs = [{"titleSlug": "two-sum", "statusDisplay": "Accepted"}]
         mock_post.return_value = _ok_response(subs)
 
@@ -100,58 +99,6 @@ class TestFetchAcceptedSlugs:
         assert slugs == {"two-sum"}
         assert errors == []
         assert mock_post.call_count == 1
-
-    @patch("leetcode_sync.requests.post")
-    def test_multi_page_pagination(self, mock_post):
-        """Walks offset 0, 20, 40 and stops when page < limit."""
-        page1 = [{"titleSlug": f"p-{i}", "statusDisplay": "Accepted"} for i in range(20)]
-        page2 = [{"titleSlug": f"q-{i}", "statusDisplay": "Accepted"} for i in range(20)]
-        page3 = [{"titleSlug": f"r-{i}", "statusDisplay": "Accepted"} for i in range(5)]
-
-        mock_post.side_effect = [
-            _ok_response(page1),
-            _ok_response(page2),
-            _ok_response(page3),
-        ]
-
-        slugs, errors = fetch_accepted_slugs("alice")
-
-        assert len(slugs) == 45  # 20 + 20 + 5
-        assert mock_post.call_count == 3
-        assert errors == []
-
-        # Verify offsets were incremented correctly
-        calls = mock_post.call_args_list
-        assert calls[0].kwargs["json"]["variables"]["offset"] == 0
-        assert calls[1].kwargs["json"]["variables"]["offset"] == 20
-        assert calls[2].kwargs["json"]["variables"]["offset"] == 40
-
-    @patch("leetcode_sync.requests.post")
-    def test_stops_on_empty_page(self, mock_post):
-        page1 = [{"titleSlug": f"p-{i}", "statusDisplay": "Accepted"} for i in range(20)]
-        mock_post.side_effect = [
-            _ok_response(page1),
-            _ok_response([]),  # empty
-        ]
-
-        slugs, errors = fetch_accepted_slugs("alice")
-
-        assert len(slugs) == 20
-        assert mock_post.call_count == 2
-
-    @patch("leetcode_sync.requests.post")
-    def test_deduplication_stops_pagination(self, mock_post):
-        """If a full page returns only already-seen slugs, stop."""
-        page = [{"titleSlug": f"p-{i}", "statusDisplay": "Accepted"} for i in range(20)]
-        mock_post.side_effect = [
-            _ok_response(page),
-            _ok_response(page),  # same slugs → no new_slugs_found
-        ]
-
-        slugs, errors = fetch_accepted_slugs("alice")
-
-        assert len(slugs) == 20
-        assert mock_post.call_count == 2
 
     @patch("leetcode_sync.requests.post")
     def test_rate_limit_429(self, mock_post):
@@ -179,6 +126,28 @@ class TestFetchAcceptedSlugs:
 
         assert slugs == set()
         assert any("user not exist" in e for e in errors)
+
+    @patch("leetcode_sync.requests.post")
+    def test_graphql_error_unknown_offset(self, mock_post):
+        """Regression test verifying we correctly handle the GraphQL unknown offset error structure."""
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = {
+            "errors": [
+                {
+                    "message": "Unknown argument \"offset\" on field \"recentAcSubmissionList\" of type \"Query\".",
+                    "locations": [{"line": 3, "column": 66}]
+                }
+            ],
+            "data": None
+        }
+        mock_post.return_value = resp
+
+        slugs, errors = fetch_accepted_slugs("alice")
+
+        assert slugs == set()
+        assert len(errors) == 1
+        assert "Unknown argument \"offset\"" in errors[0]
 
     @patch("leetcode_sync.requests.post")
     def test_connection_error(self, mock_post):

@@ -41,8 +41,6 @@ LEETCODE_GRAPHQL_URL = "https://leetcode.com/graphql"
 # the query at 20 per call; we paginate using offsets.
 _SUBMISSIONS_PER_PAGE = 20
 
-# Safety cap – stop after this many API pages to avoid runaway loops.
-_MAX_PAGES = 50
 
 # HTTP timeout for the GraphQL requests (seconds).
 REQUEST_TIMEOUT = 10
@@ -53,8 +51,8 @@ REQUEST_TIMEOUT = 10
 # ---------------------------------------------------------------------------
 
 _RECENT_AC_QUERY = """
-query recentAcSubmissions($username: String!, $limit: Int!, $offset: Int!) {
-  recentAcSubmissionList(username: $username, limit: $limit, offset: $offset) {
+query recentAcSubmissions($username: String!, $limit: Int!) {
+  recentAcSubmissionList(username: $username, limit: $limit) {
     titleSlug
     statusDisplay
   }
@@ -127,18 +125,16 @@ class SyncReport:
 # 1. LeetCode GraphQL Fetcher
 # ---------------------------------------------------------------------------
 
-def _build_recent_ac_payload(username: str, limit: int = _SUBMISSIONS_PER_PAGE, offset: int = 0) -> dict:
+def _build_recent_ac_payload(username: str, limit: int = _SUBMISSIONS_PER_PAGE) -> dict:
     """Construct the JSON body for the ``recentAcSubmissions`` query."""
     return {
         "query": _RECENT_AC_QUERY,
-        "variables": {"username": username, "limit": limit, "offset": offset},
+        "variables": {"username": username, "limit": limit},
     }
 
 
 def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
     """Fetch the set of unique accepted title-slugs for *username*.
-
-    Paginates through submissions using the offset parameter.
 
     Parameters
     ----------
@@ -160,91 +156,73 @@ def fetch_accepted_slugs(username: str) -> tuple[set[str], list[str]]:
         "Referer": "https://leetcode.com",
     }
 
-    page = 0
     limit = _SUBMISSIONS_PER_PAGE
-    offset = 0
 
-    while page < _MAX_PAGES:
-        page += 1
-        try:
-            response = requests.post(
-                LEETCODE_GRAPHQL_URL,
-                json=_build_recent_ac_payload(username, limit, offset),
-                headers=headers,
-                timeout=REQUEST_TIMEOUT,
-            )
-        except requests.exceptions.ConnectionError as exc:
-            errors.append(f"Network error connecting to LeetCode: {exc}")
-            logger.error("LeetCode sync connection error: %s", exc)
-            break
-        except requests.exceptions.Timeout:
-            errors.append("LeetCode API request timed out")
-            logger.warning("LeetCode sync request timed out")
-            break
-        except requests.exceptions.RequestException as exc:
-            errors.append(f"HTTP request failed: {exc}")
-            logger.error("LeetCode sync request error: %s", exc)
-            break
-
-        # -- Handle non-200 responses ----------------------------------------
-        if response.status_code == 429:
-            errors.append("Rate-limited by LeetCode – try again later")
-            logger.warning("LeetCode rate limit hit (429)")
-            break
-
-        if response.status_code == 403:
-            errors.append(
-                "LeetCode returned 403 Forbidden – the profile may be private"
-            )
-            logger.warning("LeetCode 403 – possible private profile")
-            break
-
-        if response.status_code != 200:
-            errors.append(
-                f"Unexpected HTTP {response.status_code} from LeetCode"
-            )
-            logger.error(
-                "LeetCode sync unexpected status %d", response.status_code
-            )
-            break
-
-        # -- Parse the JSON body ----------------------------------------------
-        try:
-            body = response.json()
-        except (ValueError, json.JSONDecodeError) as exc:
-            errors.append(f"Failed to decode LeetCode response: {exc}")
-            logger.error("LeetCode sync JSON decode error: %s", exc)
-            break
-
-        gql_errors = body.get("errors")
-        if gql_errors:
-            msg = gql_errors[0].get("message", "Unknown GraphQL error")
-            errors.append(f"LeetCode API error: {msg}")
-            logger.warning("LeetCode GraphQL error: %s", msg)
-            break
-
-        submissions = (
-            body.get("data", {}).get("recentAcSubmissionList") or []
+    try:
+        response = requests.post(
+            LEETCODE_GRAPHQL_URL,
+            json=_build_recent_ac_payload(username, limit),
+            headers=headers,
+            timeout=REQUEST_TIMEOUT,
         )
+    except requests.exceptions.ConnectionError as exc:
+        errors.append(f"Network error connecting to LeetCode: {exc}")
+        logger.error("LeetCode sync connection error: %s", exc)
+        return accepted, errors
+    except requests.exceptions.Timeout:
+        errors.append("LeetCode API request timed out")
+        logger.warning("LeetCode sync request timed out")
+        return accepted, errors
+    except requests.exceptions.RequestException as exc:
+        errors.append(f"HTTP request failed: {exc}")
+        logger.error("LeetCode sync request error: %s", exc)
+        return accepted, errors
 
-        if not submissions:
-            # Empty list means no more submissions – stop paginating.
-            break
+    # -- Handle non-200 responses ----------------------------------------
+    if response.status_code == 429:
+        errors.append("Rate-limited by LeetCode – try again later")
+        logger.warning("LeetCode rate limit hit (429)")
+        return accepted, errors
 
-        new_slugs_found = False
-        for sub in submissions:
-            slug = sub.get("titleSlug", "").strip()
-            if slug:
-                if slug not in accepted:
-                    accepted.add(slug)
-                    new_slugs_found = True
+    if response.status_code == 403:
+        errors.append(
+            "LeetCode returned 403 Forbidden – the profile may be private"
+        )
+        logger.warning("LeetCode 403 – possible private profile")
+        return accepted, errors
 
-        # Stop paginating if we received fewer submissions than requested,
-        # or if we found no new slugs (meaning we are seeing duplicate pages).
-        if len(submissions) < limit or not new_slugs_found:
-            break
+    if response.status_code != 200:
+        errors.append(
+            f"Unexpected HTTP {response.status_code} from LeetCode"
+        )
+        logger.error(
+            "LeetCode sync unexpected status %d", response.status_code
+        )
+        return accepted, errors
 
-        offset += limit
+    # -- Parse the JSON body ----------------------------------------------
+    try:
+        body = response.json()
+    except (ValueError, json.JSONDecodeError) as exc:
+        errors.append(f"Failed to decode LeetCode response: {exc}")
+        logger.error("LeetCode sync JSON decode error: %s", exc)
+        return accepted, errors
+
+    gql_errors = body.get("errors")
+    if gql_errors:
+        msg = gql_errors[0].get("message", "Unknown GraphQL error")
+        errors.append(f"LeetCode API error: {msg}")
+        logger.warning("LeetCode GraphQL error: %s", msg)
+        return accepted, errors
+
+    submissions = (
+        body.get("data", {}).get("recentAcSubmissionList") or []
+    )
+
+    for sub in submissions:
+        slug = sub.get("titleSlug", "").strip()
+        if slug:
+            accepted.add(slug)
 
     logger.info(
         "Fetched %d unique accepted slugs for '%s'", len(accepted), username
