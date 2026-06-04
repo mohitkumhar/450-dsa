@@ -1,3 +1,4 @@
+import logging
 import re
 from math import isfinite
 from datetime import date, datetime, timezone
@@ -7,6 +8,8 @@ from flask import jsonify
 from app.extensions import db
 from app.platforms.metadata import PLATFORM_META
 from app.search import service as search_service
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now():
@@ -284,6 +287,11 @@ def get_merged_daily_counts(user_doc):
         if merged:
             return merged
         return legacy if legacy else {}
+    elif _get_field(user_doc, "external_totals", {}):
+        logger.warning(
+            "User %s has external_totals but no platform_calendars in projection",
+            str(user_doc.get("_id", "")),
+        )
     return _get_field(user_doc, "external_daily_counts", {})
 
 
