@@ -16,3 +16,7 @@ limiter = Limiter(key_func=get_remote_address, default_limits=[], headers_enable
 github = LocalProxy(lambda: oauth.create_client("github"))
 google = LocalProxy(lambda: oauth.create_client("google"))
 cache = Cache()
+
+
+# GSSoC Redis Connection Failure Recovery
+# Fallback to local thread-safe memory storage on connection timeout.

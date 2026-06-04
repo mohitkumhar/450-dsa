@@ -9,17 +9,20 @@ from app.extensions import cache, db, limiter
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
 from app.profile.card_service import CACHE_TTL, get_public_card_image, warm_public_card_cache
+from app.profile.certificate_service import generate_milestone_certificate
 from app.profile.sync_service import (
     build_sync_platforms_response,
     clear_profile_caches,
     sync_user_platforms,
 )
 from app.utils import (
+    coerce_non_negative_number,
     compute_in_sheet_platform_counts,
     get_merged_daily_counts,
     json_error,
     json_success,
     merge_platform_counts,
+    normalize_timestamp,
     update_computed_stats,
     utc_now,
 )
@@ -32,6 +35,12 @@ __all__ = ["CACHE_TTL", "build_sync_platforms_response", "get_public_card_image"
 
 UNIVERSITY_SEARCH_TIMEOUT_SECONDS = 5
 HEATMAP_DAYS = 168
+
+MILESTONE_DEFS = {
+  "100-solved": {"label": "100 Problems Solved", "threshold": 100},
+  "250-solved": {"label": "250 Problems Solved", "threshold": 250},
+  "sheet-completed": {"label": "450 DSA Sheet Completed", "threshold": "all"},
+}
 
 
 def filter_heatmap_counts(daily_counts, today=None, days=HEATMAP_DAYS):
@@ -185,9 +194,9 @@ def edit_profile():
       401:
         description: Login required.
     """
-    data = request.get_json()
-    if not data:
-        return json_error("No data", status_code=400)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
@@ -223,7 +232,6 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
-
     try:
         img_io.seek(0)
         response = send_file(img_io, mimetype="image/png")
@@ -236,6 +244,32 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
+
+
+@profile_bp.route("/certificate/<milestone_id>")
+@login_required
+def milestone_certificate(milestone_id):
+    milestone = MILESTONE_DEFS.get(milestone_id)
+    if not milestone:
+        return "Milestone not found", 404
+
+    progress_data = current_user.progress or {}
+    dsa_done = sum(1 for progress_item in progress_data.values() if progress_item.get("done"))
+    total_questions = db.question.count_documents({})
+
+    threshold = milestone["threshold"]
+    if threshold == "all":
+        eligible = total_questions > 0 and dsa_done >= total_questions
+    else:
+        eligible = dsa_done >= int(threshold)
+
+    if not eligible:
+        return "Milestone not reached", 403
+
+    awarded_on = utc_now().date().isoformat()
+    img_io = generate_milestone_certificate(current_user.name, milestone["label"], awarded_on=awarded_on)
+    filename = f"certificate-{milestone_id}.png"
+    return send_file(img_io, mimetype="image/png", as_attachment=True, download_name=filename)
 
 
 @profile_bp.route("/search_universities")
@@ -345,7 +379,8 @@ def profile():
     user = current_user
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
     dsa_done = len(solved_items)
-    current_streak, longest_streak = compute_streak(user.progress)
+    merged_daily_counts = get_merged_daily_counts(user)
+    current_streak, longest_streak = compute_streak(user.progress, external_daily_counts=merged_daily_counts)
 
     pre = current_app.config.get("_PRECOMPUTED")
     if pre:
@@ -383,13 +418,13 @@ def profile():
     for question in all_questions:
         question_id = str(question["_id"])
         if question_id in solved_items:
-            solved_at = solved_items[question_id].get("timestamp") or utc_now()
-            day = solved_at.strftime("%Y-%m-%d")
+            day = normalize_timestamp(solved_items[question_id].get("timestamp"))
+            if day is None:
+                continue
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
-    ext_daily = get_merged_daily_counts(user)
-    if ext_daily:
-        for day, count in ext_daily.items():
+    if merged_daily_counts:
+        for day, count in merged_daily_counts.items():
             daily_counts[day] = daily_counts.get(day, 0) + count
 
     total_active_days = len(daily_counts)
@@ -430,9 +465,9 @@ def profile():
 
         platforms = merge_platform_counts(effective_counts, ext_platform_totals)
 
-    lc_easy = dsa_easy
-    lc_medium = dsa_medium
-    lc_hard = dsa_hard
+    lc_easy = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Easy", 0))
+    lc_medium = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Medium", 0))
+    lc_hard = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Hard", 0))
 
     lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
@@ -477,7 +512,7 @@ def profile():
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
-    update_computed_stats(user.id, user.progress, db, total_questions)
+    update_computed_stats(user.id, user.progress, db, total_questions, user)
 
     return render_template(
         "profile.html",

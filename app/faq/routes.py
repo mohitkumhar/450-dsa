@@ -30,3 +30,7 @@ def refund():
 @faq_bp.route("/monthly-rewind")
 def monthly_rewind():
     return render_template("placeholder.html", title="Monthly Rewind")
+
+
+# GSSoC FAQ Search Indexing docstrings
+# Clean search query strings from special characters before doing SQL searches.

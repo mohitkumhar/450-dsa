@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 from bson import ObjectId
 
-
 EXISTING_USER_ID = ObjectId()
 
 GITHUB_USER_INFO = {
@@ -11,9 +10,7 @@ GITHUB_USER_INFO = {
     "login": "testuser",
 }
 
-GITHUB_EMAILS = [
-    {"email": "test@example.com", "primary": True, "verified": True}
-]
+GITHUB_EMAILS = [{"email": "test@example.com", "primary": True, "verified": True}]
 
 GOOGLE_USER_INFO = {
     "sub": "google-999",
@@ -154,6 +151,7 @@ def _get_flashed_messages(client):
 
 # ── GitHub Tests ──────────────────────────────────────────────────────────────
 
+
 def test_github_links_existing_email_user(monkeypatch):
     existing = {"_id": EXISTING_USER_ID, "email": "test@example.com", "progress": {}}
     db = make_fake_db(existing=existing)
@@ -213,7 +211,10 @@ def test_github_token_exchange_exception_redirects_to_login(monkeypatch):
 
     assert resp.status_code == 302
     assert resp.headers["Location"] == "/login"
-    assert ("danger", "GitHub sign-in is temporarily unavailable. Please try again.") in flashes
+    assert (
+        "danger",
+        "GitHub sign-in is temporarily unavailable. Please try again.",
+    ) in flashes
     assert all("secret boom" not in message for _, message in flashes)
 
 
@@ -233,7 +234,10 @@ def test_github_user_fetch_exception_redirects_to_login(monkeypatch):
 
     assert resp.status_code == 302
     assert resp.headers["Location"] == "/login"
-    assert ("danger", "GitHub sign-in is temporarily unavailable. Please try again.") in flashes
+    assert (
+        "danger",
+        "GitHub sign-in is temporarily unavailable. Please try again.",
+    ) in flashes
     assert all("provider outage" not in message for _, message in flashes)
 
 
@@ -248,7 +252,11 @@ def test_github_email_fetch_exception_does_not_fail_login(monkeypatch):
     user_resp.ok = True
     user_resp.json = MagicMock(return_value=GITHUB_USER_INFO)
     mock.get = MagicMock(
-        side_effect=lambda url: user_resp if url == "user" else (_ for _ in ()).throw(RuntimeError("email fetch down"))
+        side_effect=lambda url: (
+            user_resp
+            if url == "user"
+            else (_ for _ in ()).throw(RuntimeError("email fetch down"))
+        )
     )
 
     with flask_app.test_client() as client:
@@ -261,6 +269,7 @@ def test_github_email_fetch_exception_does_not_fail_login(monkeypatch):
 
 
 # ── Google Tests ──────────────────────────────────────────────────────────────
+
 
 def test_google_links_existing_email_user(monkeypatch):
     existing = {"_id": EXISTING_USER_ID, "email": "test@example.com", "progress": {}}
@@ -324,7 +333,10 @@ def test_google_token_exchange_exception_redirects_to_login(monkeypatch):
 
     assert resp.status_code == 302
     assert resp.headers["Location"] == "/login"
-    assert ("danger", "Google sign-in is temporarily unavailable. Please try again.") in flashes
+    assert (
+        "danger",
+        "Google sign-in is temporarily unavailable. Please try again.",
+    ) in flashes
     assert all("token failed" not in message for _, message in flashes)
 
 
@@ -346,11 +358,16 @@ def test_google_id_token_parsing_exception_redirects_to_login(monkeypatch):
 
     assert resp.status_code == 302
     assert resp.headers["Location"] == "/login"
-    assert ("danger", "Google sign-in is temporarily unavailable. Please try again.") in flashes
+    assert (
+        "danger",
+        "Google sign-in is temporarily unavailable. Please try again.",
+    ) in flashes
     assert all("parse failed" not in message for _, message in flashes)
 
 
-def test_google_userinfo_exception_redirects_to_login_when_id_token_missing(monkeypatch):
+def test_google_userinfo_exception_redirects_to_login_when_id_token_missing(
+    monkeypatch,
+):
     db = make_fake_db()
     flask_app = make_app(monkeypatch, db)
 
@@ -369,7 +386,10 @@ def test_google_userinfo_exception_redirects_to_login_when_id_token_missing(monk
 
     assert resp.status_code == 302
     assert resp.headers["Location"] == "/login"
-    assert ("danger", "Google sign-in is temporarily unavailable. Please try again.") in flashes
+    assert (
+        "danger",
+        "Google sign-in is temporarily unavailable. Please try again.",
+    ) in flashes
     assert all("userinfo failed" not in message for _, message in flashes)
 
 
@@ -382,6 +402,7 @@ def test_resolve_oauth_user_returns_existing_provider_match(monkeypatch):
         "github_id": str(GITHUB_USER_INFO["id"]),
         "progress": {},
     }
+
     class FakeUserCollection:
         @staticmethod
         def find_one(q):
@@ -451,3 +472,15 @@ def test_resolve_oauth_user_creates_new_user_without_email(monkeypatch):
     assert action == "created"
     assert user_doc["github_id"] == str(GITHUB_USER_INFO["id"])
     assert user_doc["email"] is None
+
+
+def test_login_page_renders_google_button(monkeypatch):
+    db = make_fake_db()
+    flask_app = make_app(monkeypatch, db)
+
+    with flask_app.test_client() as client:
+        resp = client.get("/login")
+
+        assert resp.status_code == 200
+
+        assert b"login/google" in resp.data

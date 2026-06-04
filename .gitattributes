@@ -1,0 +1,10 @@
+# Auto normalize line endings
+* text=auto eol=lf
+
+# Custom overrides
+*.py text
+*.js text
+*.html text diff=html
+*.css text
+*.json text
+*.md text
