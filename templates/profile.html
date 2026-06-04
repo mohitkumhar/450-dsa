@@ -74,6 +74,25 @@
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
       <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
     </a>
+    {% set milestone_certs = [
+      {'id': '100-solved', 'label': '100 Solved', 'eligible': dsa_done >= 100},
+      {'id': '250-solved', 'label': '250 Solved', 'eligible': dsa_done >= 250},
+      {'id': 'sheet-completed', 'label': 'Sheet Completed', 'eligible': dsa_done >= total_questions}
+    ] %}
+    <div style="margin-top:12px">
+      <div class="sec-title">Milestone Certificates</div>
+      {% for cert in milestone_certs %}
+        {% if cert.eligible %}
+          <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('profile.milestone_certificate', milestone_id=cert.id) }}" aria-label="Download {{ cert.label }} certificate">
+            <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> {{ cert.label }} Certificate
+          </a>
+        {% else %}
+          <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" disabled aria-disabled="true">
+            <i class="bi bi-lock" style="margin-right:6px" aria-hidden="true"></i> {{ cert.label }} Certificate
+          </button>
+        {% endif %}
+      {% endfor %}
+    </div>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
       {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
