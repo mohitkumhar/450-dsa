@@ -548,6 +548,15 @@ def profile():
 
     update_computed_stats(user.id, user.progress, db, total_questions, user)
 
+    # Onboarding checklist context
+    onboarding = current_user._doc.get("onboarding", {})
+    all_keys = ("connect_platform", "first_topic", "bookmark_question", "export_progress")
+    labels = {"connect_platform": "Connect a coding platform", "first_topic": "Choose your first topic", "bookmark_question": "Bookmark a question", "export_progress": "Export your progress"}
+    checklist_items = [{"key": k, "label": labels[k], "done": bool(onboarding.get(k))} for k in all_keys]
+    done_count = sum(1 for i in checklist_items if i["done"])
+    total_count = len(all_keys)
+    onboarding_hidden = bool(onboarding.get("hidden"))
+
     return render_template(
         "profile.html",
         user=user,
@@ -576,4 +585,8 @@ def profile():
         profile_leaderboard_rank=profile_leaderboard_rank,
         current_streak=current_streak,
         longest_streak=longest_streak,
+        checklist_items=checklist_items,
+        done_count=done_count,
+        total_count=total_count,
+        onboarding_hidden=onboarding_hidden,
     )
