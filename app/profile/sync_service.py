@@ -91,6 +91,15 @@ def build_platform_sync_jobs(
     return jobs
 
 
+def _get_str_field(data, key):
+    value = data.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError(f"Field '{key}' must be a string, got {type(value).__name__}")
+    return value.strip()
+
+
 def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     now = now or utc_now()
     user_id = user.id
