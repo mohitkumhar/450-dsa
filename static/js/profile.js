@@ -77,7 +77,7 @@ window.handleSaveProfile = function(btn){
 window.handleQuickSync = function(btn) {
   const icon = document.getElementById('quickSyncIcon');
   if (btn.disabled) return;
-  
+
   const lc = userPlatforms.leetcode;
   const gh = userPlatforms.github;
   const gfg = userPlatforms.gfg;
@@ -85,7 +85,7 @@ window.handleQuickSync = function(btn) {
   const cn = userPlatforms.codingninjas;
   const ac = userPlatforms.atcoder;
   const cw = userPlatforms.codewars;
-  
+
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
     showToast('⚠️ No platforms connected to sync!');
     return;
@@ -94,7 +94,7 @@ window.handleQuickSync = function(btn) {
   btn.disabled = true;
   window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
   showToast('⏳ Syncing profiles...');
-  
+
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},

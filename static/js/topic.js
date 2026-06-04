@@ -132,20 +132,20 @@ if (navigator.onLine) flushQueue();
 
 document.querySelectorAll('.status-checkbox').forEach(function(cb) {
     cb.addEventListener('change', function() {
-        if (!isAuthenticated) { 
-            this.checked = !this.checked; 
-            window.location.href = config.loginUrl; 
-            return; 
+        if (!isAuthenticated) {
+            this.checked = !this.checked;
+            window.location.href = config.loginUrl;
+            return;
         }
         var row = document.getElementById('row-' + this.dataset.id);
         var previousChecked = !this.checked;
         var nextChecked = this.checked;
         this.disabled = true;
         row.classList.add('row-updating');
-        
+
         var problemName = row.querySelector('.q-name') ? row.querySelector('.q-name').textContent : 'Question';
         this.setAttribute('aria-label', nextChecked ? "Mark '" + problemName + "' as incomplete" : "Mark '" + problemName + "' as complete");
-        
+
         row.classList.toggle('row-done', nextChecked);
         var self = this;
         updateQuestion(this.dataset.id, {done: nextChecked})
@@ -171,9 +171,9 @@ function setSkippedState(btn, isSkipped) {
 
 document.querySelectorAll('.bookmark-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
-        if (!isAuthenticated) { 
-            window.location.href = config.loginUrl; 
-            return; 
+        if (!isAuthenticated) {
+            window.location.href = config.loginUrl;
+            return;
         }
         var isBookmarked = this.dataset.bookmarked === 'true';
         var newStatus = !isBookmarked;
@@ -334,14 +334,14 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
     this.setAttribute('aria-busy', 'true');
     var rows = Array.from(document.querySelectorAll('#questions-table tbody tr:not(#empty-state-row)'))
         .filter(function(row) { return row.style.display !== 'none'; });
-    
+
     if (rows.length === 0) {
         this.classList.remove('btn-busy');
         this.removeAttribute('aria-busy');
         alert('No questions available!');
         return;
     }
-    
+
     var randomRow = rows[Math.floor(Math.random() * rows.length)];
     randomRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     randomRow.style.outline = '2px solid var(--accent)';
