@@ -326,7 +326,8 @@ def compute_c_score(user_doc, all_questions=None):
             extra_progress_days.add(day_key)
     active_days = valid_external_days + len(extra_progress_days)
 
-    s_dsa = min(dsa_done / 450, 1.0) * 250
+    total_sheet_questions = len(all_questions) if all_questions else 450
+    s_dsa = min(dsa_done / total_sheet_questions, 1.0) * 250
     s_lc_total = min(lc_total / 500, 1.0) * 200
     s_lc_diff = min((lc_easy * 1 + lc_medium * 3 + lc_hard * 6) / 1500, 1.0) * 150
     s_lc_rating = min(lc_rating / 2500, 1.0) * 200
