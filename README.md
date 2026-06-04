@@ -227,3 +227,7 @@ pytest
 ## Contributing
 
 PRs are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening one.
+
+
+### GSSoC Flask Redis Caching Guide
+- Enable Redis cache invalidation on list updates.

@@ -192,6 +192,22 @@ def test_update_question_rejects_non_boolean_skipped(monkeypatch):
     assert response.get_json() == {"success": False, "error": "skipped must be a boolean"}
 
 
+def test_update_question_rejects_non_boolean_bookmark(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"bookmark": "true"},
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"success": False, "error": "bookmark must be a boolean"}
+
+
 def test_topic_page_accepts_lowercase_difficulty_filter(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
@@ -246,6 +262,66 @@ def test_update_question_accepts_valid_boolean_update(monkeypatch):
     assert progress["done"] is True
     assert "timestamp" in progress
     assert user["in_sheet_platform_counts"]["LeetCode"] == 1
+
+
+def test_topic_page_exposes_reset_progress_button(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    test_db.question.insert_one({"topic": topic_id, "problem": "Two Sum", "url": "https://leetcode.com/problems/two-sum/"})
+    user_id = test_db.user.insert_one({"email": "user@example.com", "progress": {}, "is_admin": False}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get(f"/topic/{topic_id}")
+
+    assert response.status_code == 200
+    html = response.data.decode("utf-8")
+    assert "Reset Progress" in html
+
+
+def test_reset_topic_progress_clears_topic_question_status(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    topic_question_id = test_db.question.insert_one(
+        {"topic": topic_id, "problem": "Two Sum", "url": "https://leetcode.com/problems/two-sum/"}
+    ).inserted_id
+    other_topic_id = test_db.topic.insert_one({"name": "Graphs", "position": 2}).inserted_id
+    other_question_id = test_db.question.insert_one(
+        {"topic": other_topic_id, "problem": "Flood Fill", "url": "https://www.geeksforgeeks.org/flood-fill-algorithm/"}
+    ).inserted_id
+    user_id = test_db.user.insert_one(
+        {
+            "email": "user@example.com",
+            "progress": {
+                str(topic_question_id): {"done": True, "skipped": True},
+                str(other_question_id): {"done": True},
+            },
+            "is_admin": False,
+            "in_sheet_platform_counts": {
+                "LeetCode": 1,
+                "GFG": 1,
+                "Coding Ninjas": 0,
+                "HackerRank": 0,
+                "AtCoder": 0,
+                "Codewars": 0,
+            },
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.post(f"/topic/{topic_id}/reset-progress", headers=csrf_headers(client))
+
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True
+
+    user = test_db.user.find_one({"_id": user_id})
+    topic_progress = user["progress"][str(topic_question_id)]
+    assert topic_progress.get("done") is None
+    assert topic_progress.get("skipped") is None
+    assert user["progress"][str(other_question_id)]["done"] is True
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 0
+    assert user["in_sheet_platform_counts"]["GFG"] == 1
 
 
 def test_update_question_sets_skipped_and_clears_done(monkeypatch):
