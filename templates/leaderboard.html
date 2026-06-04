@@ -441,7 +441,7 @@ function renderTable(entries, mode) {
       <td colspan="5" style="text-align: center; padding: 12px;">
         <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
         You are ranked #${escapeHTML(currentUserRank)} in this category. 
-        <a href="?page=${targetPage}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
+        <a href="?page=${targetPage}&mode=${encodeURIComponent(activeMode)}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
       </td>
     </tr>`;
   }
