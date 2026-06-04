@@ -1,6 +1,3 @@
-from types import SimpleNamespace
-
-import app as app_module
 import app.leaderboard.routes as leaderboard_routes
 from conftest import build_test_app
 
