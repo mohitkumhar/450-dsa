@@ -1,5 +1,6 @@
 import os
 import secrets
+import sys
 import warnings
 
 
@@ -115,6 +116,16 @@ class TestingConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     SESSION_COOKIE_SECURE = True
+
+    @classmethod
+    def apply_environment_overrides(cls, app):
+        secret_key = os.environ.get("SECRET_KEY", "").strip()
+        if secret_key in cls.INSECURE_SECRET_KEYS:
+            sys.exit(
+                "[FATAL] SECRET_KEY must be set to a secure value in production. "
+                "Run: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        super().apply_environment_overrides(app)
 
 
 CONFIG_BY_ENV = {

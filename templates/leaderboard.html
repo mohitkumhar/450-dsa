@@ -272,8 +272,10 @@ const endpointConfig = {{ {
   "publicProfileBase": url_for('public.public_profile', user_id='__USER_ID__'),
   "compareBase": url_for('leaderboard.compare', user_id='__USER_ID__'),
 }|tojson }};
-let activeMode = 'cscore';
-let currentPage = 1;
+const VALID_MODES = ['cscore', 'questions', 'rating', 'college'];
+const urlParams = new URLSearchParams(window.location.search);
+let activeMode = VALID_MODES.includes(urlParams.get('mode')) ? urlParams.get('mode') : 'cscore';
+let currentPage = Math.max(1, parseInt(urlParams.get('page'), 10) || 1);
 let totalPages = 1;
 let currentUserRank = null;
 let isLoading = false;
@@ -439,7 +441,7 @@ function renderTable(entries, mode) {
       <td colspan="5" style="text-align: center; padding: 12px;">
         <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
         You are ranked #${escapeHTML(currentUserRank)} in this category. 
-        <a href="?page=${targetPage}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
+        <a href="?page=${targetPage}&mode=${encodeURIComponent(activeMode)}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
       </td>
     </tr>`;
   }
@@ -472,15 +474,28 @@ function switchTab(mode) {
   activeTab.classList.add('active');
   activeTab.setAttribute('aria-selected', 'true');
   
+  const url = new URL(window.location);
+  url.searchParams.set('mode', mode);
+  url.searchParams.delete('page');
+  window.history.replaceState({}, '', url);
+
   loadLeaderboard(1);
 }
 
+function goToPage(page) {
+  loadLeaderboard(page);
+  const url = new URL(window.location);
+  url.searchParams.set('page', page);
+  url.searchParams.set('mode', activeMode);
+  window.history.replaceState({}, '', url);
+}
+
 document.getElementById('prevBtn').addEventListener('click', () => {
-  if (currentPage > 1) loadLeaderboard(currentPage - 1);
+  if (currentPage > 1) goToPage(currentPage - 1);
 });
 
 document.getElementById('nextBtn').addEventListener('click', () => {
-  if (currentPage < totalPages) loadLeaderboard(currentPage + 1);
+  if (currentPage < totalPages) goToPage(currentPage + 1);
 });
 
 document.querySelectorAll('.lb-tab').forEach(tab => {
@@ -489,6 +504,12 @@ document.querySelectorAll('.lb-tab').forEach(tab => {
   });
 });
 
-loadLeaderboard(1);
+// Activate initial tab from URL params
+document.querySelectorAll('.lb-tab').forEach(tab => {
+  tab.classList.toggle('active', tab.dataset.mode === activeMode);
+  tab.setAttribute('aria-selected', tab.dataset.mode === activeMode ? 'true' : 'false');
+});
+
+loadLeaderboard(currentPage);
 </script>
 {% endblock %}
