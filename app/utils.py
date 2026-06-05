@@ -1,6 +1,6 @@
 import re
 from math import isfinite
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask import jsonify
 
@@ -11,6 +11,24 @@ from app.search import service as search_service
 
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+def normalize_timestamp(timestamp):
+    """Convert a progress timestamp to a date string (YYYY-MM-DD).
+
+    Accepts datetime, date, or ISO-format string.  Returns None for
+    unparseable or missing values so callers can skip the entry safely.
+    """
+    if isinstance(timestamp, datetime):
+        return timestamp.strftime("%Y-%m-%d")
+    if isinstance(timestamp, date):
+        return timestamp.isoformat()
+    if isinstance(timestamp, str):
+        try:
+            return date.fromisoformat(timestamp[:10]).isoformat()
+        except (ValueError, TypeError):
+            return None
+    return None
 
 
 def json_response(payload=None, status_code=200, **fields):
@@ -247,20 +265,25 @@ def get_merged_daily_counts(user_doc):
         for _platform, counts in calendars.items():
             if isinstance(counts, dict):
                 for date, count in counts.items():
-                    if coerce_non_negative_number(count) > 0:
-                        merged[date] = merged.get(date, 0) + count
+                    safe = coerce_non_negative_number(count)
+                    if safe > 0:
+                        merged[date] = merged.get(date, 0) + safe
 
         for date, count in legacy_fallback.items():
-            if coerce_non_negative_number(count) > 0:
-                merged[date] = max(merged.get(date, 0), count)
+            safe = coerce_non_negative_number(count)
+            if safe > 0:
+                merged[date] = max(merged.get(date, 0), safe)
+
+        legacy = _get_field(user_doc, "external_daily_counts", {})
+        if isinstance(legacy, dict):
+            for date, count in legacy.items():
+                safe = coerce_non_negative_number(count)
+                if safe > 0:
+                    merged[date] = max(merged.get(date, 0), safe)
 
         if merged:
-            legacy = _get_field(user_doc, "external_daily_counts", {})
-            if isinstance(legacy, dict):
-                for date, count in legacy.items():
-                    if coerce_non_negative_number(count) > 0:
-                        merged[date] = max(merged.get(date, 0), count)
             return merged
+        return legacy if legacy else {}
     return _get_field(user_doc, "external_daily_counts", {})
 
 
@@ -371,12 +394,13 @@ def merge_platform_counts(in_sheet_counts, external_totals):
     return platforms
 
 
-def update_computed_stats(user_id, progress, db_handle, total_questions):
+def update_computed_stats(user_id, progress, db_handle, total_questions, user_doc=None):
     from streaks import compute_streak
 
     dsa_done = sum(1 for p in progress.values() if p.get("done"))
     dsa_progress = round((dsa_done / total_questions * 100) if total_questions > 0 else 0, 1)
-    current_streak, longest_streak = compute_streak(progress)
+    merged = get_merged_daily_counts(user_doc) if user_doc else None
+    current_streak, longest_streak = compute_streak(progress, external_daily_counts=merged)
 
     db_handle.user.update_one(
         {"_id": user_id},
