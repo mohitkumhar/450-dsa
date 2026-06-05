@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+.mylist-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.mylist-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+.ml-table-wrap { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; }
+.ml-table { width: 100%; border-collapse: collapse; }
+.ml-table th { padding: 12px 16px; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-color); text-align: left; }
+.ml-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.9rem; vertical-align: middle; }
+.ml-table tr:last-child td { border-bottom: none; }
+.ml-table tr.done-row td { opacity: 0.5; text-decoration: line-through; }
+.diff-badge { border-radius: 99px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; }
+.diff-easy { background: #22c55e22; color: #22c55e; }
+.diff-medium { background: #f59e0b22; color: #f59e0b; }
+.diff-hard { background: #ef444422; color: #ef4444; }
+.ml-actions { display: flex; gap: 8px; }
+.ml-btn { border: none; background: transparent; cursor: pointer; color: var(--text-secondary); padding: 4px 6px; border-radius: var(--radius); transition: color 0.15s; font-size: 1rem; }
+.ml-btn:hover { color: var(--accent); }
+.ml-btn.delete:hover { color: #ef4444; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+.empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+.ml-modal-backdrop { display: none; position: fixed; inset: 0; background: #0008; z-index: 1000; align-items: center; justify-content: center; }
+.ml-modal-backdrop.open { display: flex; }
+.ml-modal { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 28px; width: 100%; max-width: 480px; }
+.ml-modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: var(--text-primary); }
+.ml-field { margin-bottom: 14px; }
+.ml-field label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+.ml-field input, .ml-field select, .ml-field textarea { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 8px 12px; color: var(--text-primary); font-size: 0.9rem; outline: none; }
+.ml-field input:focus, .ml-field select:focus, .ml-field textarea:focus { border-color: var(--accent); }
+.ml-field textarea { resize: vertical; min-height: 80px; }
+.ml-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="mylist-header">
+    <h1><i class="bi bi-journal-plus" aria-hidden="true"></i> My Question List</h1>
+    <button class="ui-btn ui-btn-primary" id="add-btn">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add Question
+    </button>
+</div>
+{% if questions %}
+<div class="ml-table-wrap">
+    <table class="ml-table">
+        <thead>
+            <tr>
+                <th>Done</th>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Difficulty</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="ml-tbody">
+        {% for q in questions %}
+        <tr id="row-{{ q._id }}" class="{% if q.done %}done-row{% endif %}">
+            <td><input type="checkbox" class="ml-done-check" data-id="{{ q._id }}" {% if q.done %}checked{% endif %}></td>
+            <td>
+                {% if q.url %}<a href="{{ q.url|safe_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">{{ q.title }}</a>
+                {% else %}{{ q.title }}{% endif %}
+            </td>
+            <td>{{ q.category or "—" }}</td>
+            <td><span class="diff-badge diff-{{ q.difficulty|lower }}">{{ q.difficulty }}</span></td>
+            <td style="max-width:200px;white-space:pre-wrap;font-size:0.82rem">{{ q.notes or "—" }}</td>
+            <td>
+                <div class="ml-actions">
+                    <button class="ml-btn edit-btn" data-id="{{ q._id }}" data-title="{{ q.title }}" data-url="{{ q.url }}" data-category="{{ q.category }}" data-difficulty="{{ q.difficulty }}" data-notes="{{ q.notes }}" aria-label="Edit">
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>
+                    <button class="ml-btn delete ml-del-btn" data-id="{{ q._id }}" aria-label="Delete">
+                        <i class="bi bi-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-journal-x" aria-hidden="true"></i>
+    <p>No custom questions yet.<br>Click <strong>Add Question</strong> to get started.</p>
+</div>
+{% endif %}
+<div class="ml-modal-backdrop" id="ml-modal" role="dialog" aria-modal="true">
+    <div class="ml-modal">
+        <h2 id="modal-title">Add Question</h2>
+        <input type="hidden" id="edit-id">
+        <div class="ml-field"><label for="f-title">Title *</label><input type="text" id="f-title" placeholder="e.g. Two Sum"></div>
+        <div class="ml-field"><label for="f-url">URL</label><input type="url" id="f-url" placeholder="https://leetcode.com/problems/..."></div>
+        <div class="ml-field"><label for="f-category">Category</label><input type="text" id="f-category" placeholder="e.g. Arrays, Trees"></div>
+        <div class="ml-field"><label for="f-difficulty">Difficulty</label>
+            <select id="f-difficulty"><option value="Easy">Easy</option><option value="Medium" selected>Medium</option><option value="Hard">Hard</option></select>
+        </div>
+        <div class="ml-field"><label for="f-notes">Notes</label><textarea id="f-notes" placeholder="Approach, key insight..."></textarea></div>
+        <div class="ml-modal-actions">
+            <button class="ui-btn ui-btn-secondary" id="modal-cancel">Cancel</button>
+            <button class="ui-btn ui-btn-primary" id="modal-save">Save</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const csrfToken = {{ csrf_token()|tojson }};
+const modal = document.getElementById('ml-modal');
+const editId = document.getElementById('edit-id');
+const openModal = (title, data={}) => {
+    document.getElementById('modal-title').textContent = title;
+    editId.value = data.id || '';
+    document.getElementById('f-title').value = data.title || '';
+    document.getElementById('f-url').value = data.url || '';
+    document.getElementById('f-category').value = data.category || '';
+    document.getElementById('f-difficulty').value = data.difficulty || 'Medium';
+    document.getElementById('f-notes').value = data.notes || '';
+    modal.classList.add('open');
+    document.getElementById('f-title').focus();
+};
+const closeModal = () => modal.classList.remove('open');
+document.getElementById('add-btn').onclick = () => openModal('Add Question');
+document.getElementById('modal-cancel').onclick = closeModal;
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.getElementById('modal-save').onclick = async () => {
+    const id = editId.value;
+    const body = {
+        title: document.getElementById('f-title').value.trim(),
+        url: document.getElementById('f-url').value.trim(),
+        category: document.getElementById('f-category').value.trim(),
+        difficulty: document.getElementById('f-difficulty').value,
+        notes: document.getElementById('f-notes').value.trim(),
+    };
+    if (!body.title) { alert('Title is required'); return; }
+    const url = id ? `/mylist/${id}` : '/mylist/add';
+    const method = id ? 'PATCH' : 'POST';
+    const r = await fetch(url, { method, headers: {'Content-Type':'application/json', 'X-CSRFToken': csrfToken}, body: JSON.stringify(body) });
+    const data = await r.json();
+    if (data.success || data.id) { closeModal(); location.reload(); }
+    else alert(data.error || 'Something went wrong');
+};
+document.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.onclick = () => openModal('Edit Question', {
+        id: btn.dataset.id, title: btn.dataset.title, url: btn.dataset.url,
+        category: btn.dataset.category, difficulty: btn.dataset.difficulty, notes: btn.dataset.notes
+    });
+});
+document.querySelectorAll('.ml-del-btn').forEach(btn => {
+    btn.onclick = async () => {
+        if (!confirm('Delete this question?')) return;
+        const r = await fetch(`/mylist/${btn.dataset.id}`, { method: 'DELETE', headers: {'X-CSRFToken': csrfToken} });
+        const data = await r.json();
+        if (data.success) document.getElementById(`row-${btn.dataset.id}`).remove();
+    };
+});
+document.querySelectorAll('.ml-done-check').forEach(chk => {
+    chk.onchange = async function() {
+        const r = await fetch(`/mylist/${this.dataset.id}`, {
+            method: 'PATCH', headers: {'Content-Type':'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({done: this.checked})
+        });
+        const data = await r.json();
+        if (data.success) document.getElementById(`row-${this.dataset.id}`).classList.toggle('done-row', this.checked);
+    };
+});
+</script>
+{% endblock %}
