@@ -1,3 +1,4 @@
+from flask_wtf.csrf import CSRFProtect
 from authlib.integrations.flask_client import OAuth
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
