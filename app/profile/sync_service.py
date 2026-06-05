@@ -153,7 +153,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             atcoder_username = str(data.get("atcoder", "") or "").strip()
             update_fields["atcoder_username"] = validate_username(atcoder_username)
         if "codewars" in data:
-            codewars_username = data.get("codewars", "").strip()
+            codewars_username = str(data.get("codewars", "") or "").strip()
             update_fields["codewars_username"] = validate_username(codewars_username)
     except ValueError as e:
         return {"success": False, "error": str(e)}, 400
