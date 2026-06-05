@@ -290,7 +290,7 @@ def get_merged_daily_counts(user_doc):
     elif _get_field(user_doc, "external_totals", {}):
         logger.warning(
             "User %s has external_totals but no platform_calendars in projection",
-            str(user_doc.get("_id", "")),
+            str(_get_field(user_doc, "_id", "")),
         )
     return _get_field(user_doc, "external_daily_counts", {})
 

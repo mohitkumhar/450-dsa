@@ -398,6 +398,17 @@ def test_sync_clears_stale_totals_when_platform_fails_or_username_cleared(monkey
     assert "GitHub_Commits" not in totals
 
 
+def test_get_merged_daily_counts_object_with_external_totals_no_calendars():
+    """Object-style user with external_totals but no platform_calendars
+    must not raise AttributeError on the warning branch."""
+    user = FakeUser(
+        external_totals={"LeetCode": 10},
+        external_daily_counts={"2026-05-25": 3},
+    )
+    merged = get_merged_daily_counts(user)
+    assert merged == {"2026-05-25": 3}
+
+
 def test_build_sync_platforms_response_all_failed():
     result = build_sync_platforms_response(
         {
