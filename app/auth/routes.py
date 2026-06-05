@@ -156,6 +156,9 @@ def login():
     if request.method == "POST":
         email = normalize_email(request.form.get("email"))
         password = request.form.get("password")
+        if not email or not password:
+            flash("Email and password are required.", "danger")
+            return render_template("login.html")
         user_doc = db.user.find_one({"email": email})
         if user_doc and user_doc.get("password") and password and bcrypt.check_password_hash(user_doc["password"], password):
             user_doc = reactivate_user_if_needed(user_doc)
@@ -224,6 +227,7 @@ def logout():
 
 @auth_bp.route("/delete_account", methods=["POST"])
 @login_required
+@limiter.limit("3 per minute")
 def delete_account():
     # CSRF check — consume token immediately (single-use)
     token = request.form.get("csrf_token", "")
@@ -254,6 +258,7 @@ def delete_account():
 
 @auth_bp.route("/deactivate_account", methods=["POST"])
 @login_required
+@limiter.limit("3 per minute")
 def deactivate_account():
     token = request.form.get("csrf_token", "")
     expected = session.pop(DEACTIVATE_CSRF_SESSION_KEY, None)
@@ -304,12 +309,14 @@ def delete_account_token():
 
 
 @auth_bp.route("/login/github")
+@limiter.limit("10 per minute")
 def login_github():
     redirect_uri = url_for("auth.authorize_github", _external=True)
     return github.authorize_redirect(redirect_uri)
 
 
 @auth_bp.route("/login/github/authorize")
+@limiter.limit("10 per minute")
 def authorize_github():
     try:
         token = github.authorize_access_token()
@@ -368,6 +375,7 @@ def authorize_github():
 
 
 @auth_bp.route("/login/google")
+@limiter.limit("10 per minute")
 def login_google():
     redirect_uri = url_for("auth.authorize_google", _external=True)
     nonce = secrets.token_urlsafe(16)
@@ -376,6 +384,7 @@ def login_google():
 
 
 @auth_bp.route("/login/google/authorize")
+@limiter.limit("10 per minute")
 def authorize_google():
     nonce = session.pop(GOOGLE_OAUTH_NONCE_SESSION_KEY, None)
     if not nonce:
