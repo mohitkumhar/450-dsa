@@ -273,6 +273,8 @@ def milestone_certificate(milestone_id):
 
 
 @profile_bp.route("/search_universities")
+@limiter.limit("30 per minute")
+@cache.cached(timeout=300, query_string=True)
 def search_universities():
     """Return matching universities for an autocomplete query.
     ---
