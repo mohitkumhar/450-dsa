@@ -602,7 +602,7 @@ window.handleSaveProfile = function(btn){
     resume_url: document.getElementById('ep_resume').value,
   };
   window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
-  fetch('/edit_profile',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken,'X-CSRFToken':'{{ csrf_token() }}'},body:JSON.stringify(payload)})
+  fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})
     .then(r=>r.json())
     .then(res=>{
       if(res.success){

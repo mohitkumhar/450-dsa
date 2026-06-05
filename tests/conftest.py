@@ -35,17 +35,15 @@ def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
     test_db = mongomock.MongoClient().db
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.setenv("RATELIMIT_KEY_PREFIX", f"test-{uuid.uuid4()}")
-
     for target in (app_module, auth_routes, *extra_db_targets):
         monkeypatch.setattr(target, "db", test_db)
-
+    import app.extensions as _ext
+    monkeypatch.setattr(_ext, "db", test_db)
     if oauth_clients:
         for client_name, client in oauth_clients.items():
             monkeypatch.setattr(auth_routes, client_name, client)
-
     monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
     monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
-
     flask_app = app_module.create_app()
     flask_app.config.update(TESTING=True)
     flask_app._db_initialized = True

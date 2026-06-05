@@ -1,14 +1,20 @@
 from datetime import datetime
 from bson import ObjectId
-from app.extensions import db
+
+
+def _get_db():
+    import app.extensions as _ext
+    return _ext.db
 
 
 def init_notification_preferences(user_id):
     """Initialize notification preferences for a new user."""
+    db = _get_db()
+    if db is None:
+        return None
     existing = db.notification_preferences.find_one({"user_id": ObjectId(user_id)})
     if existing:
         return existing
-
     prefs = {
         "user_id": ObjectId(user_id),
         "browser_notifications_enabled": False,
@@ -17,7 +23,7 @@ def init_notification_preferences(user_id):
             "reminders": True,
             "challenges": True,
         },
-        "permission_status": "default",  # default, granted, denied
+        "permission_status": "default",
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow(),
     }
@@ -26,13 +32,20 @@ def init_notification_preferences(user_id):
     return prefs
 
 
+
 def get_notification_preferences(user_id):
     """Get notification preferences for a user."""
-    return db.notification_preferences.find_one({"user_id": ObjectId(user_id)})
-
+    db = _get_db()
+    if db is None:
+        return None
+    try:
+        return db.notification_preferences.find_one({"user_id": ObjectId(user_id)})
+    except AttributeError:
+        return None
 
 def update_notification_permission(user_id, permission_status):
     """Update browser notification permission status."""
+    db = _get_db()
     result = db.notification_preferences.update_one(
         {"user_id": ObjectId(user_id)},
         {
@@ -49,6 +62,7 @@ def update_notification_permission(user_id, permission_status):
 
 def update_notification_type(user_id, notification_type, enabled):
     """Enable/disable a specific notification type."""
+    db = _get_db()
     result = db.notification_preferences.update_one(
         {"user_id": ObjectId(user_id)},
         {
@@ -67,7 +81,6 @@ def should_send_notification(user_id, notification_type):
     prefs = get_notification_preferences(user_id)
     if not prefs:
         return False
-
     return (
         prefs.get("browser_notifications_enabled", False)
         and prefs.get("notification_types", {}).get(notification_type, False)

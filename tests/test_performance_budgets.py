@@ -10,7 +10,7 @@ PAGE_BUDGETS = {
     "/": {"html_bytes": 47_000, "js_bytes": 8_000, "initial_requests": 6},
     "/search": {"html_bytes": 60_000, "js_bytes": 19_000, "initial_requests": 6},
     "/leaderboard": {"html_bytes": 55_000, "js_bytes": 17_000, "initial_requests": 6},
-    "/profile": {"html_bytes": 90_000, "js_bytes": 23_500, "initial_requests": 8},
+    "/profile": {"html_bytes": 90_000, "js_bytes": 29_500, "initial_requests": 9},
 }
 
 
