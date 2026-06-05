@@ -1569,3 +1569,33 @@ body {
         border: 2px solid white;
     }
 }
+
+/* Progressive hints styling */
+.hints-container {
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.show-hint-btn {
+    margin-bottom: 6px;
+}
+
+.hints-list {
+    margin: 6px 0 0 0;
+    padding-left: 18px;
+    list-style-type: decimal;
+}
+
+.hint-item {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-size: 0.8rem;
+}
+
+.hidden {
+    display: none !important;
+}
