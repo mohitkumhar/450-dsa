@@ -296,6 +296,9 @@ def update_question(question_id):
         if field in data and not isinstance(data[field], bool):
             return jsonify({"success": False, "error": f"{field} must be a boolean"}), 400
 
+    if data.get("done") is True and data.get("skipped") is True:
+        data["skipped"] = False
+
     user_id = current_user.id
     update_fields = {}
     progress = current_user.progress
