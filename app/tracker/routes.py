@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from bson import ObjectId
 from bson.errors import InvalidId
 from flask import Blueprint, Response, current_app, jsonify, render_template, request
@@ -306,6 +308,7 @@ def update_question(question_id):
     if "done" in data:
         if data["done"] and not existing.get("done"):
             update_fields[f"progress.{question_id}.timestamp"] = utc_now()
+            update_fields[f"progress.{question_id}.next_review"] = utc_now() + timedelta(days=1)
             message = f"✅ Marked '{question.get('problem', 'Question')}' as complete!"
             update_fields[f"progress.{question_id}.skipped"] = False
             update_fields[platform_count_field] = 1
@@ -382,6 +385,53 @@ def bookmarks():
         question["topic_name"] = topic_docs.get(question["topic"], "Unknown")
 
     return render_template("bookmarks.html", questions=questions, progress_dict=progress)
+
+
+@tracker_bp.route("/revision")
+@login_required
+def revision():
+    progress = current_user.progress
+    now = utc_now()
+
+    bookmarked_ids = []
+    skipped_ids = []
+    due_ids = []
+
+    for q_id, p_item in progress.items():
+        if p_item.get("bookmark"):
+            bookmarked_ids.append(q_id)
+        if p_item.get("skipped"):
+            skipped_ids.append(q_id)
+        if p_item.get("done") and p_item.get("next_review") and p_item["next_review"] <= now:
+            due_ids.append(q_id)
+
+    def _fetch_question_docs(id_list):
+        oids = []
+        for q_id in id_list:
+            try:
+                oids.append(ObjectId(q_id))
+            except InvalidId:
+                pass
+        return list(db.question.find({"_id": {"$in": oids}}, BOOKMARKS_QUESTION_PROJECTION))
+
+    bookmarked_qs = _fetch_question_docs(bookmarked_ids)
+    skipped_qs = _fetch_question_docs(skipped_ids)
+    due_qs = _fetch_question_docs(due_ids)
+
+    all_questions = bookmarked_qs + skipped_qs + due_qs
+    topic_ids = list(set(q["topic"] for q in all_questions))
+    topic_docs = {t["_id"]: t["name"] for t in db.topic.find({"_id": {"$in": topic_ids}})}
+    for q_list in (bookmarked_qs, skipped_qs, due_qs):
+        for q in q_list:
+            q["topic_name"] = topic_docs.get(q["topic"], "Unknown")
+
+    return render_template(
+        "revision.html",
+        bookmarked_qs=bookmarked_qs,
+        skipped_qs=skipped_qs,
+        due_qs=due_qs,
+        progress_dict=progress,
+    )
 
 
 @tracker_bp.route("/export/csv")
