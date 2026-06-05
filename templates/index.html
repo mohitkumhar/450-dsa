@@ -382,6 +382,7 @@
                 </span>
                 <span class="topic-action-btn {% if t_percent == 100 %}completed{% elif t_percent > 0 %}started{% endif %}" aria-hidden="true">
                     {% if t_percent == 100 %}
+
                     <i class="bi bi-check-circle-fill" aria-hidden="true"></i> Completed
                     {% elif t_percent > 0 %}
                     <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Continue
@@ -399,6 +400,7 @@
 
 {% block scripts %}
 <script>
-const K='pinnedTopics:{{ current_user.get_id() if current_user.is_authenticated else "anonymous" }}',C=[...document.querySelectorAll('.topic-card-shell')],G=()=>{try{return JSON.parse(localStorage[K]||'[]').filter(x=>C.some(c=>c.dataset.topicId==x))}catch{return[]}},S=a=>{try{localStorage[K]=JSON.stringify(a)}catch{}},R=()=>{let p=G();S(p);C.forEach((c,i)=>{let x=c.dataset.topicId,o=p.includes(x);c.classList.toggle('is-pinned',o);c.style.order=o?p.indexOf(x):C.length+i;c.querySelector('.pin-btn').setAttribute('aria-pressed',o)})};document.querySelectorAll('.pin-btn').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();let p=G(),x=b.dataset.topicId,i=p.indexOf(x);i<0?p.unshift(x):p.splice(i,1);S(p);R()});R();
+const K='pinnedTopics:{{ current_user.get_id() if current_user.is_authenticated else "anonymous" }}',C=[...document.querySelectorAll('.topic-card-shell')],G=()=>{try{return JSON.parse(localStorage[K]||'[]').filter(x=>C.some(c=>c.dataset.topicId==x))}catch{return[]}},S=a=>{try{localStorage[K]=JSON.stringify(a)}catch{}},R=()=>{let p=G();S(p);C.forEach((c,i)=>{let x=c.dataset.topicId,o=p.includes(x);c.classList.toggle('is-pinned',o);c.style.order=o?p.indexOf(x):C.length+i;c.querySelector('.pin-btn').setAttribute('aria-pressed',o)})};document.querySelectorAll('.pin-btn').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();let p=G(),x=b.dataset.topicId,i=p.indexOf(x);i<0?p.unshift(x):p.splice(i,1);S(p);R()});R();(function(){var p=document.getElementById("continue-panel");if(!p)return;fetch("/api/continue").then(r=>r.json()).then(d=>{var q=d.resume_question;if(!q)return;document.getElementById("cp-topic").textContent=d.resume_topic_name||"";document.getElementById("cp-question").textContent=q.problem||"";var b=document.getElementById("cp-btn");b.href="/topic/"+q.topic_id;p.style.display="flex";}).catch(()=>{});})();
+
 </script>
 {% endblock %}
