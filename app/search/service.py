@@ -129,11 +129,20 @@ DIFFICULTY_FILTERS = {
 }
 
 
+def _sanitize_text_search(query):
+    """Remove characters that can cause MongoDB $text search errors."""
+    if not query:
+        return query
+    sanitized = re.sub(r"[^\w\s\"@+\-]", " ", query)
+    return re.sub(r"\s+", " ", sanitized).strip()
+
+
 def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, progress=None):
     db_handle = db_handle or db
     filters = filters or {}
     progress = progress or {}
     query, requested_platforms = parse_search_query(raw_query)
+    query = _sanitize_text_search(query)
     query_tokens = tokenize_search_text(query)
     topic_id_str = filters.get("topic_id", "")
     difficulty_filter = filters.get("difficulty", "")
