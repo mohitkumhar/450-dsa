@@ -12,8 +12,6 @@ from app.notifications.service import (
     check_goal_deadlines,
     check_challenge_deadlines,
 )
-from app.extensions import db
-from bson import ObjectId
 
 
 @notifications_bp.route("/notifications/init", methods=["POST"])

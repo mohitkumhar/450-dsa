@@ -102,7 +102,6 @@ def create_app(config_class=None):
     )
     
     cache.init_app(app)
-    csrf.init_app(app)
     Swagger(
         app,
         template={

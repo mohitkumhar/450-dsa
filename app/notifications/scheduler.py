@@ -50,7 +50,6 @@ Usage:
    ```
 """
 
-from datetime import datetime
 from app.extensions import db
 from app.notifications.service import (
     check_review_reminders,
