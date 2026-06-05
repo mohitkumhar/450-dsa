@@ -443,16 +443,13 @@ def test_sync_codewars_handles_non_string_value(monkeypatch):
 
 def test_sync_codewars_handles_null_value(monkeypatch):
     """A null/None codewars value must be normalized to empty string without
-    raising AttributeError."""
+    raising AttributeError. An empty username means no fetch job is created,
+    matching the same skipped behavior as other platforms."""
     now = datetime.now(timezone.utc)
     user = FakeUser()
     db = FakeDB()
     cache = FakeCache()
 
-    monkeypatch.setattr(
-        "app.profile.sync_service.fetch_codewars",
-        lambda username: None,
-    )
     monkeypatch.setattr("app.profile.sync_service.invalidate_leaderboard_cache", lambda: None)
 
     payload, status_code = sync_user_platforms(
@@ -464,5 +461,5 @@ def test_sync_codewars_handles_null_value(monkeypatch):
     )
 
     assert status_code == 200
-    # None results in empty string username → fetch returns None → no data → failed
-    assert payload["platforms"]["codewars"]["status"] == "failed"
+    # None normalizes to empty string → no fetch job enqueued → skipped
+    assert payload["platforms"]["codewars"]["status"] == "skipped"
