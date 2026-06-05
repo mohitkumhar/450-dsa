@@ -336,6 +336,12 @@ def update_question(question_id):
         update_fields[f"progress.{question_id}.notes"] = data["notes"]
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
 
+    if "personal_difficulty" in data:
+        val = data["personal_difficulty"]
+        if val not in (None, "Easy", "Medium", "Hard"):
+            return jsonify({"success": False, "error": "personal_difficulty must be Easy, Medium, Hard or null"}), 400
+        update_fields[f"progress.{question_id}.personal_difficulty"] = val
+
     if update_fields:
         for field in list(update_fields):
             if field.startswith("in_sheet_platform_counts."):
