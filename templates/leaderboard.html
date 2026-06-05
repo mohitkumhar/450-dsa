@@ -271,6 +271,7 @@ const CURRENT_USER_ID = {{ current_user_id | tojson }};
 const endpointConfig = {{ {
   "publicProfileBase": url_for('public.public_profile', user_id='__USER_ID__'),
   "compareBase": url_for('leaderboard.compare', user_id='__USER_ID__'),
+  "collegeBase": url_for('public.college_detail', slug='__COLLEGE_SLUG__'),
 }|tojson }};
 const VALID_MODES = ['cscore', 'questions', 'rating', 'college'];
 const urlParams = new URLSearchParams(window.location.search);
@@ -287,6 +288,10 @@ function escapeHTML(str) {
   return str.replace(/[&<>"']/g, function(c) {
     return '&#' + c.charCodeAt(0) + ';';
   });
+}
+
+function collegeSlug(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 function safeURL(url) {
@@ -397,7 +402,7 @@ function renderTable(entries, mode) {
       ? endpointConfig.publicProfileBase.replace('__USER_ID__', encodeURIComponent(e.user_id))
       : '';
     const nameHTML = isCollegeMode
-      ? `${escapeHTML(e.college)}`
+      ? `<a href="${endpointConfig.collegeBase.replace('__COLLEGE_SLUG__', encodeURIComponent(collegeSlug(e.college)))}" aria-label="View ${escapeHTML(e.college)} page">${escapeHTML(e.college)}</a>`
       : `<a href="${profileURL}" aria-label="View profile of ${escapeHTML(e.name)}">${escapeHTML(e.name)}</a>${isMe ? '<span class="me-tag" aria-label="This is you">YOU</span>' : ''}`;
     
     const subtitleHTML = isCollegeMode
