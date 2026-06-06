@@ -219,6 +219,10 @@ def reset_topic_progress(topic_id):
 
     invalidate_leaderboard_cache()
     warm_public_card_cache(current_user.id, db_handle=db)
+    pre = current_app.config.get("_PRECOMPUTED")
+    total_questions = (pre["total_questions"] if pre
+                       else db.question.count_documents({}))
+    update_computed_stats(current_user.id, current_user.progress, db, total_questions)
     return json_success(message=f"Reset progress for '{topic_doc.get('name', 'this topic')}'")
 
 
@@ -296,6 +300,9 @@ def update_question(question_id):
         if field in data and not isinstance(data[field], bool):
             return jsonify({"success": False, "error": f"{field} must be a boolean"}), 400
 
+    if data.get("done") is True and data.get("skipped") is True:
+        data["skipped"] = False
+
     user_id = current_user.id
     update_fields = {}
     progress = current_user.progress
@@ -337,21 +344,19 @@ def update_question(question_id):
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
 
     if update_fields:
-        for field in list(update_fields):
-            if field.startswith("in_sheet_platform_counts."):
-                del update_fields[field]
+        inc_fields = {
+            field: update_fields.pop(field)
+            for field in list(update_fields)
+            if field.startswith("in_sheet_platform_counts.")
+        }
         update_doc = {}
         if update_fields:
             update_doc["$set"] = update_fields
-        if update_doc:
-            db.user.update_one({"_id": user_id}, update_doc)
+        if inc_fields:
+            update_doc["$inc"] = inc_fields
+        db.user.update_one({"_id": user_id}, update_doc)
         current_user.reload()
         pre = current_app.config.get("_PRECOMPUTED")
-        all_questions = (pre["all_questions"] if pre
-                         else list(db.question.find({}, {"_id": 1, "url": 1})))
-        solved_items = {q_id: p for q_id, p in current_user.progress.items() if p.get("done")}
-        in_sheet_counts = compute_in_sheet_platform_counts(solved_items, all_questions)
-        db.user.update_one({"_id": user_id}, {"$set": {"in_sheet_platform_counts": in_sheet_counts}})
         total_questions = (pre["total_questions"] if pre
                            else db.question.count_documents({}))
         update_computed_stats(user_id, current_user.progress, db, total_questions)

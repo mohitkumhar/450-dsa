@@ -133,8 +133,8 @@ def create_app(config_class=None):
 
     oauth.register(
         name="github",
-        client_id=os.environ.get("GITHUB_CLIENT_ID", "your-github-client-id"),
-        client_secret=os.environ.get("GITHUB_CLIENT_SECRET", "your-github-client-secret"),
+        client_id=os.environ.get("GITHUB_CLIENT_ID"),
+        client_secret=os.environ.get("GITHUB_CLIENT_SECRET"),
         access_token_url="https://github.com/login/oauth/access_token",
         access_token_params=None,
         authorize_url="https://github.com/login/oauth/authorize",
@@ -145,8 +145,8 @@ def create_app(config_class=None):
 
     oauth.register(
         name="google",
-        client_id=os.environ.get("GOOGLE_CLIENT_ID", "your-google-client-id"),
-        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
+        client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid email profile"},
     )

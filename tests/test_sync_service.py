@@ -14,6 +14,7 @@ class FakeUser:
         self.hackerrank_username = kwargs.get("hackerrank_username", "")
         self.codingninjas_username = kwargs.get("codingninjas_username", "")
         self.atcoder_username = kwargs.get("atcoder_username", "")
+        self.codewars_username = kwargs.get("codewars_username", "")
         self.platform_calendars = kwargs.get("platform_calendars", {})
         self.external_daily_counts = kwargs.get("external_daily_counts", {})
         self.external_totals = kwargs.get("external_totals", {})
@@ -310,6 +311,18 @@ def test_get_merged_daily_counts_falls_back_to_legacy():
     assert merged == {"2026-05-25": 3}
 
 
+def test_get_merged_daily_counts_empty_platform_calendars_with_string_legacy():
+    """Empty platform calendars must not prevent merging of string-typed legacy
+    external_daily_counts; the string must be coerced via
+    coerce_non_negative_number before being passed to max()."""
+    user = FakeUser(
+        platform_calendars={"leetcode": {}},
+        external_daily_counts={"2026-05-25": "3", "2026-05-26": 2},
+    )
+    merged = get_merged_daily_counts(user)
+    assert merged == {"2026-05-25": 3, "2026-05-26": 2}
+
+
 def test_sync_clears_stale_totals_when_platform_fails_or_username_cleared(monkeypatch):
     """When a sync is requested for a platform and the sync fails or the username
     is cleared, old external_totals for that platform must be removed so stale
@@ -386,6 +399,17 @@ def test_sync_clears_stale_totals_when_platform_fails_or_username_cleared(monkey
     assert "GitHub_Commits" not in totals
 
 
+def test_get_merged_daily_counts_object_with_external_totals_no_calendars():
+    """Object-style user with external_totals but no platform_calendars
+    must not raise AttributeError on the warning branch."""
+    user = FakeUser(
+        external_totals={"LeetCode": 10},
+        external_daily_counts={"2026-05-25": 3},
+    )
+    merged = get_merged_daily_counts(user)
+    assert merged == {"2026-05-25": 3}
+
+
 def test_build_sync_platforms_response_all_failed():
     result = build_sync_platforms_response(
         {
@@ -395,3 +419,58 @@ def test_build_sync_platforms_response_all_failed():
     )
     assert result["success"] is False
     assert "all platforms" in result["error"].lower()
+
+
+def test_sync_codewars_handles_non_string_value(monkeypatch):
+    """Codewars username normalization must tolerate null and non-string
+    payload values the same way other platform fields do."""
+    now = datetime.now(timezone.utc)
+    user = FakeUser(codewars_username="old_codewars_user")
+    db = FakeDB()
+    cache = FakeCache()
+
+    monkeypatch.setattr(
+        "app.profile.sync_service.fetch_codewars",
+        lambda username: {"total": 42},
+    )
+    monkeypatch.setattr("app.profile.sync_service.invalidate_leaderboard_cache", lambda: None)
+
+    # Non-string value — should not raise AttributeError
+    payload, status_code = sync_user_platforms(
+        user,
+        {"codewars": 12345},
+        db,
+        cache,
+        now=now,
+    )
+
+    assert status_code == 200
+    assert payload["platforms"]["codewars"]["status"] == "synced"
+
+    update_doc = db.user.updates[0][1]
+    # The integer 12345 was converted to string "12345" before stripping
+    assert update_doc["$set"]["codewars_username"] == "12345"
+
+
+def test_sync_codewars_handles_null_value(monkeypatch):
+    """A null/None codewars value must be normalized to empty string without
+    raising AttributeError. An empty username means no fetch job is created,
+    matching the same skipped behavior as other platforms."""
+    now = datetime.now(timezone.utc)
+    user = FakeUser()
+    db = FakeDB()
+    cache = FakeCache()
+
+    monkeypatch.setattr("app.profile.sync_service.invalidate_leaderboard_cache", lambda: None)
+
+    payload, status_code = sync_user_platforms(
+        user,
+        {"codewars": None},
+        db,
+        cache,
+        now=now,
+    )
+
+    assert status_code == 200
+    # None normalizes to empty string → no fetch job enqueued → skipped
+    assert payload["platforms"]["codewars"]["status"] == "skipped"

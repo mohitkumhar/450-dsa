@@ -172,7 +172,7 @@
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
+    <a href="{{ url_for('leaderboard.leaderboard') }}" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View app leaderboard">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
@@ -346,10 +346,10 @@
 
     <hr style="border-color:var(--border-color);margin:16px 0">
 
-    <!-- DSA difficulty -->
+    <!-- LeetCode difficulty -->
     <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:12px">
-      <span style="flex:1;text-align:center;padding-left:24px">DSA</span>
-      <button onclick="exportChart('difficultyChart', 'dsa-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
+      <span style="flex:1;text-align:center;padding-left:24px">LeetCode</span>
+      <button onclick="exportChart('difficultyChart', 'leetcode-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
         <i class="bi bi-download" aria-hidden="true"></i>
       </button>
     </div>
