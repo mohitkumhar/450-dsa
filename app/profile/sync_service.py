@@ -22,6 +22,19 @@ logger = logging.getLogger("flask.app")
 
 SYNC_COOLDOWN_SECONDS = 600
 
+PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank", "codingninjas", "atcoder", "codewars"}
+
+PLATFORM_TOTAL_KEYS = {
+    "leetcode": {"LeetCode", "LeetCode_Easy", "LeetCode_Medium", "LeetCode_Hard",
+                 "LeetCode_Contests", "LeetCode_Rating", "LeetCode_GlobalRank"},
+    "github": {"GitHub_Issues", "GitHub_PRs", "GitHub_Merged_PRs", "GitHub_Commits"},
+    "gfg": {"GFG"},
+    "codingninjas": {"Coding Ninjas"},
+    "hackerrank": {"HackerRank"},
+    "atcoder": {"AtCoder"},
+    "codewars": {"Codewars"},
+}
+
 
 def build_sync_platforms_response(platform_status: dict):
     attempted = sum(1 for value in platform_status.values() if value.get("status") != "skipped")
@@ -164,6 +177,13 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
 
     existing_totals = getattr(user, "external_totals", {}) or {}
     platform_totals = dict(existing_totals) if isinstance(existing_totals, dict) else {}
+
+    # Clear stale totals for platforms included in current sync
+    for platform_key in data:
+        if platform_key in PLATFORM_TOTAL_KEYS:
+            for total_key in PLATFORM_TOTAL_KEYS[platform_key]:
+                platform_totals.pop(total_key, None)
+
     platform_status = {}
 
     def _mark(platform_key: str, status: str, error: str = None):
