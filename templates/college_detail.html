@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block head %}
+<meta property="og:title" content="{{ college }} | 450 DSA Tracker" />
+<meta property="og:description" content="{{ college }} has {{ member_count }} members, {{ total_solved }} total problems solved, average C-Score of {{ avg_c_score }}." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ request.url }}" />
+<title>{{ college }} | 450 DSA</title>
+{% endblock %}
+
+{% block content %}
+<style>
+.cp-header { margin-bottom: 24px; }
+.cp-header h1 { font-size: 1.6rem; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.cp-header p { color: var(--text-secondary); font-size: 0.88rem; margin-top: 4px; }
+.cp-back { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+.cp-back:hover { text-decoration: underline; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; text-align: center; }
+.stat-card .num { font-size: 2rem; font-weight: 900; line-height: 1.2; color: var(--text-primary); }
+.stat-card .lbl { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+.member-table-wrap { overflow-x: auto; }
+.member-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.member-table thead th { text-align: left; padding: 10px 12px; font-size: 0.73rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.member-table tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+.member-table tbody tr:hover { background: var(--bg-secondary); }
+.rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; font-size: 0.78rem; font-weight: 700; background: var(--bg-secondary); color: var(--text-secondary); }
+.rank-1 { background: linear-gradient(135deg, #ffd700, #ffb300); color: #000; }
+.rank-2 { background: linear-gradient(135deg, #e0e0e0, #bdbdbd); color: #000; }
+.rank-3 { background: linear-gradient(135deg, #cd7f32, #b8712e); color: #fff; }
+.user-info { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); overflow: hidden; }
+.user-avatar img { width: 100%; height: 100%; }
+.user-name { font-weight: 600; color: var(--accent); text-decoration: none; }
+.user-name:hover { text-decoration: underline; }
+.plat-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; margin-right: 4px; }
+.plat-lc { background: rgba(255, 184, 0, 0.15); color: #ffb800; }
+.plat-gfg { background: rgba(47, 180, 103, 0.15); color: #2fb467; }
+.plat-cn { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.plat-hr { background: rgba(0, 188, 108, 0.15); color: #00bc6c; }
+.section-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+.loading { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 0.88rem; }
+</style>
+
+<a href="{{ url_for('leaderboard.leaderboard') }}" class="cp-back"><i class="bi bi-arrow-left"></i> Back to Leaderboard</a>
+<div class="cp-header">
+  <h1><i class="bi bi-mortarboard-fill" style="color: var(--accent)"></i> {{ college }}</h1>
+  <p>{{ member_count }} member{{ 's' if member_count != 1 else '' }} &middot; Ranked on the DSA leaderboard</p>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="num" style="color: var(--accent)">{{ total_solved }}</div>
+    <div class="lbl">Total Solved</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ member_count }}</div>
+    <div class="lbl">Members</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ avg_c_score }}</div>
+    <div class="lbl">Avg C-Score</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ avg_rating }}</div>
+    <div class="lbl">Avg Rating</div>
+  </div>
+  <div class="stat-card">
+    <div class="num">{{ dsa_done }}</div>
+    <div class="lbl">DSA Done</div>
+  </div>
+</div>
+
+<div class="section-title"><i class="bi bi-people-fill" style="color: var(--accent)"></i> Members</div>
+
+{% if members %}
+<div class="member-table-wrap">
+  <table class="member-table">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Name</th>
+        <th scope="col">C-Score</th>
+        <th scope="col">DSA</th>
+        <th scope="col">Platforms</th>
+        <th scope="col">Rating</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in members %}
+      <tr>
+        <td><span class="rank-badge rank-{{ loop.index if loop.index <= 3 else '' }}">{{ loop.index }}</span></td>
+        <td>
+          <div class="user-info">
+            <div class="user-avatar">
+              {% if m.profile_photo %}
+              <img src="{{ m.profile_photo }}" alt="{{ m.name }}" width="32" height="32">
+              {% else %}
+              {{ (m.name or 'U')[0]|upper }}
+              {% endif %}
+            </div>
+            <a href="{{ url_for('public.public_profile', user_id=m.user_id) }}" class="user-name">{{ m.name }}</a>
+          </div>
+        </td>
+        <td style="font-weight: 700; color: var(--accent)">{{ m.c_score }}</td>
+        <td>{{ m.dsa_done }} / 450</td>
+        <td>
+          {% if m.lc_total %}<span class="plat-badge plat-lc">LC {{ m.lc_total }}</span>{% endif %}
+          {% if m.gfg_total %}<span class="plat-badge plat-gfg">GFG {{ m.gfg_total }}</span>{% endif %}
+          {% if m.cn_total %}<span class="plat-badge plat-cn">CN {{ m.cn_total }}</span>{% endif %}
+          {% if m.hr_total %}<span class="plat-badge plat-hr">HR {{ m.hr_total }}</span>{% endif %}
+        </td>
+        <td>{{ m.lc_rating or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="loading">No members found for this college.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}{% endblock %}
