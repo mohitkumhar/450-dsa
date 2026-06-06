@@ -264,6 +264,30 @@ def test_update_question_accepts_valid_boolean_update(monkeypatch):
     assert user["in_sheet_platform_counts"]["LeetCode"] == 1
 
 
+def test_update_question_normalizes_conflicting_done_skipped(monkeypatch):
+    """When done:true and skipped:true are sent together, done wins and the
+    platform count must not be incremented."""
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    question_id = test_db.question.insert_one(
+        {"problem": "Two Sum", "url": "https://leetcode.com/problems/two-sum/"}
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        user_id = login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"done": True, "skipped": True},
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 200
+    user = test_db.user.find_one({"_id": user_id})
+    progress = user["progress"][str(question_id)]
+    assert progress["done"] is True
+    assert progress.get("skipped") is not True
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 1
+
+
 def test_topic_page_exposes_reset_progress_button(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id

@@ -1,6 +1,7 @@
 import csv
 import json
 from io import StringIO
+from datetime import datetime
 
 
 def normalize_url(url):
@@ -65,6 +66,9 @@ def parse_csv_backup(content_str):
         url = get_val("URL")
         url2 = get_val("URL2")
 
+        revision_status = get_val("Revision Status") or get_val("revision_status")
+        last_reviewed = get_val("Last Reviewed") or get_val("last_reviewed")
+
         parsed_items.append({
             "problem": problem,
             "url": url,
@@ -73,6 +77,8 @@ def parse_csv_backup(content_str):
             "bookmark": bookmark,
             "skipped": skipped,
             "notes": notes,
+            "revision_status": revision_status,
+            "last_reviewed": last_reviewed,
         })
 
     return parsed_items, None
@@ -132,6 +138,16 @@ def parse_json_backup(content_str):
         url2 = str(item.get("url2") or item.get("URL2") or "")
         key = str(item.get("key") or item.get("id") or item.get("_id") or "")
 
+        revision_status = (
+            item.get("revision_status")
+            or item.get("Revision Status")
+        )
+
+        last_reviewed = (
+            item.get("last_reviewed")
+            or item.get("Last Reviewed")
+        )
+
         if not problem and not url and not key:
             continue
 
@@ -144,6 +160,8 @@ def parse_json_backup(content_str):
             "bookmark": bookmark,
             "skipped": skipped,
             "notes": notes,
+            "revision_status" : revision_status,
+            "last_reviewed" : last_reviewed,
         })
 
     return parsed_items, None
@@ -205,13 +223,25 @@ def process_dry_run(parsed_items, db_questions, current_progress):
         q_id = str(target_question["_id"])
         problem_title = target_question["problem"]
 
+        last_reviewed = item.get("last_reviewed")
+        parsed_last_reviewed = None
+
+        if last_reviewed:
+            try:
+                parsed_last_reviewed = datetime.fromisoformat(last_reviewed)
+            except ValueError:
+                parsed_last_reviewed = None
+
         mapped_progress[q_id] = {
             "done": item["done"],
             "bookmark": item["bookmark"],
             "skipped": item["skipped"],
             "notes": item["notes"],
+            "revision_status": item.get(
+                "revision_status",
+            ),
+           "last_reviewed": parsed_last_reviewed,
         }
-
         existing = current_progress.get(q_id, {})
         change_desc = []
         if item["done"] != bool(existing.get("done")):

@@ -29,6 +29,11 @@ DIFFICULTY_FILTERS = {
     "hard": "Hard",
 }
 
+REVISION_STATUSES = {
+    "To Review",
+    "Reviewed",
+    "Needs Practice",
+}
 
 def normalize_difficulty_filter(raw_filter):
     value = (raw_filter or "all").strip().lower()
@@ -118,7 +123,7 @@ def topic(topic_id):
     for question in questions:
         question["editorial_links"] = question_editorial_links(question)
     progress_dict = current_user.progress if current_user.is_authenticated else {}
-    
+
     # Calculate counts based on the unfiltered list of questions
     total_count = len(questions)
     easy_count = sum(1 for q in questions if q.get('difficulty', 'Medium') == 'Easy')
@@ -127,11 +132,11 @@ def topic(topic_id):
     done_count = sum(1 for q in questions if progress_dict.get(str(q["_id"]), {}).get("done"))
     skipped_count = sum(1 for q in questions if progress_dict.get(str(q["_id"]), {}).get("skipped"))
     todo_count = total_count - done_count - skipped_count
-    
+
     # Get difficulty filter from query parameter
     difficulty_filter = normalize_difficulty_filter(request.args.get('difficulty', 'all'))
     status_filter = request.args.get('status', 'all')
-    
+
     if difficulty_filter != 'all':
         questions = [q for q in questions if q.get('difficulty', 'Medium') == difficulty_filter]
 
@@ -151,11 +156,11 @@ def topic(topic_id):
         active_filters.append(f"{difficulty_filter} difficulty")
     if status_filter != 'all':
         active_filters.append(f"{status_filter.capitalize()} status")
-    
+
     return render_template(
-        "topic.html", 
-        topic=topic_doc, 
-        questions=questions, 
+        "topic.html",
+        topic=topic_doc,
+        questions=questions,
         progress_dict=progress_dict,
         difficulty_filter=difficulty_filter,
         status_filter=status_filter,
@@ -219,6 +224,10 @@ def reset_topic_progress(topic_id):
 
     invalidate_leaderboard_cache()
     warm_public_card_cache(current_user.id, db_handle=db)
+    pre = current_app.config.get("_PRECOMPUTED")
+    total_questions = (pre["total_questions"] if pre
+                       else db.question.count_documents({}))
+    update_computed_stats(current_user.id, current_user.progress, db, total_questions)
     return json_success(message=f"Reset progress for '{topic_doc.get('name', 'this topic')}'")
 
 
@@ -292,9 +301,21 @@ def update_question(question_id):
     if not isinstance(data, dict):
         return jsonify({"success": False, "error": "Request body must be a JSON object"}), 400
 
+    if (
+            "revision_status" in data
+            and data["revision_status"] not in REVISION_STATUSES
+    ):
+            return jsonify({
+                "success": False,
+                "error": "Invalid revision status"
+            }), 400
+
     for field in ("done", "bookmark", "skipped"):
         if field in data and not isinstance(data[field], bool):
             return jsonify({"success": False, "error": f"{field} must be a boolean"}), 400
+
+    if data.get("done") is True and data.get("skipped") is True:
+        data["skipped"] = False
 
     user_id = current_user.id
     update_fields = {}
@@ -324,14 +345,26 @@ def update_question(question_id):
         elif not data["skipped"] and existing.get("skipped"):
             message = f"↩️ Removed skipped status for '{question.get('problem', 'Question')}'"
         update_fields[f"progress.{question_id}.skipped"] = data["skipped"]
-    
+
     if "bookmark" in data:
         if data["bookmark"] and not existing.get("bookmark"):
             message = f"🔖 Added '{question.get('problem', 'Question')}' to bookmarks!"
         elif not data["bookmark"] and existing.get("bookmark"):
             message = f"📌 Removed '{question.get('problem', 'Question')}' from bookmarks"
         update_fields[f"progress.{question_id}.bookmark"] = data["bookmark"]
-    
+
+    if "revision_status" in data:
+        update_fields[
+            f"progress.{question_id}.revision_status"
+        ] = data["revision_status"]
+
+        update_fields[
+            f"progress.{question_id}.last_reviewed"
+        ] = utc_now()
+        message = (
+            f"Revision status updated for "
+            f"'{question.get('problem', 'Question')}'"
+        )
     if "notes" in data:
         update_fields[f"progress.{question_id}.notes"] = data["notes"]
         message = f"📝 Notes saved for '{question.get('problem', 'Question')}'!"
@@ -343,21 +376,24 @@ def update_question(question_id):
         update_fields[f"progress.{question_id}.personal_difficulty"] = val
 
     if update_fields:
-        for field in list(update_fields):
-            if field.startswith("in_sheet_platform_counts."):
-                del update_fields[field]
+        inc_fields = {
+            field: update_fields.pop(field)
+            for field in list(update_fields)
+            if field.startswith("in_sheet_platform_counts.")
+        }
         update_doc = {}
         if update_fields:
             update_doc["$set"] = update_fields
+        if inc_fields:
+            update_doc["$inc"] = inc_fields
         if update_doc:
-            db.user.update_one({"_id": user_id}, update_doc)
+            db.user.update_one(
+                {"_id": user_id},
+                update_doc
+            )
         current_user.reload()
+
         pre = current_app.config.get("_PRECOMPUTED")
-        all_questions = (pre["all_questions"] if pre
-                         else list(db.question.find({}, {"_id": 1, "url": 1})))
-        solved_items = {q_id: p for q_id, p in current_user.progress.items() if p.get("done")}
-        in_sheet_counts = compute_in_sheet_platform_counts(solved_items, all_questions)
-        db.user.update_one({"_id": user_id}, {"$set": {"in_sheet_platform_counts": in_sheet_counts}})
         total_questions = (pre["total_questions"] if pre
                            else db.question.count_documents({}))
         update_computed_stats(user_id, current_user.progress, db, total_questions)
@@ -484,7 +520,14 @@ def export_json():
     for question in questions:
         question_id = str(question.get('_id'))
         item_progress = progress.get(question_id, {}) or {}
-        if item_progress.get('done') or item_progress.get('bookmark') or item_progress.get('skipped') or item_progress.get('notes'):
+        if (
+                item_progress.get('done')
+                or item_progress.get('bookmark')
+                or item_progress.get('skipped')
+                or item_progress.get('notes')
+                or item_progress.get('revision_status')
+                or item_progress.get('last_reviewed')
+            ):
             topic_name = topic_lookup.get(question.get('topic'), 'Unknown')
             exported_progress.append({
                 "topic": topic_name,
@@ -495,6 +538,18 @@ def export_json():
                 "notes": item_progress.get('notes', ''),
                 "url": question.get('url', ''),
                 "url2": question.get('url2', ''),
+                "revision_status":
+                item_progress.get(
+                    "revision_status",
+                    "To Review"
+                ),
+
+                "last_reviewed":
+                (
+                    item_progress.get("last_reviewed").isoformat()
+                    if item_progress.get("last_reviewed")
+                    else None
+                ),
             })
 
     backup_data = {
@@ -616,7 +671,23 @@ def import_commit():
                 "bookmark": bookmark,
                 "skipped": skipped,
                 "notes": notes,
-                "timestamp": timestamp
+                "timestamp": timestamp,
+
+                "revision_status":
+                    imp_val.get(
+                        "revision_status"
+                    )
+                    or existing.get(
+                        "revision_status"
+                    ),
+
+                "last_reviewed":
+                    imp_val.get(
+                        "last_reviewed"
+                    )
+                    or existing.get(
+                        "last_reviewed"
+                    )
             }
     else:
         # Replace mode should overwrite only the mapped/imported questions while
@@ -636,7 +707,18 @@ def import_commit():
                 "bookmark": imp_val["bookmark"],
                 "skipped": imp_val["skipped"] if not imp_val["done"] else False,
                 "notes": imp_val["notes"],
-                "timestamp": timestamp
+                "timestamp": timestamp,
+
+                "revision_status":
+                    imp_val.get(
+                        "revision_status",
+                        "To Review"
+                    ),
+
+                "last_reviewed":
+                    imp_val.get(
+                        "last_reviewed"
+                    )
             }
 
     solved_items = {q_id: prog for q_id, prog in new_progress.items() if prog.get("done")}

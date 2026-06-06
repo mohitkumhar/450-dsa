@@ -1,3 +1,4 @@
+import logging
 import re
 from math import isfinite
 from datetime import date, datetime, timezone
@@ -7,6 +8,8 @@ from flask import jsonify
 from app.extensions import db
 from app.platforms.metadata import PLATFORM_META
 from app.search import service as search_service
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now():
@@ -284,6 +287,11 @@ def get_merged_daily_counts(user_doc):
         if merged:
             return merged
         return legacy if legacy else {}
+    elif _get_field(user_doc, "external_totals", {}):
+        logger.warning(
+            "User %s has external_totals but no platform_calendars in projection",
+            str(_get_field(user_doc, "_id", "")),
+        )
     return _get_field(user_doc, "external_daily_counts", {})
 
 
@@ -326,7 +334,8 @@ def compute_c_score(user_doc, all_questions=None):
             extra_progress_days.add(day_key)
     active_days = valid_external_days + len(extra_progress_days)
 
-    s_dsa = min(dsa_done / 450, 1.0) * 250
+    total_sheet_questions = len(all_questions) if all_questions else 450
+    s_dsa = min(dsa_done / total_sheet_questions, 1.0) * 250
     s_lc_total = min(lc_total / 500, 1.0) * 200
     s_lc_diff = min((lc_easy * 1 + lc_medium * 3 + lc_hard * 6) / 1500, 1.0) * 150
     s_lc_rating = min(lc_rating / 2500, 1.0) * 200
