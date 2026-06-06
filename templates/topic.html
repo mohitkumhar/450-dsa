@@ -226,6 +226,15 @@
                         aria-pressed="{{ 'true' if p and p.skipped else 'false' }}">
                         <i class="bi {% if p and p.skipped %}bi-skip-forward-fill{% else %}bi-skip-forward{% endif %}" aria-hidden="true"></i>
                     </button>
+                    <button class="action-icon report-btn"
+                        data-id="{{ q_id_str }}"
+                        data-problem="{{ q.problem }}"
+                        style="color:var(--text-muted);transition:color 0.2s"
+                        onmouseover="this.style.color='var(--accent)'"
+                        onmouseout="this.style.color='var(--text-muted)'"
+                        aria-label="Report issue for '{{ q.problem }}'">
+                        <i class="bi bi-flag" aria-hidden="true"></i>
+                    </button>
                 </td>
                 <td>
                     <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn"
@@ -255,6 +264,35 @@
 
 <!-- Notes Modal -->
 {{ notes_modal(textarea_label='Notes for this question') }}
+
+<!-- Report Modal -->
+<div class="app-modal" id="reportModal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+  <div class="app-modal__dialog" style="max-width: 480px;">
+    <h3 class="app-modal__title" id="reportModalTitle">
+      <i class="bi bi-flag-fill" style="color:var(--accent);" aria-hidden="true"></i>
+      <span>Report Question Issue</span>
+    </h3>
+    <p style="font-size:.8rem;color:var(--text-secondary);margin: 8px 0 16px 0;" id="reportModalSubtitle"></p>
+    <input type="hidden" id="reportQuestionId">
+    
+    <label class="m-lbl" style="display:block;font-size:0.75rem;font-weight:700;margin-bottom:6px;color:var(--text-secondary)">Issue Type</label>
+    <select class="m-inp" id="reportType" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:8px;padding:8px 12px;font-size:0.85rem;width:100%;margin-bottom:14px;font-family:inherit;outline:none;cursor:pointer;display:block">
+      <option value="broken_link">Broken / Stale URL Link</option>
+      <option value="typo">Typo or Spelling Mistake</option>
+      <option value="wrong_difficulty">Incorrect Difficulty Rating</option>
+      <option value="duplicate">Duplicate Problem Listing</option>
+      <option value="other">Other / Custom Feedback</option>
+    </select>
+
+    <label class="m-lbl" style="display:block;font-size:0.75rem;font-weight:700;margin-bottom:6px;color:var(--text-secondary)">Description / Details</label>
+    <textarea class="app-modal__textarea" id="reportDescription" placeholder="Provide details about the broken link, typo, duplicate, etc..." style="width:100%;margin-bottom:14px;min-height:100px;font-family:inherit;padding:10px;border-radius:8px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary)"></textarea>
+    
+    <div class="app-modal__actions" style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="ui-btn ui-btn-secondary" id="reportModalCancel" aria-label="Cancel reporting issue">Cancel</button>
+      <button class="ui-btn ui-btn-primary" id="saveReportBtn" aria-label="Submit report">Submit Report</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -657,6 +695,92 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
         this.classList.remove('btn-busy');
         this.removeAttribute('aria-busy');
     }, 2000);
+});
+
+// Endpoint for reporting questions
+endpointConfig.reportQuestion = "{{ url_for('tracker.report_question') }}";
+
+const reportModal = document.getElementById('reportModal');
+function openReportModal(triggerEl) {
+    reportModal.classList.add('open');
+    reportModal._trigger = triggerEl;
+    const focusable = reportModal.querySelectorAll(FOCUSABLE);
+    if (focusable.length) focusable[0].focus();
+    reportModal.addEventListener('keydown', trapReportFocus);
+}
+
+function closeReportModal() {
+    reportModal.classList.remove('open');
+    reportModal.removeEventListener('keydown', trapReportFocus);
+    if (reportModal._trigger) reportModal._trigger.focus();
+    document.getElementById('reportDescription').value = '';
+}
+
+function trapReportFocus(e) {
+    const focusable = Array.from(reportModal.querySelectorAll(FOCUSABLE));
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.key === 'Tab') {
+        if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+        else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+    }
+    if (e.key === 'Escape') closeReportModal();
+}
+
+document.querySelectorAll('.report-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (!isAuthenticated) { window.location.href = "{{ url_for('auth.login') }}"; return; }
+        document.getElementById('reportQuestionId').value = this.dataset.id;
+        document.getElementById('reportModalSubtitle').textContent = `Report bad links, typos, wrong difficulty, or duplicates for "${this.dataset.problem}".`;
+        openReportModal(this);
+    });
+});
+
+document.getElementById('reportModalCancel').addEventListener('click', closeReportModal);
+reportModal.addEventListener('click', e => { if (e.target === reportModal) closeReportModal(); });
+
+document.getElementById('saveReportBtn').addEventListener('click', function() {
+    const qId = document.getElementById('reportQuestionId').value;
+    const reportType = document.getElementById('reportType').value;
+    const description = document.getElementById('reportDescription').value;
+    
+    if (!description.trim()) {
+        alert('Please enter a description for the report.');
+        return;
+    }
+    
+    const previousContent = this.innerHTML;
+    this.disabled = true;
+    this.textContent = 'Submitting...';
+    
+    fetch(endpointConfig.reportQuestion, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            question_id: qId,
+            report_type: reportType,
+            description: description
+        })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            closeReportModal();
+            showToast('✅ Report submitted! Thank you! 🚀');
+        } else {
+            alert('❌ Submission failed: ' + res.error);
+        }
+    })
+    .catch(err => {
+        console.error('Error reporting question:', err);
+        alert('❌ Network error. Check connection.');
+    })
+    .finally(() => {
+        this.disabled = false;
+        this.innerHTML = previousContent;
+    });
 });
 
 </script>

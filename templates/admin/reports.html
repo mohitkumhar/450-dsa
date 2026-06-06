@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+.admin-title {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.admin-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(150deg, rgba(255, 107, 0, 0.08), rgba(59, 130, 246, 0.04));
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 107, 0, 0.08);
+}
+
+.stat-label {
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.admin-panels {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+}
+
+.panel-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.panel-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.panel-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    margin-top: 2px;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 9px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.action-btn.primary:hover:not(:disabled) {
+    background: #ff5500;
+    border-color: #ff5500;
+    color: #fff;
+}
+
+.action-btn.secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.action-btn.success-btn {
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #34d399;
+}
+.action-btn.success-btn:hover {
+    border-color: #10b981;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.action-btn.info-btn {
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #60a5fa;
+}
+.action-btn.info-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.action-btn.github-btn {
+    border-color: rgba(156, 163, 175, 0.35);
+    color: var(--text-primary);
+    background: rgba(156, 163, 175, 0.05);
+}
+.action-btn.github-btn:hover {
+    border-color: #f3f4f6;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.search-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 9px;
+    padding: 9px 12px;
+    width: 100%;
+    max-width: 320px;
+    font-family: inherit;
+    font-size: 0.85rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.table-wrap {
+    overflow-x: auto;
+    margin-top: 14px;
+}
+
+.reports-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.reports-table th,
+.reports-table td {
+    padding: 14px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    text-align: left;
+}
+
+.reports-table th {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+}
+
+.reports-table td {
+    font-size: 0.88rem;
+    vertical-align: middle;
+}
+
+.reports-table tr {
+    transition: background-color 0.25s ease;
+}
+
+.reports-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.015);
+}
+
+.issue-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.issue-badge.broken_link {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.issue-badge.typo {
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.08);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.issue-badge.wrong_difficulty {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.issue-badge.duplicate {
+    color: #ec4899;
+    background: rgba(236, 72, 153, 0.08);
+    border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+.issue-badge.other {
+    color: #6b7280;
+    background: rgba(107, 114, 128, 0.08);
+    border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 20px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid var(--border-color);
+}
+
+.status-badge.pending {
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.05);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.1);
+}
+
+.status-badge.reviewed {
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.status-badge.resolved {
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.empty-state {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    text-align: center;
+    padding: 40px 0;
+}
+
+.filter-tab-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-tab:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.filter-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+</style>
+
+<section class="admin-header">
+    <div>
+        <h1 class="admin-title"><i class="bi bi-flag-fill" style="color:var(--accent)"></i> In-App Metadata Reports</h1>
+        <p class="admin-subtitle">Review user-submitted reports regarding broken link URLs, typos, duplicates, or incorrect difficulties.</p>
+    </div>
+    <a class="action-btn" href="{{ url_for('admin.dashboard') }}">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</section>
+
+<section class="stats-grid">
+    <article class="stat-card">
+        <p class="stat-label">Total Reports</p>
+        <p class="stat-value" id="stat-total">{{ metrics.total }}</p>
+    </article>
+    <article class="stat-card" style="border-color:rgba(245, 158, 11, 0.2)">
+        <p class="stat-label" style="color:#f59e0b">Pending Reviews</p>
+        <p class="stat-value" id="stat-pending" style="color:#f59e0b">{{ metrics.pending }}</p>
+    </article>
+    <article class="stat-card" style="border-color:rgba(59, 130, 246, 0.2)">
+        <p class="stat-label" style="color:#60a5fa">Reviewed</p>
+        <p class="stat-value" id="stat-reviewed" style="color:#3b82f6">{{ metrics.reviewed }}</p>
+    </article>
+    <article class="stat-card" style="border-color:rgba(16, 185, 129, 0.2)">
+        <p class="stat-label" style="color:#34d399">Resolved</p>
+        <p class="stat-value" id="stat-resolved" style="color:#10b981">{{ metrics.resolved }}</p>
+    </article>
+</section>
+
+<section class="admin-panels">
+    <article class="panel">
+        <div class="panel-title-row">
+            <div>
+                <h2 class="panel-title">User Feedback Queue</h2>
+                <p class="panel-subtitle" id="table-subtitle">Showing {{ reports|length }} reports</p>
+            </div>
+            <input type="text" id="report-search" class="search-input" placeholder="Search by question, description, or user..." oninput="applyFilters()">
+        </div>
+
+        <div class="filter-tab-bar">
+            <button class="filter-tab active" data-filter="all" onclick="setFilter('all')">All Reports</button>
+            <button class="filter-tab" data-filter="pending" onclick="setFilter('pending')">Pending <span style="font-size:0.75rem;opacity:0.85">({{ metrics.pending }})</span></button>
+            <button class="filter-tab" data-filter="reviewed" onclick="setFilter('reviewed')">Reviewed <span style="font-size:0.75rem;opacity:0.85">({{ metrics.reviewed }})</span></button>
+            <button class="filter-tab" data-filter="resolved" onclick="setFilter('resolved')">Resolved <span style="font-size:0.75rem;opacity:0.85">({{ metrics.resolved }})</span></button>
+        </div>
+
+        <div class="table-wrap">
+            <table class="reports-table" id="reports-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%">Question Name</th>
+                        <th style="width: 12%">Type</th>
+                        <th style="width: 15%">Reporter &amp; Time</th>
+                        <th style="width: 25%">Details</th>
+                        <th style="width: 10%">Status</th>
+                        <th style="width: 18%">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reports-tbody">
+                    {% if reports %}
+                        {% for r in reports %}
+                        <tr class="report-row" 
+                            data-id="{{ r._id }}"
+                            data-status="{{ r.status }}" 
+                            data-question="{{ r.question_name|lower }}" 
+                            data-desc="{{ r.description|lower }}" 
+                            data-user="{{ r.reporter_name|lower }}"
+                            data-primary-url="{{ r.question_url or '' }}"
+                            data-secondary-url="{{ r.question_url2 or '' }}">
+                            <td>
+                                <div style="font-weight:700;margin-bottom:4px;color:var(--text-primary)">{{ r.question_name }}</div>
+                                <div style="display:flex;gap:8px;font-size:0.75rem">
+                                    {% if r.question_url %}
+                                    <a href="{{ r.question_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--info);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
+                                        <i class="bi bi-box-arrow-up-right"></i> Link 1
+                                    </a>
+                                    {% endif %}
+                                    {% if r.question_url2 %}
+                                    <a href="{{ r.question_url2 }}" target="_blank" rel="noopener noreferrer" style="color:var(--info);text-decoration:none;display:inline-flex;align-items:center;gap:3px">
+                                        <i class="bi bi-box-arrow-up-right"></i> Link 2
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="issue-badge {{ r.report_type }}">
+                                    {{ r.report_type|replace('_', ' ') }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="font-weight:600">{{ r.reporter_name }}</div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">
+                                    {{ r.created_at.strftime('%Y-%m-%d %H:%M') if r.created_at else 'Never' }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="max-height:80px;overflow-y:auto;font-size:0.82rem;line-height:1.4;white-space:pre-line;color:var(--text-secondary)">{{ r.description }}</div>
+                            </td>
+                            <td>
+                                <span class="status-badge {{ r.status }}">
+                                    <i class="bi bi-{% if r.status == 'pending' %}exclamation-circle-fill{% elif r.status == 'reviewed' %}eye-fill{% else %}check-circle-fill{% endif %}"></i>
+                                    {{ r.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    {% if r.status != 'reviewed' %}
+                                    <button class="action-btn info-btn" onclick="updateStatus('{{ r._id }}', 'reviewed')" title="Mark as Reviewed" style="padding:5px 8px;font-size:0.75rem">
+                                        <i class="bi bi-eye"></i> Review
+                                    </button>
+                                    {% endif %}
+                                    {% if r.status != 'resolved' %}
+                                    <button class="action-btn success-btn" onclick="updateStatus('{{ r._id }}', 'resolved')" title="Mark as Resolved" style="padding:5px 8px;font-size:0.75rem">
+                                        <i class="bi bi-check-lg"></i> Resolve
+                                    </button>
+                                    {% endif %}
+                                    <button class="action-btn github-btn" 
+                                            onclick="openGitHubIssue('{{ r.question_name|escape }}', '{{ r.report_type|escape }}', '{{ r.description|replace('\n', '\\n')|replace('\'', '\\\'')|escape }}', '{{ r.reporter_name|escape }}', '{{ r.question_url or '' }}', '{{ r.question_url2 or '' }}')" 
+                                            title="Export to GitHub Issues" 
+                                            style="padding:5px 8px;font-size:0.75rem">
+                                        <i class="bi bi-github"></i> Issue
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr id="empty-row">
+                            <td colspan="6" class="empty-state">
+                                <i class="bi bi-clipboard-check-fill" style="color:var(--success);font-size:2.5rem;display:block;margin-bottom:8px"></i>
+                                No user reports submitted yet! Everything is clean.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const csrfToken = "{{ csrf_token() }}";
+let activeFilter = 'all';
+
+function applyFilters() {
+    const searchVal = document.getElementById('report-search').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.report-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const question = row.getAttribute('data-question');
+        const desc = row.getAttribute('data-desc');
+        const user = row.getAttribute('data-user');
+        const status = row.getAttribute('data-status');
+
+        const matchesSearch = question.includes(searchVal) || desc.includes(searchVal) || user.includes(searchVal);
+        const matchesFilter = activeFilter === 'all' || status === activeFilter;
+
+        if (matchesSearch && matchesFilter) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    document.getElementById('table-subtitle').textContent = `Showing ${visibleCount} reports`;
+    
+    // Manage empty state row
+    const emptyRow = document.getElementById('empty-row');
+    if (visibleCount === 0 && rows.length > 0) {
+        if (!emptyRow) {
+            const tbody = document.getElementById('reports-tbody');
+            const tr = document.createElement('tr');
+            tr.id = 'empty-row';
+            tr.innerHTML = `<td colspan="6" class="empty-state">No matching reports found.</td>`;
+            tbody.appendChild(tr);
+        }
+    } else if (emptyRow && rows.length > 0) {
+        emptyRow.remove();
+    }
+}
+
+function setFilter(filterName) {
+    activeFilter = filterName;
+    
+    // Update active tab styling
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+        if (tab.getAttribute('data-filter') === filterName) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+
+    applyFilters();
+}
+
+function updateStatus(reportId, newStatus) {
+    showToast('⏳ Updating report status...', 'info');
+    fetch(`/admin/reports/${reportId}/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            showToast(`✅ Report marked as ${newStatus}!`, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast('❌ Error: ' + res.error, 'danger');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('❌ Network error.', 'danger');
+    });
+}
+
+function openGitHubIssue(questionName, reportType, description, reporter, primaryUrl, secondaryUrl) {
+    const formattedType = reportType.replace('_', ' ').toUpperCase();
+    const title = encodeURIComponent(`[Metadata Issue] ${questionName}`);
+    
+    // Decode escaped newlines for markdown body
+    const cleanDesc = description.replace(/\\n/g, '\n');
+    
+    const bodyText = `### Problem Information
+- **Question / Problem**: ${questionName}
+- **Report Type**: ${formattedType}
+- **Reporter**: ${reporter}
+
+### Issue Description / User Feedback
+${cleanDesc}
+
+### Question Links
+- **Primary URL**: ${primaryUrl ? `[Link](${primaryUrl})` : 'N/A'}
+- **Secondary URL**: ${secondaryUrl ? `[Link](${secondaryUrl})` : 'N/A'}
+
+---
+*Submitted securely via the In-App Question Reporting System.*`;
+
+    const body = encodeURIComponent(bodyText);
+    const githubUrl = `https://github.com/mohitkumhar/450-dsa/issues/new?title=${title}&body=${body}`;
+    
+    window.open(githubUrl, '_blank');
+}
+</script>
+{% endblock %}
