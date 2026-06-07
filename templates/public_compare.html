@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row mb-3">
+    <div class="col text-center">
+      <h2>Public Comparison</h2>
+      <p class="text-muted">Side-by-side summary of two public users' progress and platform totals.</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body text-center">
+          <img src="{{ user_a.avatar_url }}" alt="avatar" class="rounded-circle mb-2" width="96" height="96">
+          <h5 class="card-title">{{ user_a.username }}</h5>
+          <p class="mb-1">C-Score: <strong>{{ stats_a.c_score }}</strong></p>
+          <p class="mb-1">DSA Done: <strong>{{ stats_a.dsa_done }}</strong></p>
+          <p class="mb-1">Total Solved: <strong>{{ stats_a.total_solved }}</strong></p>
+          <p class="mb-1">Active Days: <strong>{{ stats_a.active_days }}</strong></p>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for name, value in platforms_a.items() %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ name }}
+            <span class="badge bg-primary rounded-pill">{{ value }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-body text-center">
+          <img src="{{ user_b.avatar_url }}" alt="avatar" class="rounded-circle mb-2" width="96" height="96">
+          <h5 class="card-title">{{ user_b.username }}</h5>
+          <p class="mb-1">C-Score: <strong>{{ stats_b.c_score }}</strong></p>
+          <p class="mb-1">DSA Done: <strong>{{ stats_b.dsa_done }}</strong></p>
+          <p class="mb-1">Total Solved: <strong>{{ stats_b.total_solved }}</strong></p>
+          <p class="mb-1">Active Days: <strong>{{ stats_b.active_days }}</strong></p>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for name, value in platforms_b.items() %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            {{ name }}
+            <span class="badge bg-primary rounded-pill">{{ value }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
