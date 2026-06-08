@@ -1,4 +1,5 @@
 import sys
+import uuid
 from unittest.mock import MagicMock
 
 import mongomock
@@ -33,6 +34,7 @@ def pytest_collection_modifyitems(config, items):
 def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
     test_db = mongomock.MongoClient().db
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("RATELIMIT_KEY_PREFIX", f"test-{uuid.uuid4()}")
 
     for target in (app_module, auth_routes, *extra_db_targets):
         monkeypatch.setattr(target, "db", test_db)

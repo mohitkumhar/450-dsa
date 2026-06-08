@@ -13,7 +13,12 @@
         "Notes": "",
         "URL": "https://www.geeksforgeeks.org/write-a-program-to-reverse-an-array-or-string/",
         "URL2": "https://www.codingninjas.com/codestudio/problems/reverse-the-array_1262298?topList=love-babbar-dsa-sheet-problems",
-        "difficulty": "Easy"
+        "difficulty": "Easy",
+        "hints": [
+          "Think about the expected pattern before coding.",
+          "Try identifying the main data structure needed.",
+          "Consider the edge cases before finalizing the solution."
+        ]
       },
       {
         "Topic": "Array",
@@ -23,7 +28,11 @@
         "Notes": "",
         "URL": "https://practice.geeksforgeeks.org/problems/find-minimum-and-maximum-element-in-an-array4428/1",
         "URL2": "https://www.codingninjas.com/codestudio/problems/sum-of-max-and-min_1081476?topList=love-babbar-dsa-sheet-problems",
-        "difficulty": "Medium"
+        "difficulty": "Medium",
+        "hints": [
+          "Can you solve this with minimum number of comparisons?",
+          "Try comparing elements in pairs."
+        ]
       },
       {
         "Topic": "Array",
