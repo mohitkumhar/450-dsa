@@ -36,3 +36,27 @@ def test_search_and_leaderboard_templates_use_url_for_route_config():
 
     assert '"publicProfileBase": url_for(\'public.public_profile\'' in leaderboard_template
     assert "`/u/${encodeURIComponent(e.user_id)}`" not in leaderboard_template
+
+
+def test_profile_autocomplete_uses_textcontent_not_innerhtml():
+    template = (TEMPLATE_DIR / "profile.html").read_text(encoding="utf-8")
+    assert "spanName.textContent = item.name" in template
+    assert "spanCountry.textContent = item.country" in template
+
+
+def test_base_template_defines_escape_html():
+    template = (TEMPLATE_DIR / "base.html").read_text(encoding="utf-8")
+    assert "window.escapeHtml = function" in template
+
+
+def test_search_template_uses_global_escape_html():
+    template = (TEMPLATE_DIR / "search.html").read_text(encoding="utf-8")
+    assert "escapeHtml(" in template
+    assert "function escapeHtml" not in template
+
+
+def test_leaderboard_template_uses_global_escape_html():
+    template = (TEMPLATE_DIR / "leaderboard.html").read_text(encoding="utf-8")
+    assert "escapeHtml(" in template
+    assert "function escapeHTML" not in template
+    assert "function escapeHtml" not in template

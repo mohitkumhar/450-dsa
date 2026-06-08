@@ -281,14 +281,6 @@ let currentUserRank = null;
 let isLoading = false;
 let leaderboardController = null;
 
-function escapeHTML(str) {
-  if (typeof str !== 'string' && typeof str !== 'number') return '';
-  str = String(str);
-  return str.replace(/[&<>"']/g, function(c) {
-    return '&#' + c.charCodeAt(0) + ';';
-  });
-}
-
 function safeURL(url) {
   if (!url) return '';
   try {
@@ -314,9 +306,9 @@ function getScoreClass(mode) {
 
 function avatarHTML(entry, size = 36) {
   if (entry.profile_photo) {
-    return `<img src="${safeURL(entry.profile_photo)}" alt="${escapeHTML(entry.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    return `<img src="${safeURL(entry.profile_photo)}" alt="${escapeHtml(entry.name)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   }
-  return escapeHTML((entry.name || '?')[0].toUpperCase());
+  return escapeHtml((entry.name || '?')[0].toUpperCase());
 }
 
 function renderLeaderboardError(error) {
@@ -324,7 +316,7 @@ function renderLeaderboardError(error) {
   currentPage = 1;
   totalPages = 1;
   currentUserRank = null;
-  document.getElementById('lbBody').innerHTML = `<tr><td colspan="5" class="loading">${escapeHTML(message)}</td></tr>`;
+  document.getElementById('lbBody').innerHTML = `<tr><td colspan="5" class="loading">${escapeHtml(message)}</td></tr>`;
   renderPagination();
 }
 
@@ -397,17 +389,17 @@ function renderTable(entries, mode) {
       ? endpointConfig.publicProfileBase.replace('__USER_ID__', encodeURIComponent(e.user_id))
       : '';
     const nameHTML = isCollegeMode
-      ? `${escapeHTML(e.college)}`
-      : `<a href="${profileURL}" aria-label="View profile of ${escapeHTML(e.name)}">${escapeHTML(e.name)}</a>${isMe ? '<span class="me-tag" aria-label="This is you">YOU</span>' : ''}`;
+      ? `${escapeHtml(e.college)}`
+      : `<a href="${profileURL}" aria-label="View profile of ${escapeHtml(e.name)}">${escapeHtml(e.name)}</a>${isMe ? '<span class="me-tag" aria-label="This is you">YOU</span>' : ''}`;
     
     const subtitleHTML = isCollegeMode
-      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} · Top: ${escapeHTML(e.top_user?.name || 'N/A')}`
-      : (escapeHTML(e.college) || '—');
+      ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} · Top: ${escapeHtml(e.top_user?.name || 'N/A')}`
+      : (escapeHtml(e.college) || '—');
     
     const dsaHTML = `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
     
     const compareHTML = (CURRENT_USER_ID && !isMe && e.user_id)
-      ? `<a class="pagination-btn" style="margin-left:8px" href="${endpointConfig.compareBase.replace('__USER_ID__', encodeURIComponent(e.user_id))}" aria-label="Compare with ${escapeHTML(e.name)}">Compare</a>`
+      ? `<a class="pagination-btn" style="margin-left:8px" href="${endpointConfig.compareBase.replace('__USER_ID__', encodeURIComponent(e.user_id))}" aria-label="Compare with ${escapeHtml(e.name)}">Compare</a>`
       : '';
 
     const platformHTML = isCollegeMode
@@ -422,7 +414,7 @@ function renderTable(entries, mode) {
         <td class="rank-cell ${rankClass}" aria-label="Rank ${rank}">${rankIcon}</td>
         <td>
           <div class="user-cell">
-            <div class="user-cell-avatar" aria-label="Avatar for ${escapeHTML(e.name)}">${avatarHTML(e)}</div>
+            <div class="user-cell-avatar" aria-label="Avatar for ${escapeHtml(e.name)}">${avatarHTML(e)}</div>
             <div class="user-cell-info">
               <div class="user-cell-name">${nameHTML}</div>
               <div class="user-cell-college">${subtitleHTML}</div>
@@ -440,7 +432,7 @@ function renderTable(entries, mode) {
     html += `<tr class="current-user-pinned me-row">
       <td colspan="5" style="text-align: center; padding: 12px;">
         <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
-        You are ranked #${escapeHTML(currentUserRank)} in this category. 
+        You are ranked #${escapeHtml(currentUserRank)} in this category. 
         <a href="?page=${targetPage}&mode=${encodeURIComponent(activeMode)}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
       </td>
     </tr>`;
