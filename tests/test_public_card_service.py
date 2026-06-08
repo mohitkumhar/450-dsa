@@ -62,7 +62,7 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
     monkeypatch.setattr("app.profile.card_service.db", fake_db)
     monkeypatch.setattr("app.profile.card_service.card_cache", fake_cache)
     monkeypatch.setattr("app.profile.card_service.compute_c_score", lambda user_doc: {"c_score": 144, "dsa_done": 1})
-    monkeypatch.setattr("app.profile.card_service.compute_streak", lambda progress: (4, 8))
+    monkeypatch.setattr("app.profile.card_service.compute_streak", lambda progress, **kw: (4, 8))
     monkeypatch.setattr("app.profile.card_service.compute_user_platforms", lambda solved, totals, all_questions: {"LeetCode": 12})
     monkeypatch.setattr("app.profile.card_service.card_generator.generate_progress_card", fake_generate)
 

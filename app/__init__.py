@@ -133,8 +133,8 @@ def create_app(config_class=None):
 
     oauth.register(
         name="github",
-        client_id=os.environ.get("GITHUB_CLIENT_ID", "your-github-client-id"),
-        client_secret=os.environ.get("GITHUB_CLIENT_SECRET", "your-github-client-secret"),
+        client_id=os.environ.get("GITHUB_CLIENT_ID"),
+        client_secret=os.environ.get("GITHUB_CLIENT_SECRET"),
         access_token_url="https://github.com/login/oauth/access_token",
         access_token_params=None,
         authorize_url="https://github.com/login/oauth/authorize",
@@ -145,8 +145,8 @@ def create_app(config_class=None):
 
     oauth.register(
         name="google",
-        client_id=os.environ.get("GOOGLE_CLIENT_ID", "your-google-client-id"),
-        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET", "your-google-client-secret"),
+        client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid email profile"},
     )
@@ -184,16 +184,17 @@ def create_app(config_class=None):
                     questions = []
                     for question in topic["questions"]:
                         difficulty = question.get("difficulty", "Medium")
-                        questions.append(
-                            {
-                                "topic": topic_id,
-                                "problem": question["Problem"],
-                                "url": question["URL"],
-                                "url2": question.get("URL2", ""),
-                                "editorial_links": question_editorial_links(question),
-                                "difficulty": difficulty,
-                            }
-                        )
+                        q_data = {
+                            "topic": topic_id,
+                            "problem": question["Problem"],
+                            "url": question["URL"],
+                            "url2": question.get("URL2", ""),
+                            "editorial_links": question_editorial_links(question),
+                            "difficulty": difficulty,
+                        }
+                        if "hints" in question:
+                            q_data["hints"] = question["hints"]
+                        questions.append(q_data)
                     if questions:
                         db.question.insert_many(questions)
             return
@@ -211,6 +212,13 @@ def create_app(config_class=None):
             topic_id = topic_doc["_id"]
             for question in topic["questions"]:
                 difficulty = question.get("difficulty", "Medium")
+                set_fields = {
+                    "url2": question.get("URL2", ""),
+                    "editorial_links": question_editorial_links(question),
+                    "difficulty": difficulty,
+                }
+                if "hints" in question:
+                    set_fields["hints"] = question["hints"]
                 db.question.update_one(
                     {
                         "topic": topic_id,
@@ -218,11 +226,7 @@ def create_app(config_class=None):
                         "url": question["URL"],
                     },
                     {
-                        "$set": {
-                            "url2": question.get("URL2", ""),
-                            "editorial_links": question_editorial_links(question),
-                            "difficulty": difficulty,
-                        }
+                        "$set": set_fields
                     },
                     upsert=True,
                 )

@@ -13,8 +13,7 @@ from app.decorators import admin_required
 from app.extensions import cache, db
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.sync_service import clear_profile_caches
-from app.utils import get_merged_daily_counts
-from app.utils.helpers import log_admin_action
+
 
 admin_bp = Blueprint("admin", __name__, template_folder="templates")
 
@@ -24,7 +23,7 @@ def _safe_int(value, default=0):
     except (TypeError, ValueError):
         return default
 
-@admin_bp.route("/dashboard", methods=["GET"])
+
 @login_required
 @admin_required
 def dashboard():
