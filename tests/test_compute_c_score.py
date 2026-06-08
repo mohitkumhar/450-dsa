@@ -1,9 +1,12 @@
+from datetime import date, datetime, timezone
+
 from app.utils import (
     compute_c_score,
     compute_in_sheet_platform_counts,
     compute_total_solved,
     compute_user_platforms,
     merge_platform_counts,
+    normalize_timestamp,
 )
 
 
@@ -334,3 +337,33 @@ def test_return_keys_present():
         "cw_total", "active_days", "total_solved",
     }
     assert expected_keys == set(result.keys())
+
+
+def test_normalize_timestamp_from_datetime():
+    ts = datetime(2026, 5, 1, 12, 30, 0, tzinfo=timezone.utc)
+    assert normalize_timestamp(ts) == "2026-05-01"
+
+
+def test_normalize_timestamp_from_date():
+    ts = date(2026, 5, 1)
+    assert normalize_timestamp(ts) == "2026-05-01"
+
+
+def test_normalize_timestamp_from_iso_string():
+    assert normalize_timestamp("2026-05-01") == "2026-05-01"
+
+
+def test_normalize_timestamp_from_iso_string_with_time():
+    assert normalize_timestamp("2026-05-01T12:30:00Z") == "2026-05-01"
+
+
+def test_normalize_timestamp_returns_none_for_none():
+    assert normalize_timestamp(None) is None
+
+
+def test_normalize_timestamp_returns_none_for_invalid_type():
+    assert normalize_timestamp(12345) is None
+
+
+def test_normalize_timestamp_returns_none_for_garbage_string():
+    assert normalize_timestamp("not-a-date") is None

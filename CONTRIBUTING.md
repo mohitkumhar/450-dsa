@@ -254,3 +254,7 @@ test: add tests for search filters
 ---
 
 Thanks for contributing! 🙌
+
+
+### GSSoC Fetchers Testing Rules
+- Mock external DSA platform response payloads.

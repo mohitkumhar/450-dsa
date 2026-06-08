@@ -17,3 +17,6 @@ CLAUDE.md
 GEMINI.md
 .codex
 out.html
+instance/*.db
+.env.*
+!.env.example

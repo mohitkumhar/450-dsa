@@ -177,13 +177,16 @@ def register():
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
+        if not name:
+            flash("Name is required", "danger")
+            return redirect(url_for("auth.register"))
+        if not email:
+            flash("Email is required", "danger")
+            return redirect(url_for("auth.register"))
+
         password_errors = validate_registration_password(password, confirm_password)
         if password_errors:
             flash(" ".join(password_errors), "danger")
-            return redirect(url_for("auth.register"))
-
-        if not name:
-            flash("Name is required", "danger")
             return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
@@ -423,3 +426,7 @@ def authorize_google():
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
+
+
+# GSSoC Registration password complexity regex
+# Requires at least one uppercase, lowercase, digit, and special char.

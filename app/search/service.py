@@ -187,19 +187,18 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
         or difficulty_filter in DIFFICULTY_FILTERS
         or status_filter == "undone"
     )
-    fetch_limit = limit * 4 if post_fetch_filters else limit
+    fetch_limit = None if requested_platforms else (limit * 4 if post_fetch_filters else limit)
     if difficulty_filter in DIFFICULTY_FILTERS:
         projection["difficulty"] = 1
 
     if query_tokens:
         projection["score"] = {"$meta": "textScore"}
-        cursor = (
-            db_handle.question.find(mongo_query, projection)
-            .sort([("score", {"$meta": "textScore"})])
-            .limit(fetch_limit)
-        )
+        cursor = db_handle.question.find(mongo_query, projection).sort([("score", {"$meta": "textScore"})])
     else:
-        cursor = db_handle.question.find(mongo_query, projection).limit(fetch_limit)
+        cursor = db_handle.question.find(mongo_query, projection)
+
+    if fetch_limit is not None:
+        cursor = cursor.limit(fetch_limit)
 
     questions = list(cursor)
     topic_ids = list({question.get("topic") for question in questions if question.get("topic")})

@@ -5,6 +5,8 @@
 Track your progress through Love Babbar's 450 DSA problems — with platform sync, leaderboard, and more.
 
 [![Open For PR](https://img.shields.io/badge/Open%20For-PR-orange?style=for-the-badge&logo=github)](https://github.com/mohitkumhar/450-dsa)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-red?style=flat&logo=shield)](SECURITY.md)
+[![Code Style](https://img.shields.io/badge/Code%20Style-PEP8-blue?style=flat&logo=python)](https://peps.python.org/pep-0008/)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat&logo=python)
 ![Flask](https://img.shields.io/badge/Flask-2.3-black?style=flat&logo=flask)
 ![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat&logo=mongodb)
@@ -24,7 +26,7 @@ A full-stack Flask web app to help you track, manage, and share your DSA journey
 - **Notes** — write and save personal notes per question
 - **Search** — full-text search with topic, difficulty, platform, and status filters
 - **OAuth login** — sign in with GitHub or Google, or register with email/password
-- **Platform sync** — connect LeetCode, GFG, GitHub, HackerRank, Coding Ninjas and pull your stats
+- **Platform sync** — connect LeetCode, GFG, GitHub, HackerRank, Coding Ninjas, AtCoder, and Codewars and pull your stats
 - **Profile dashboard** — activity heatmap, rating chart, difficulty breakdown, badges
 - **Leaderboard** — ranked by C-Score (composite score across all platforms)
 - **Public profiles** — shareable profile cards
@@ -34,11 +36,76 @@ A full-stack Flask web app to help you track, manage, and share your DSA journey
 
 ---
 
+## Platform Sync Guide
+
+### Supported Platforms
+
+The platform sync feature currently supports:
+
+- LeetCode
+- GitHub
+- GeeksforGeeks (GFG)
+- HackerRank
+- Coding Ninjas
+- AtCoder
+- Codewars
+
+### Username and Profile Formats
+
+Provide the platform username or handle for supported platforms.
+
+For Coding Ninjas, you may provide either:
+
+- A profile ID
+- A full Coding Ninjas profile URL
+
+### Sync Cooldown
+
+Platform sync requests are rate limited to avoid excessive requests to external services.
+
+After a sync attempt, users must wait **10 minutes** before starting another sync. If a sync is attempted before the cooldown expires, the remaining wait time is returned in the response.
+
+### Sync Status Indicators
+
+Each platform reports its sync result independently:
+
+| Status    | Meaning                                       |
+| --------- | --------------------------------------------- |
+| `synced`  | Platform data was fetched successfully        |
+| `failed`  | Platform data could not be fetched            |
+| `skipped` | Platform was not included in the sync request |
+
+### Partial Success Handling
+
+Platform sync operations are processed independently.
+
+- If at least one platform syncs successfully, the overall request is considered successful.
+- If some platforms succeed and others fail, the response includes `partial_success: true`.
+- If all requested platforms fail, the sync request is considered unsuccessful.
+- If no platforms are provided, no sync attempt is performed.
+
+### Troubleshooting
+
+Common causes of sync failures include:
+
+- Invalid username or handle
+- Incorrect Coding Ninjas profile ID or URL
+- No solved problems found on the platform
+- External API rate limits
+- Temporary platform outages
+- External service errors
+
+If a platform fails to sync, verify the supplied username or profile information and try again later.
+
+> **Note:** If you recently changed your username on a platform,
+> allow some time for the change to propagate before syncing again.
+
 ## Quick Start
 
 ### Option 1 — Local setup
 
 **1. Clone and set up environment**
+
 ```bash
 git clone https://github.com/mohitkumhar/450-dsa.git
 cd 450-dsa
@@ -57,12 +124,14 @@ pip install -r requirements-dev.txt
 ```
 
 **2. Configure environment variables**
+
 ```bash
 cp .env.example .env   # macOS/Linux
 copy .env.example .env  # Windows
 ```
 
 Edit `.env` and fill in your values:
+
 ```env
 # REQUIRED - generate your own first:
 # python -c "import secrets; print(secrets.token_hex(32))"
@@ -88,6 +157,7 @@ CLOUDINARY_API_SECRET=your-api-secret
 The app warns and generates a temporary `SECRET_KEY` if the variable is missing or still set to an insecure placeholder. Set a real generated secret in deployed environments so user sessions persist across restarts. If a secret was ever committed or shared, rotate it before running the app again.
 
 **3. Run**
+
 ```bash
 python run.py
 ```
@@ -145,6 +215,7 @@ Open `http://localhost:5000`.
 The app uses **MongoDB** (via Flask-PyMongo). There is no SQLite or SQLAlchemy — those were part of an earlier version.
 
 **Collections:**
+
 - `user` — user accounts, progress, platform usernames, external stats
 - `topic` — DSA topic names and ordering
 - `question` — all 450+ problems with URLs
@@ -157,38 +228,38 @@ You can use [MongoDB Atlas](https://cloud.mongodb.com) (free M0 tier) or a local
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Dashboard — all topics with progress |
-| GET | `/topic/<id>` | Questions for a topic |
-| GET | `/search` | Search page |
-| GET | `/bookmarks` | Saved bookmarks |
-| GET | `/profile` | User profile dashboard |
-| GET | `/leaderboard` | Global leaderboard |
-| GET | `/u/<user_id>` | Public profile |
-| GET | `/api/search_questions` | Search API (supports `q`, `topic_id`, `difficulty`, `platform`, `status`, `limit`) |
-| GET | `/api/leaderboard` | Leaderboard API (supports `mode`: cscore, questions, rating, college) |
-| POST | `/update_question/<id>` | Update done/bookmark/notes for a question |
-| POST | `/sync_platforms` | Sync external platform stats |
-| POST | `/edit_profile` | Update profile fields |
-| POST | `/upload_photo` | Upload profile photo |
-| POST | `/delete_account` | Permanently delete account (GDPR) |
-| GET | `/search_universities` | University autocomplete |
+| Method | Endpoint                | Description                                                                        |
+| ------ | ----------------------- | ---------------------------------------------------------------------------------- |
+| GET    | `/`                     | Dashboard — all topics with progress                                               |
+| GET    | `/topic/<id>`           | Questions for a topic                                                              |
+| GET    | `/search`               | Search page                                                                        |
+| GET    | `/bookmarks`            | Saved bookmarks                                                                    |
+| GET    | `/profile`              | User profile dashboard                                                             |
+| GET    | `/leaderboard`          | Global leaderboard                                                                 |
+| GET    | `/u/<user_id>`          | Public profile                                                                     |
+| GET    | `/api/search_questions` | Search API (supports `q`, `topic_id`, `difficulty`, `platform`, `status`, `limit`) |
+| GET    | `/api/leaderboard`      | Leaderboard API (supports `mode`: cscore, questions, rating, college)              |
+| POST   | `/update_question/<id>` | Update done/bookmark/notes for a question                                          |
+| POST   | `/sync_platforms`       | Sync external platform stats                                                       |
+| POST   | `/edit_profile`         | Update profile fields                                                              |
+| POST   | `/upload_photo`         | Upload profile photo                                                               |
+| POST   | `/delete_account`       | Permanently delete account (GDPR)                                                  |
+| GET    | `/search_universities`  | University autocomplete                                                            |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Flask 2.3 |
-| Database | MongoDB (Flask-PyMongo) |
-| Auth | Flask-Login, Flask-Bcrypt, Authlib (OAuth) |
-| Rate limiting | Flask-Limiter |
-| Frontend | Jinja2, Bootstrap Icons, Chart.js |
-| Photo storage | Cloudinary |
-| Testing | Pytest |
-| Deployment | Docker, Vercel |
+| Layer         | Technology                                 |
+| ------------- | ------------------------------------------ |
+| Backend       | Flask 2.3                                  |
+| Database      | MongoDB (Flask-PyMongo)                    |
+| Auth          | Flask-Login, Flask-Bcrypt, Authlib (OAuth) |
+| Rate limiting | Flask-Limiter                              |
+| Frontend      | Jinja2, Bootstrap Icons, Chart.js          |
+| Photo storage | Cloudinary                                 |
+| Testing       | Pytest                                     |
+| Deployment    | Docker, Vercel                             |
 
 ---
 
@@ -203,17 +274,17 @@ pytest
 
 ## Environment Variables Reference
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SECRET_KEY` | Recommended | Flask session secret. Must be a real generated secret, not a placeholder. Missing or insecure values fall back to a temporary key and reset sessions on restart. |
-| `MONGO_URI` | Yes | MongoDB connection string |
-| `GITHUB_CLIENT_ID` | No | GitHub OAuth app client ID |
-| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth app client secret |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
-| `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud name for photo uploads |
-| `CLOUDINARY_API_KEY` | No | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | No | Cloudinary API secret |
+| Variable                | Required    | Description                                                                                                                                                      |
+| ----------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SECRET_KEY`            | Recommended | Flask session secret. Must be a real generated secret, not a placeholder. Missing or insecure values fall back to a temporary key and reset sessions on restart. |
+| `MONGO_URI`             | Yes         | MongoDB connection string                                                                                                                                        |
+| `GITHUB_CLIENT_ID`      | No          | GitHub OAuth app client ID                                                                                                                                       |
+| `GITHUB_CLIENT_SECRET`  | No          | GitHub OAuth app client secret                                                                                                                                   |
+| `GOOGLE_CLIENT_ID`      | No          | Google OAuth client ID                                                                                                                                           |
+| `GOOGLE_CLIENT_SECRET`  | No          | Google OAuth client secret                                                                                                                                       |
+| `CLOUDINARY_CLOUD_NAME` | No          | Cloudinary cloud name for photo uploads                                                                                                                          |
+| `CLOUDINARY_API_KEY`    | No          | Cloudinary API key                                                                                                                                               |
+| `CLOUDINARY_API_SECRET` | No          | Cloudinary API secret                                                                                                                                            |
 
 ---
 
@@ -227,3 +298,7 @@ pytest
 ## Contributing
 
 PRs are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening one.
+
+### GSSoC Flask Redis Caching Guide
+
+- Enable Redis cache invalidation on list updates.

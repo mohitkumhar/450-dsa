@@ -86,6 +86,9 @@
     <a href="{{ url_for('tracker.export_topic_notes', topic_id=topic._id|string) }}" class="export-notes-btn" aria-label="Export notes for this topic">
         <i class="bi bi-download" aria-hidden="true"></i> Export Notes
     </a>
+    <button type="button" class="export-notes-btn reset-progress-btn" id="resetTopicProgressBtn" aria-label="Reset progress for this topic">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset Progress
+    </button>
     {% endif %}
 </div>
 
@@ -139,6 +142,7 @@
                 <th scope="col">Difficulty</th>
                 <th scope="col">Save</th>
                 <th scope="col">Notes</th>
+                <th scope="col">Revision</th>
             </tr>
         </thead>
         <tbody>
@@ -182,6 +186,21 @@
                             </a>
                         {% endfor %}
                     </div>
+                    {% if q.hints %}
+                      <div class="hints-container" id="hints-container-{{ q_id_str }}" data-hints-total="{{ q.hints|length }}" data-hints-revealed="0">
+                        <button type="button" class="show-hint-btn ui-btn ui-btn-secondary ui-btn-sm" data-question-id="{{ q_id_str }}">
+                          Show Hint
+                        </button>
+
+                        <ul class="hints-list" id="hints-list-{{ q_id_str }}">
+                          {% for hint in q.hints %}
+                            <li class="hint-item hidden" data-hint-index="{{ loop.index0 }}">
+                              {{ hint }}
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      </div>
+                    {% endif %}
                 </td>
                 <td>
                     <span class="difficulty-badge difficulty-{{ difficulty|lower }}" aria-label="{{ difficulty }} difficulty question">
@@ -214,10 +233,49 @@
                         {% if p and p.notes %}Edit{% else %}Add{% endif %}
                     </button>
                 </td>
+
+               <td>
+                    <select
+                        class="revision-select"
+                        data-id="{{ q_id_str }}"
+                    >
+                        <option value="To Review"
+                            {% if not p or p.get('revision_status', 'To Review') == 'To Review' %}
+                            selected
+                            {% endif %}
+                        >
+                            To Review
+                        </option>
+
+                        <option value="Reviewed"
+                            {% if p and p.get('revision_status') == 'Reviewed' %}
+                            selected
+                            {% endif %}
+                        >
+                            Reviewed
+                        </option>
+
+                        <option value="Needs Practice"
+                            {% if p and p.get('revision_status') == 'Needs Practice' %}
+                            selected
+                            {% endif %}
+                        >
+                            Needs Practice
+                        </option>
+                    </select>
+
+                    <!-- LAST REVIEWED -->
+                    {% if p and p.get('last_reviewed') %}
+                    <div style="font-size:11px;color:#888;margin-top:4px;">
+                        Last reviewed:
+                        {{ p.get('last_reviewed').strftime('%d %b %Y %H:%M') }}
+                    </div>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
             <tr id="empty-state-row" style="display:none;">
-                <td colspan="6" class="text-center" style="padding: 2rem;">
+                <td colspan="7" class="text-center" style="padding: 2rem;">
                     <p style="margin-bottom: 0.75rem; color: var(--text-muted, #888);">
                         No questions match the selected difficulty.
                     </p>
@@ -236,6 +294,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/topic.js') }}"></script>
 <script>
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
@@ -380,21 +439,21 @@ if (navigator.onLine) flushQueue();
 // Update the checkbox event listener
 document.querySelectorAll('.status-checkbox').forEach(cb => {
     cb.addEventListener('change', function() {
-        if (!isAuthenticated) { 
-            this.checked = !this.checked; 
-            window.location.href = "{{ url_for('auth.login') }}"; 
-            return; 
+        if (!isAuthenticated) {
+            this.checked = !this.checked;
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
         }
         const row = document.getElementById('row-' + this.dataset.id);
         const previousChecked = !this.checked;
         const nextChecked = this.checked;
         this.disabled = true;
         row.classList.add('row-updating');
-        
+
         // Update ARIA label
         const problemName = row.querySelector('.q-name')?.textContent || 'Question';
         this.setAttribute('aria-label', nextChecked ? `Mark '${problemName}' as incomplete` : `Mark '${problemName}' as complete`);
-        
+
         row.classList.toggle('row-done', nextChecked);
         updateQuestion(this.dataset.id, {done: nextChecked})
             .catch(() => {
@@ -419,9 +478,9 @@ function setSkippedState(btn, isSkipped) {
 
 document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-        if (!isAuthenticated) { 
-            window.location.href = "{{ url_for('auth.login') }}"; 
-            return; 
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
         }
         const isBookmarked = this.dataset.bookmarked === 'true';
         const newStatus = !isBookmarked;
@@ -505,6 +564,44 @@ document.querySelectorAll('.filter-btn[data-status]').forEach(btn => {
     }
 })();
 
+const resetTopicProgressBtn = document.getElementById('resetTopicProgressBtn');
+if (resetTopicProgressBtn) {
+    resetTopicProgressBtn.addEventListener('click', async function() {
+        if (!isAuthenticated) {
+            window.location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+
+        if (!window.confirm('Reset all done and skipped progress for this topic?')) {
+            return;
+        }
+
+        const previousLabel = this.innerHTML;
+        this.disabled = true;
+        this.classList.add('btn-busy');
+        this.setAttribute('aria-busy', 'true');
+
+        try {
+            const response = await fetch(endpointConfig.resetTopicProgress, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Reset failed');
+            }
+            window.location.reload();
+        } catch (error) {
+            showUpdateError('Unable to reset topic progress. Please try again.');
+        } finally {
+            this.disabled = false;
+            this.classList.remove('btn-busy');
+            this.removeAttribute('aria-busy');
+            this.innerHTML = previousLabel;
+        }
+    });
+}
+
 // Notes Modal with focus trap
 const modal = document.getElementById('notesModal');
 const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
@@ -579,14 +676,14 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
     this.setAttribute('aria-busy', 'true');
     const rows = Array.from(document.querySelectorAll('#questions-table tbody tr:not(#empty-state-row)'))
         .filter(row => row.style.display !== 'none');
-    
+
     if (rows.length === 0) {
         this.classList.remove('btn-busy');
         this.removeAttribute('aria-busy');
         alert('No questions available!');
         return;
     }
-    
+
     const randomRow = rows[Math.floor(Math.random() * rows.length)];
     randomRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     randomRow.style.outline = '2px solid var(--accent)';
@@ -597,5 +694,36 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
     }, 2000);
 });
 
+document.querySelectorAll('.revision-select').forEach(select => {
+
+    select.addEventListener('change', function() {
+
+        const previous = this.dataset.previous || "To Review";
+        const currentSelect = this;
+
+        updateQuestion(
+            this.dataset.id,
+            {
+                revision_status: this.value
+            }
+        )
+        .then(() => {
+            currentSelect.dataset.previous =
+                currentSelect.value;
+        })
+        .catch(() => {
+
+            currentSelect.value = previous;
+
+            showUpdateError(
+                "Unable to update revision status"
+            );
+        });
+
+    });
+
+    select.dataset.previous = select.value;
+
+});
 </script>
 {% endblock %}
