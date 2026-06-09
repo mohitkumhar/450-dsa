@@ -10,8 +10,10 @@ from flask import session
 from flask_login import current_user, login_required
 
 from app.decorators import admin_required
-from app.extensions import db
-from app.utils import get_merged_daily_counts
+from app.extensions import cache, db
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.profile.sync_service import clear_profile_caches
+
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -66,39 +68,58 @@ def _recent_error_logs(max_entries=120):
 
 def _compute_system_stats():
     total_users = db.user.count_documents({})
-
-    total_submissions = 0
-    active_users_today = set()
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    projection = {"progress": 1, "external_totals": 1, "external_daily_counts": 1, "platform_calendars": 1}
-    for user in db.user.find({}, projection):
-        progress = user.get("progress") or {}
-        solved_in_app = 0
+    total_submissions = 0
+    active_users_today = 0
 
-        for progress_item in progress.values():
-            if progress_item.get("done"):
-                solved_in_app += 1
-                solved_at = progress_item.get("timestamp")
-                if solved_at and hasattr(solved_at, "strftime") and solved_at.strftime("%Y-%m-%d") == today:
-                    active_users_today.add(user["_id"])
+    pipeline = [
+        {"$match": {"is_deactivated": {"$ne": True}}},
+        {"$project": {
+            "progress_array": {"$objectToArray": {"$ifNull": ["$progress", {}]}},
+            "ext_totals": {"$ifNull": ["$external_totals", {}]},
+            "ext_daily": {"$ifNull": ["$external_daily_counts", {}]},
+            "platform_calendars": 1,
+        }},
+    ]
 
-        external_totals = user.get("external_totals") or {}
-        external_solved = sum(
-            max(external_totals.get(key, 0), 0)
-            for key in ("LeetCode", "GFG", "Coding Ninjas", "HackerRank")
+    for user in db.user.aggregate(pipeline):
+        solved_count = 0
+        user_active = False
+        for p in user.get("progress_array", []):
+            if p.get("v", {}).get("done"):
+                solved_count += 1
+                ts = p["v"].get("timestamp")
+                if ts and hasattr(ts, "strftime") and ts.strftime("%Y-%m-%d") == today:
+                    user_active = True
+
+        ext = user.get("ext_totals", {})
+        ext_solved = sum(
+            max(ext.get(k, 0), 0)
+            for k in ("LeetCode", "GFG", "Coding Ninjas", "HackerRank")
         )
 
-        daily_counts = get_merged_daily_counts(user)
-        if daily_counts.get(today, 0) > 0:
-            active_users_today.add(user["_id"])
+        if not user_active:
+            ext_daily = user.get("ext_daily", {})
+            if ext_daily.get(today, 0) > 0:
+                user_active = True
 
-        total_submissions += solved_in_app + external_solved
+        if not user_active:
+            calendars = user.get("platform_calendars", {})
+            if isinstance(calendars, dict):
+                for cal in calendars.values():
+                    if isinstance(cal, dict) and cal.get(today, 0) > 0:
+                        user_active = True
+                        break
+
+        total_submissions += solved_count + ext_solved
+        if user_active:
+            active_users_today += 1
 
     return {
         "total_users": total_users,
         "total_submissions": total_submissions,
-        "active_users_today": len(active_users_today),
+        "active_users_today": active_users_today,
     }
 
 
@@ -197,6 +218,9 @@ def delete_user(user_id):
     result = db.user.delete_one({"_id": target_id})
     if result.deleted_count != 1:
         abort(500)
+
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, target_id)
 
     display_name = target_user.get("name") or target_user.get("email") or "user"
     flash(f"Deleted account for {display_name}.", "success")

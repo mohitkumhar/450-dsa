@@ -74,6 +74,25 @@
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
       <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
     </a>
+    {% set milestone_certs = [
+      {'id': '100-solved', 'label': '100 Solved', 'eligible': dsa_done >= 100},
+      {'id': '250-solved', 'label': '250 Solved', 'eligible': dsa_done >= 250},
+      {'id': 'sheet-completed', 'label': 'Sheet Completed', 'eligible': dsa_done >= total_questions}
+    ] %}
+    <div style="margin-top:12px">
+      <div class="sec-title">Milestone Certificates</div>
+      {% for cert in milestone_certs %}
+        {% if cert.eligible %}
+          <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('profile.milestone_certificate', milestone_id=cert.id) }}" aria-label="Download {{ cert.label }} certificate">
+            <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> {{ cert.label }} Certificate
+          </a>
+        {% else %}
+          <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" disabled aria-disabled="true">
+            <i class="bi bi-lock" style="margin-right:6px" aria-hidden="true"></i> {{ cert.label }} Certificate
+          </button>
+        {% endif %}
+      {% endfor %}
+    </div>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
       {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
@@ -153,7 +172,7 @@
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
+    <a href="{{ url_for('leaderboard.leaderboard') }}" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View app leaderboard">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
@@ -327,10 +346,10 @@
 
     <hr style="border-color:var(--border-color);margin:16px 0">
 
-    <!-- DSA difficulty -->
+    <!-- LeetCode difficulty -->
     <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:12px">
-      <span style="flex:1;text-align:center;padding-left:24px">DSA</span>
-      <button onclick="exportChart('difficultyChart', 'dsa-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
+      <span style="flex:1;text-align:center;padding-left:24px">LeetCode</span>
+      <button onclick="exportChart('difficultyChart', 'leetcode-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
         <i class="bi bi-download" aria-hidden="true"></i>
       </button>
     </div>
@@ -452,7 +471,18 @@
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
-    </div><!-- end scrollable body -->
+    <div style="margin-bottom:16px">
+  <label class="m-lbl"><i class="bi bi-shield-lock" style="color:var(--accent)"></i> Profile Visibility</label>
+  <select class="m-inp" id="ep_profile_visibility">
+    <option value="public" {% if (user.profile_visibility or 'public') == 'public' %}selected{% endif %}>Public - show full profile</option>
+    <option value="private" {% if user.profile_visibility == 'private' %}selected{% endif %}>Private - hide public profile</option>
+    <option value="stats_only" {% if user.profile_visibility == 'stats_only' %}selected{% endif %}>Stats Only - show only progress stats</option>
+  </select>
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">
+    Control what other users can see on your public profile page.
+  </div>
+</div>
+  </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
       <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
       <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
@@ -511,7 +541,7 @@
           </label>
         </div>
         <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px" id="importModeHelp">
-          Merge will add new progress and combine note differences. Replace will completely overwrite all your sheet progress.
+          Merge will add new progress and combine note differences. Replace will overwrite only the questions found in your import file (unmatched existing progress is preserved).
         </div>
       </div>
       
@@ -559,16 +589,17 @@ const csrfToken = {{ csrf_token()|tojson }};
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');
   const payload={
-    name: document.getElementById('ep_name').value,
-    bio: document.getElementById('ep_bio').value,
-    headline: document.getElementById('ep_headline').value,
-    location: document.getElementById('ep_location').value,
-    college: document.getElementById('ep_college').value,
-    linkedin_url: document.getElementById('ep_linkedin').value,
-    twitter_url: document.getElementById('ep_twitter').value,
-    website_url: document.getElementById('ep_website').value,
-    resume_url: document.getElementById('ep_resume').value,
-  };
+  name: document.getElementById('ep_name').value,
+  bio: document.getElementById('ep_bio').value,
+  headline: document.getElementById('ep_headline').value,
+  location: document.getElementById('ep_location').value,
+  college: document.getElementById('ep_college').value,
+  linkedin_url: document.getElementById('ep_linkedin').value,
+  twitter_url: document.getElementById('ep_twitter').value,
+  website_url: document.getElementById('ep_website').value,
+  resume_url: document.getElementById('ep_resume').value,
+  profile_visibility: document.getElementById('ep_profile_visibility').value,
+};
   window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
   fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})
     .then(r=>r.json())
@@ -591,13 +622,13 @@ window.handleQuickSync = function(btn) {
   const icon = document.getElementById('quickSyncIcon');
   if (btn.disabled) return;
   
-  const lc = '{{ user.leetcode_username or "" }}';
-  const gh = '{{ user.github_username or "" }}';
-  const gfg = '{{ user.gfg_username or "" }}';
-  const hr = '{{ user.hackerrank_username or "" }}';
-  const cn = '{{ user.codingninjas_username or "" }}';
-  const ac = '{{ user.atcoder_username or "" }}';
-  const cw = '{{ user.codewars_username or "" }}';
+  const lc = {{ (user.leetcode_username or "")|tojson }};
+  const gh = {{ (user.github_username or "")|tojson }};
+  const gfg = {{ (user.gfg_username or "")|tojson }};
+  const hr = {{ (user.hackerrank_username or "")|tojson }};
+  const cn = {{ (user.codingninjas_username or "")|tojson }};
+  const ac = {{ (user.atcoder_username or "")|tojson }};
+  const cw = {{ (user.codewars_username or "")|tojson }};
   
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
     showToast('⚠️ No platforms connected to sync!');
@@ -852,4 +883,28 @@ function handlePhotoUpload(e){
 })();
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
+<style>
+  @media screen and (max-width:768px)
+  {
+    .prof-layout
+    {
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+      padding:10px;
+    }
+    .card
+    {
+      width:100%;
+      border-radius:12px;
+      margin-bottom: 15px;
+    }
+    img
+    {
+      max-width: 100%;
+      height: auto;
+    }
+  }
+</style>
+
 {% endblock %}

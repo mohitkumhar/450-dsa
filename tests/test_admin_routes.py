@@ -242,6 +242,18 @@ def test_admin_can_delete_other_user(monkeypatch):
         }
     ).inserted_id
 
+    invalidated = {"leaderboard": 0, "profile": 0}
+    monkeypatch.setattr(
+        admin_routes,
+        "invalidate_leaderboard_cache",
+        lambda: invalidated.__setitem__("leaderboard", invalidated["leaderboard"] + 1),
+    )
+    monkeypatch.setattr(
+        admin_routes,
+        "clear_profile_caches",
+        lambda _cache, _user_id: invalidated.__setitem__("profile", invalidated["profile"] + 1),
+    )
+
     with flask_app.test_client() as client:
         login_as(client, admin_id)
         csrf_token = set_csrf_token(client)
@@ -254,6 +266,8 @@ def test_admin_can_delete_other_user(monkeypatch):
     assert response.status_code == 200
     assert test_db.user.find_one({"_id": victim_id}) is None
     assert "Deleted account for Spam Bot." in response.data.decode("utf-8")
+    assert invalidated["leaderboard"] == 1
+    assert invalidated["profile"] == 1
 
 
 def test_admin_delete_rejects_missing_csrf(monkeypatch):

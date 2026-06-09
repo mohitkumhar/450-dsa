@@ -5,7 +5,9 @@ from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
-from app.extensions import bcrypt, db, github, google, limiter, login_manager
+from app.extensions import bcrypt, cache, db, github, google, limiter, login_manager
+from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.profile.sync_service import clear_profile_caches
 from app.utils import utc_now
 
 
@@ -45,15 +47,16 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
         return user_doc, "linked"
 
     result = db.user.insert_one(
-        {
-            "name": name,
-            "email": email,
-            provider_field: provider_id,
-            "progress": {},
-            "is_admin": False,
-            "created_at": utc_now(),
-        }
-    )
+    {
+        "name": name,
+        "email": email,
+        provider_field: provider_id,
+        "progress": {},
+        "profile_visibility": "public",
+        "is_admin": False,
+        "created_at": utc_now(),
+    }
+)
     user_doc = db.user.find_one({"_id": result.inserted_id})
     return user_doc, "created"
 
@@ -175,13 +178,16 @@ def register():
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
+        if not name:
+            flash("Name is required", "danger")
+            return redirect(url_for("auth.register"))
+        if not email:
+            flash("Email is required", "danger")
+            return redirect(url_for("auth.register"))
+
         password_errors = validate_registration_password(password, confirm_password)
         if password_errors:
             flash(" ".join(password_errors), "danger")
-            return redirect(url_for("auth.register"))
-
-        if not name:
-            flash("Name is required", "danger")
             return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
@@ -192,15 +198,16 @@ def register():
         hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
         try:
             db.user.insert_one(
-                {
-                    "name": name,
-                    "email": email,
-                    "password": hashed_password,
-                    "progress": {},
-                    "is_admin": False,
-                    "created_at": utc_now(),
-                }
-            )
+    {
+        "name": name,
+        "email": email,
+        "password": hashed_password,
+        "progress": {},
+        "profile_visibility": "public",
+        "is_admin": False,
+        "created_at": utc_now(),
+    }
+)
             flash("Your account has been created! You can now log in.", "success")
             return redirect(url_for("auth.login"))
         except Exception:
@@ -244,6 +251,8 @@ def delete_account():
     user_id = current_user.id
     logout_user()
     db.user.delete_one({"_id": user_id})
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, user_id)
     flash("Your account has been permanently deleted.", "info")
     return redirect(url_for("auth.login"))
 
@@ -271,6 +280,8 @@ def deactivate_account():
         {"_id": current_user.id},
         {"$set": {"is_deactivated": True, "deactivated_at": utc_now()}},
     )
+    invalidate_leaderboard_cache()
+    clear_profile_caches(cache, current_user.id)
     logout_user()
     flash("Your account has been deactivated. Log in again anytime to reactivate it.", "info")
     return redirect(url_for("auth.login"))
@@ -417,3 +428,7 @@ def authorize_google():
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
+
+
+# GSSoC Registration password complexity regex
+# Requires at least one uppercase, lowercase, digit, and special char.

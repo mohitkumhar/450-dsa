@@ -1,13 +1,25 @@
 {% extends "base.html" %}
+
 {% block head %}
+{% if is_private %}
+<meta property="og:title" content="Private Profile | 450 DSA" />
+<meta property="og:description" content="This user has chosen to keep their profile private." />
+<title>Private Profile | 450 DSA</title>
+{% elif is_stats_only %}
+<meta property="og:title" content="Stats Only Profile | 450 DSA" />
+<meta property="og:description"
+      content="This user shares progress statistics only with a C-Score of {{ stats.c_score or 0 }}." />
+<title>Stats Only Profile | 450 DSA</title>
+{% else %}
 <meta property="og:title"
       content="{{ user.username }}'s DSA Profile 450 DSA Tracker" />
 <meta property="og:description"
-      content="{{ user.username }} has solved {{ stats.dsa_done }} DSA problems
-               with a C-Score of {{ stats.c_score }}. Check their full stats!" />
+      content="{{ user.username }} has solved {{ stats.dsa_done or 0 }} DSA problems
+               with a C-Score of {{ stats.c_score or 0 }}. Check their full stats!" />
+<title>{{ user.username }}'s Profile | 450 DSA</title>
+{% endif %}
 <meta property="og:type" content="profile" />
 <meta property="og:url" content="{{ request.url }}" />
-<title>{{ user.username }}'s Profile | 450 DSA</title>
 {% endblock %}
 
 {% block content %}
@@ -25,12 +37,24 @@
 .stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
 .stat-num{font-size:2.4rem;font-weight:900;line-height:1;margin-top:4px;color:var(--text-primary)}
 .stat-lbl{font-size:0.75rem;color:var(--text-secondary);font-weight:600}
+.private-message{max-width:720px;margin:0 auto;text-align:center;padding:34px}
+.private-icon{font-size:3rem;margin-bottom:14px}
+.private-title{font-size:1.8rem;font-weight:900;margin-bottom:10px}
+.private-text{color:var(--text-secondary);font-size:.95rem}
 @media(max-width:520px){.stat-row{grid-template-columns:1fr}}
 </style>
 
 <div class="prof-layout">
+  {% if is_private %}
+    <div class="card private-message">
+      <div class="private-icon">🔒</div>
+      <div class="private-title">Private Profile</div>
+      <p class="private-text">This user has chosen to keep their public profile private.</p>
+    </div>
+  {% else %}
   <div class="prof-main">
     <div class="card" style="text-align:center">
+      {% if not is_stats_only %}
       <div class="avatar-ring" style="margin-bottom:16px">
         {% if user.avatar_url %}
         <img src="{{ user.avatar_url }}" width="90" height="90" loading="eager" fetchpriority="high" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="{{ user.username }}">
@@ -40,6 +64,12 @@
       </div>
       <div class="prof-name">{{ user.username }}</div>
       <div class="prof-handle">Public DSA Profile</div>
+      {% else %}
+      <div class="private-icon">📊</div>
+      <div class="prof-name">Stats Only Profile</div>
+      <div class="prof-handle">This user shares progress statistics only</div>
+      {% endif %}
+
       <div class="sec-title" style="margin-top:18px">C-Score</div>
       <div class="big-num" style="color:var(--accent)">{{ stats.c_score or 0 }}</div>
       <div class="sub-label">Composite public score</div>
@@ -108,9 +138,14 @@
     </div>
 
     <div class="card" style="text-align:center;color:var(--text-secondary);font-size:.82rem">
-      This is a public profile page.
+      {% if is_stats_only %}
+        This profile is limited to public progress statistics.
+      {% else %}
+        This is a public profile page.
+      {% endif %}
     </div>
   </div>
+  {% endif %}
 </div>
 {% endblock %}
 

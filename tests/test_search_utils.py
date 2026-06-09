@@ -183,6 +183,42 @@ def test_search_filters_requested_platform_without_extra_collection_scan(monkeyp
     ]
 
 
+def test_search_applies_platform_filter_before_final_limit(monkeypatch):
+    lc_questions = [
+        {
+            "_id": f"lc-{index}",
+            "problem": f"Binary Tree Variant {index}",
+            "topic": "trees",
+            "url": f"https://leetcode.com/problems/binary-tree-variant-{index}/",
+            "url2": "",
+            "score": 100 - index,
+        }
+        for index in range(40)
+    ]
+    gfg_question = {
+        "_id": "gfg-1",
+        "problem": "Binary Tree Traversal",
+        "topic": "trees",
+        "url": "https://practice.geeksforgeeks.org/problems/binary-tree-traversal/",
+        "url2": "",
+        "score": 10,
+    }
+    fake_db = FakeDB(
+        questions=lc_questions + [gfg_question],
+        topics=[{"_id": "trees", "name": "Trees", "position": 4}],
+    )
+    monkeypatch.setattr(utils, "db", fake_db)
+
+    payload = utils.search_dsa_questions("gfg binary tree", limit=10)
+
+    assert payload["requested_platforms"] == ["GFG"]
+    assert [result["id"] for result in payload["results"]] == ["gfg-1"]
+    assert fake_db.question.cursor.limit_count is None
+    assert fake_db.topic.find_calls == [
+        ({"_id": {"$in": ["trees"]}}, {"name": 1, "position": 1})
+    ]
+
+
 def test_empty_query_returns_without_database_calls(monkeypatch):
     fake_db = FakeDB()
     monkeypatch.setattr(utils, "db", fake_db)

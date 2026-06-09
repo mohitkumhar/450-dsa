@@ -38,6 +38,8 @@ def test_parse_json_backup():
                 "done": True,
                 "bookmark": False,
                 "notes": "Use a hash map.",
+                "revision_status": "Reviewed",
+                "last_reviewed": "2026-06-01T10:00:00",
                 "url": "https://leetcode.com/problems/two-sum/",
                 "url2": ""
             }
@@ -49,6 +51,8 @@ def test_parse_json_backup():
     assert items[0]["problem"] == "Two Sum"
     assert items[0]["done"] is True
     assert items[0]["notes"] == "Use a hash map."
+    assert items[0]["revision_status"] == "Reviewed"
+    assert items[0]["last_reviewed"] == "2026-06-01T10:00:00"
 
 
 def test_process_dry_run():
@@ -88,8 +92,15 @@ def test_export_json_route(monkeypatch):
     }).inserted_id
 
     progress = {
-        str(question_id): {"done": True, "bookmark": True, "notes": "Good notes"}
+    str(question_id): {
+        "done": True,
+        "bookmark": True,
+        "notes": "Good notes",
+        "revision_status": "Reviewed",
+        "last_reviewed": tracker_routes.utc_now()
     }
+}
+
     user_id = test_db.user.insert_one({"email": "user@example.com", "progress": progress, "is_admin": False}).inserted_id
 
     with flask_app.test_client() as client:
@@ -105,7 +116,8 @@ def test_export_json_route(monkeypatch):
     assert data["progress"][0]["problem"] == "Two Sum"
     assert data["progress"][0]["done"] is True
     assert data["progress"][0]["notes"] == "Good notes"
-
+    assert data["progress"][0]["revision_status"] == "Reviewed"
+    assert data["progress"][0]["last_reviewed"] is not None
 
 def test_import_preview_route(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
@@ -152,7 +164,8 @@ def test_import_commit_route_merge(monkeypatch):
     user_id = test_db.user.insert_one({
         "email": "user@example.com",
         "progress": {
-            str(question_id): {"done": False, "bookmark": True, "notes": "Existing notes"}
+            str(question_id): {"done": False, "bookmark": True, "notes": "Existing notes", "revision_status": "Needs Practice",
+"last_reviewed": "2026-06-01T10:00:00"}
         },
         "in_sheet_platform_counts": {"LeetCode": 0},
         "is_admin": False
@@ -183,6 +196,14 @@ def test_import_commit_route_merge(monkeypatch):
     assert "Imported notes" in progress["notes"]
     assert user["in_sheet_platform_counts"]["LeetCode"] == 1
 
+    # Regression: import commit must update computed stats
+    assert user["dsa_progress"] == 100.0
+    assert user["current_streak"] >= 1
+    assert user["longest_streak"] >= 1
+    assert progress["revision_status"] == "Needs Practice"
+    assert progress["last_reviewed"] is not None
+
+
 
 def test_import_commit_route_replace(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
@@ -193,12 +214,19 @@ def test_import_commit_route_replace(monkeypatch):
         "url": "https://leetcode.com/problems/two-sum/",
         "url2": ""
     }).inserted_id
+    untouched_id = test_db.question.insert_one({
+        "topic": topic_id,
+        "problem": "Best Time to Buy and Sell Stock",
+        "url": "https://leetcode.com/problems/best-time-to-buy-and-sell-stock/",
+        "url2": ""
+    }).inserted_id
 
     # Existing progress
     user_id = test_db.user.insert_one({
         "email": "user@example.com",
         "progress": {
-            str(question_id): {"done": False, "bookmark": True, "notes": "Existing notes"}
+            str(question_id): {"done": False, "bookmark": True, "notes": "Existing notes"},
+            str(untouched_id): {"done": True, "bookmark": False, "notes": "Keep me"}
         },
         "in_sheet_platform_counts": {"LeetCode": 0},
         "is_admin": False
@@ -226,4 +254,14 @@ def test_import_commit_route_replace(monkeypatch):
     assert progress["done"] is True
     assert progress["bookmark"] is False  # Bookmark overwritten to False
     assert progress["notes"] == "Imported notes"  # Notes replaced
-    assert user["in_sheet_platform_counts"]["LeetCode"] == 1
+
+    # Replace mode should not drop unrelated existing entries that were not in the import file.
+    untouched_progress = user["progress"][str(untouched_id)]
+    assert untouched_progress["done"] is True
+    assert untouched_progress["notes"] == "Keep me"
+    # Preserve existing done entries, so counts reflect both solved questions.
+    assert user["in_sheet_platform_counts"]["LeetCode"] == 2
+    # Regression: import commit must update computed stats
+    assert user["dsa_progress"] == 100.0
+    assert user["current_streak"] >= 1
+    assert user["longest_streak"] >= 1

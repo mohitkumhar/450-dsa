@@ -77,7 +77,7 @@ def app(mock_db):
         from app import create_app
         app = create_app()
         app.config['TESTING'] = True
-        
+
         # Keep the mock in place for the app context
         app.mock_db = mock_db
         yield app
@@ -92,7 +92,7 @@ def client(app):
 def test_card_generator_returns_bytesio():
     """Test that generate_progress_card returns a BytesIO object."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="Test User",
         c_score=100,
@@ -100,10 +100,10 @@ def test_card_generator_returns_bytesio():
         current_streak=10,
         platforms={"LeetCode": 50}
     )
-    
+
     # Verify it's a BytesIO object
     assert isinstance(result, io.BytesIO)
-    
+
     # Verify it contains PNG data
     result.seek(0)
     png_header = result.read(8)
@@ -114,36 +114,76 @@ def test_public_card_valid_user(client, app):
     """Test that /u/<user_id>/card.png returns 200 with valid user."""
     user_id = ObjectId()
     from datetime import datetime, timedelta, timezone
+
     now = datetime.now(timezone.utc)
     user_data = {
         "_id": user_id,
         "name": "Test User",
         "progress": {
             "q1": {"done": True, "timestamp": now},
-            "q2": {"done": True, "timestamp": now - timedelta(days=1)}
+            "q2": {"done": True, "timestamp": now - timedelta(days=1)},
         },
         "external_totals": {
             "LeetCode": 10,
             "GFG": 5,
-        }
+        },
     }
-    
+
     app.mock_db.question.data = {
         "q1": {"_id": "q1", "url": "https://leetcode.com/"},
         "q2": {"_id": "q2", "url": "https://geeksforgeeks.org/"},
         "q3": {"_id": "q3", "url": ""},
-        "q4": {"_id": "q4", "url": ""}
+        "q4": {"_id": "q4", "url": ""},
     }
-    
-    app.mock_db.user.data[str(user_id)] = user_data
-    
-    with patch('app.profile.routes.db', app.mock_db):
-        response = client.get(f"/u/{user_id}/card.png")
-        
-        assert response.status_code == 200
-        assert response.content_type == "image/png"
-        assert len(response.data) > 0
 
+    app.mock_db.user.data[str(user_id)] = user_data
+
+    with patch("app.profile.routes.db", app.mock_db):
+        response = client.get(f"/u/{user_id}/card.png")
+
+    assert response.status_code == 200
+    assert response.content_type == "image/png"
+    assert len(response.data) > 0
+
+
+def test_public_card_private_profile_returns_403(client, app):
+    """Test that private profiles block public progress card access."""
+    user_id = ObjectId()
+    user_data = {
+        "_id": user_id,
+        "name": "Private User",
+        "profile_visibility": "private",
+        "progress": {},
+        "external_totals": {},
+    }
+
+    app.mock_db.user.data[str(user_id)] = user_data
+
+    with patch("app.profile.routes.db", app.mock_db):
+        response = client.get(f"/u/{user_id}/card.png")
+
+    assert response.status_code == 403
+    assert b"Profile is private" in response.data
+
+
+def test_public_card_stats_only_profile_returns_403(client, app):
+    """Test that stats-only profiles block public progress card access to avoid identity leaks."""
+    user_id = ObjectId()
+    user_data = {
+        "_id": user_id,
+        "name": "Stats Only User",
+        "profile_visibility": "stats_only",
+        "progress": {},
+        "external_totals": {"LeetCode": 12},
+    }
+
+    app.mock_db.user.data[str(user_id)] = user_data
+
+    with patch("app.profile.routes.db", app.mock_db):
+        response = client.get(f"/u/{user_id}/card.png")
+
+    assert response.status_code == 403
+    assert b"Profile card is unavailable for stats-only profiles" in response.data
 
 def test_public_card_invalid_user_id(client, app):
     """Test that /u/<invalid_id>/card.png returns 400."""
@@ -156,10 +196,10 @@ def test_public_card_invalid_user_id(client, app):
 def test_public_card_missing_user(client, app):
     """Test that /u/<nonexistent_user_id>/card.png returns 404."""
     user_id = ObjectId()
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 404
         assert b"User not found" in response.data
 
@@ -173,16 +213,16 @@ def test_public_card_with_minimal_data(client, app):
         "progress": {},
         "external_totals": {}
     }
-    
+
     app.mock_db.question.data = {
         "q1": {"_id": "q1"}
     }
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 200
         assert response.content_type == "image/png"
 
@@ -195,16 +235,16 @@ def test_public_card_with_anonymous_name(client, app):
         "progress": {"q1": {"done": True, "timestamp": datetime.now(timezone.utc)}},
         "external_totals": {}
     }
-    
+
     app.mock_db.question.data = {
         "q1": {"_id": "q1"}
     }
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 200
         assert response.content_type == "image/png"
 
@@ -218,24 +258,24 @@ def test_public_card_caching(client, app):
         "progress": {"q1": {"done": True, "timestamp": datetime.now(timezone.utc)}},
         "external_totals": {"LeetCode": 20}
     }
-    
+
     app.mock_db.question.data = {
         "q1": {"_id": "q1"}
     }
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         # First request - should generate card
         response1 = client.get(f"/u/{user_id}/card.png")
         assert response1.status_code == 200
         data1 = response1.data
-        
+
         # Second request - should use cache
         response2 = client.get(f"/u/{user_id}/card.png")
         assert response2.status_code == 200
         data2 = response2.data
-        
+
         # Both should return the same PNG data
         assert data1 == data2
 
@@ -292,15 +332,15 @@ def test_public_card_exception_handling(client, app):
         "progress": {},
         "external_totals": {}
     }
-    
+
     app.mock_db.question.data = {}
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db), \
          patch('card_generator.generate_progress_card', side_effect=Exception("Secret path leak")):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 500
         assert b"Unable to generate progress card" in response.data
         assert b"Secret path leak" not in response.data
@@ -316,14 +356,14 @@ def test_card_generator_with_long_name(client, app):
         "progress": {},
         "external_totals": {"LeetCode": 100, "GFG": 50, "Coding Ninjas": 30, "HackerRank": 20}
     }
-    
+
     app.mock_db.question.data = {}
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 200
         assert response.content_type == "image/png"
         assert len(response.data) > 0
@@ -343,14 +383,14 @@ def test_card_generator_with_all_platforms(client, app):
             "HackerRank": 150
         }
     }
-    
+
     app.mock_db.question.data = {}
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 200
         assert response.content_type == "image/png"
         assert len(response.data) > 0
@@ -365,14 +405,14 @@ def test_card_generator_with_zero_values(client, app):
         "progress": {},
         "external_totals": {}
     }
-    
+
     app.mock_db.question.data = {}
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 200
         assert response.content_type == "image/png"
         assert len(response.data) > 0
@@ -381,7 +421,7 @@ def test_card_generator_with_zero_values(client, app):
 def test_card_generator_png_format():
     """Test that generated card is valid PNG format."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="PNG Format Test",
         c_score=50,
@@ -389,12 +429,12 @@ def test_card_generator_png_format():
         current_streak=5,
         platforms={"LeetCode": 25}
     )
-    
+
     # Check PNG signature
     result.seek(0)
     signature = result.read(8)
     assert signature == b'\x89PNG\r\n\x1a\n'
-    
+
     # Check that we can seek and read multiple times
     result.seek(0)
     data1 = result.read()
@@ -407,7 +447,7 @@ def test_card_generator_png_format():
 def test_card_generator_empty_platforms():
     """Test card generation with empty platforms dict."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="No Platforms",
         c_score=10,
@@ -415,7 +455,7 @@ def test_card_generator_empty_platforms():
         current_streak=1,
         platforms={}
     )
-    
+
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
@@ -424,7 +464,7 @@ def test_card_generator_empty_platforms():
 def test_card_generator_single_platform():
     """Test card generation with single platform."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="Single Platform",
         c_score=25,
@@ -432,7 +472,7 @@ def test_card_generator_single_platform():
         current_streak=2,
         platforms={"LeetCode": 50}
     )
-    
+
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
@@ -441,7 +481,7 @@ def test_card_generator_single_platform():
 def test_card_generator_multiple_platforms():
     """Test card generation with multiple platforms."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="Multi Platform",
         c_score=100,
@@ -454,7 +494,7 @@ def test_card_generator_multiple_platforms():
             "HackerRank": 20
         }
     )
-    
+
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
@@ -463,7 +503,7 @@ def test_card_generator_multiple_platforms():
 def test_card_generator_high_values():
     """Test card generation with high metric values."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="High Achiever",
         c_score=9999,
@@ -476,7 +516,7 @@ def test_card_generator_high_values():
             "HackerRank": 300
         }
     )
-    
+
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
@@ -485,7 +525,7 @@ def test_card_generator_high_values():
 def test_card_generator_special_characters_in_name():
     """Test card generation with special characters in name."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="User@#$%^&*()",
         c_score=50,
@@ -493,7 +533,7 @@ def test_card_generator_special_characters_in_name():
         current_streak=5,
         platforms={"LeetCode": 25}
     )
-    
+
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
@@ -502,7 +542,7 @@ def test_card_generator_special_characters_in_name():
 def test_card_generator_unicode_name():
     """Test card generation with unicode characters in name."""
     from card_generator import generate_progress_card
-    
+
     result = generate_progress_card(
         name="用户名 🚀",
         c_score=50,
@@ -510,7 +550,7 @@ def test_card_generator_unicode_name():
         current_streak=5,
         platforms={"LeetCode": 25}
     )
-    
+
     assert isinstance(result, io.BytesIO)
     result.seek(0)
     assert result.read(8) == b'\x89PNG\r\n\x1a\n'
@@ -526,12 +566,12 @@ def test_public_card_response_headers(client, app):
         "external_totals": {}
     }
     app.mock_db.question.data = {}
-    
+
     app.mock_db.user.data[str(user_id)] = user_data
-    
+
     with patch('app.profile.routes.db', app.mock_db):
         response = client.get(f"/u/{user_id}/card.png")
-        
+
         assert response.status_code == 200
         assert response.content_type == "image/png"
         assert "Content-Length" in response.headers or len(response.data) > 0
