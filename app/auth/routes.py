@@ -1,5 +1,6 @@
 import re
 import secrets
+import time
 
 from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
@@ -161,6 +162,7 @@ def login():
         if user_doc and user_doc.get("password") and password and bcrypt.check_password_hash(user_doc["password"], password):
             user_doc = reactivate_user_if_needed(user_doc)
             login_user(UserWrapper(user_doc))
+            session["_admin_last_active"] = time.time()
             flash(f"Welcome back, {user_doc.get('name', 'User')}! 👋", "success")
             return redirect(url_for("tracker.index"))
         flash("Login unsuccessful. Please check email and password.", "danger")
@@ -369,6 +371,7 @@ def authorize_github():
 
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
+    session["_admin_last_active"] = time.time()
     return redirect(url_for("tracker.index"))
 
 
@@ -427,6 +430,7 @@ def authorize_google():
 
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
+    session["_admin_last_active"] = time.time()
     return redirect(url_for("tracker.index"))
 
 
