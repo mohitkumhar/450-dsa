@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.admin-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:22px; flex-wrap:wrap; }
+.admin-title { font-size:1.7rem; font-weight:800; letter-spacing:-0.02em; }
+.admin-subtitle { color:var(--text-secondary); font-size:0.92rem; }
+.import-zone { background:var(--bg-card); border:1px solid var(--border-color); border-radius:14px; padding:24px; margin-bottom:20px; }
+.sheet-preview { margin-top:20px; }
+.sheet-preview table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+.sheet-preview th { text-align:left; padding:8px 10px; border-bottom:2px solid var(--border-color); font-weight:600; }
+.sheet-preview td { padding:8px 10px; border-bottom:1px solid var(--border-color); vertical-align:top; }
+.topic-row td { background:rgba(255,107,0,0.04); font-weight:700; }
+.preview-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.preview-stat { background:var(--bg-card); border:1px solid var(--border-color); border-radius:10px; padding:14px; text-align:center; }
+.preview-stat .value { font-size:1.4rem; font-weight:800; }
+.preview-stat .label { font-size:0.78rem; color:var(--text-secondary); margin-top:2px; }
+.preview-stat.new .value { color:#22c55e; }
+.preview-stat.update .value { color:#f59e0b; }
+.preview-stat.existing .value { color:var(--text-secondary); }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border-radius:8px; font-weight:600; font-size:0.88rem; cursor:pointer; border:none; text-decoration:none; }
+.btn-primary { background:#ff6b00; color:#fff; }
+.btn-primary:hover { background:#e65c00; }
+.btn-mono { background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color); }
+.btn-mono:hover { background:var(--border-color); }
+.btn-danger { background:#dc2626; color:#fff; }
+.btn-danger:hover { background:#b91c1c; }
+.action-row { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+.file-input { padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; background:var(--bg-card); color:var(--text-primary); font-size:0.88rem; }
+</style>
+
+<div class="admin-header">
+  <div>
+    <div class="admin-title"><a href="{{ url_for('admin.dashboard') }}" style="color:var(--text-secondary);text-decoration:none">Admin</a> / Import sheet</div>
+    <div class="admin-subtitle">Upload a JSON or CSV file to add or update questions</div>
+  </div>
+</div>
+
+{% if not preview %}
+<div class="import-zone">
+  <form method="POST" enctype="multipart/form-data">
+    <p style="margin:0 0 12px 0;font-weight:600">Select file</p>
+    <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 14px 0">
+      JSON format: Array of <code>{ topicName, position, questions: [{ Problem, URL, URL2?, difficulty?, hints? }] }</code><br>
+      CSV format: Columns <code>Topic, Position, Problem, URL, URL2, Difficulty</code>
+    </p>
+    <input type="file" name="file" accept=".json,.csv" class="file-input" required>
+    <div class="action-row">
+      <button type="submit" class="btn btn-primary">Upload & preview</button>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-mono">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% if preview %}
+<div class="preview-stats">
+  <div class="preview-stat new">
+    <div class="value">+{{ preview.new_topics }}</div>
+    <div class="label">New topics</div>
+  </div>
+  <div class="preview-stat existing">
+    <div class="value">{{ preview.existing_topics }}</div>
+    <div class="label">Existing topics</div>
+  </div>
+  <div class="preview-stat new">
+    <div class="value">+{{ preview.new_questions }}</div>
+    <div class="label">New questions</div>
+  </div>
+  <div class="preview-stat existing">
+    <div class="value">{{ preview.existing_questions }}</div>
+    <div class="label">Unchanged</div>
+  </div>
+  <div class="preview-stat update">
+    <div class="value">{{ preview.updated_questions }}</div>
+    <div class="label">Will update</div>
+  </div>
+</div>
+
+<div class="import-zone">
+  <p style="margin:0 0 12px 0;font-weight:600">Preview: {{ filename }}</p>
+  <div class="sheet-preview">
+    <table>
+      <thead>
+        <tr><th>Topic</th><th>Position</th><th>Problem</th><th>URL</th><th>Difficulty</th></tr>
+      </thead>
+      <tbody>
+        {% for topic in topics %}
+        <tr class="topic-row"><td colspan="5">{{ topic.topicName }}</td></tr>
+        {% for q in topic.questions %}
+        <tr>
+          <td></td>
+          <td>{{ topic.position }}</td>
+          <td>{{ q.Problem }}</td>
+          <td style="font-size:0.8rem;word-break:break-all">{{ q.URL }}</td>
+          <td>{{ q.difficulty }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="file" value="{{ filename }}">
+    <input type="hidden" name="confirm" value="yes">
+    <textarea name="raw_content" style="display:none">{{ raw_content }}</textarea>
+    <div class="action-row">
+      <button type="submit" class="btn btn-primary">Confirm import</button>
+      <a href="{{ url_for('admin.import_sheet') }}" class="btn btn-mono">Choose another file</a>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
