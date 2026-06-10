@@ -234,8 +234,8 @@ def create_app(config_class=None):
     def _precompute_static_data(app):
         """Precompute static question/topic metadata and store in app config."""
         try:
-            questions = list(db.question.find())
-            topics = list(db.topic.find().sort("position", 1))
+            questions = list(db.question.find({}, {"topic": 1, "problem": 1, "url": 1, "url2": 1, "difficulty": 1, "editorial_links": 1}))
+            topics = list(db.topic.find({}, {"name": 1, "position": 1}).sort("position", 1))
         except Exception:
             return
 

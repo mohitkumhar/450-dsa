@@ -75,7 +75,7 @@ def index():
         total_questions = pre["total_questions"]
         topic_question_count = pre["topic_question_count"]
     else:
-        topics = list(db.topic.find().sort("position", 1))
+        topics = list(db.topic.find({}, {"name": 1}).sort("position", 1))
         total_questions = db.question.count_documents({})
         all_questions = list(db.question.find({}, INDEX_QUESTION_PROJECTION))
         topic_question_count = {}

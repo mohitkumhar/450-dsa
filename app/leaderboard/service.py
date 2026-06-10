@@ -10,7 +10,6 @@ def build_leaderboard_data():
             {"is_deactivated": {"$ne": True}},
             {
                 "name": 1,
-                "email": 1,
                 "profile_photo": 1,
                 "college": 1,
                 "leetcode_username": 1,
