@@ -1,5 +1,6 @@
 import re
 import secrets
+from datetime import timedelta
 
 from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
@@ -428,6 +429,79 @@ def authorize_google():
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
+
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("3 per minute", methods=["POST"])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("tracker.index"))
+    if request.method == "POST":
+        email = normalize_email(request.form.get("email"))
+        user_doc = db.user.find_one({"email": email}) if email else None
+
+        # Always show same message to avoid email enumeration
+        flash("If that email is registered, a reset link has been sent.", "info")
+
+        if user_doc and user_doc.get("password"):
+            token = secrets.token_urlsafe(32)
+            expires_at = utc_now() + timedelta(minutes=30)
+            db.user.update_one(
+                {"_id": user_doc["_id"]},
+                {"$set": {
+                    "reset_token": token,
+                    "reset_token_expires_at": expires_at,
+                }},
+            )
+            current_app.logger.info(
+                "Password reset token generated for %s — in production this would send an email",
+                email,
+            )
+
+        return redirect(url_for("auth.forgot_password"))
+
+    return render_template("forgot_password.html")
+
+
+@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for("tracker.index"))
+
+    user_doc = db.user.find_one({"reset_token": token})
+
+    if not user_doc:
+        flash("Invalid or expired reset link.", "danger")
+        return redirect(url_for("auth.forgot_password"))
+
+    expires_at = user_doc.get("reset_token_expires_at")
+    if not expires_at or utc_now() > expires_at:
+        db.user.update_one(
+            {"_id": user_doc["_id"]},
+            {"$unset": {"reset_token": "", "reset_token_expires_at": ""}},
+        )
+        flash("Reset link has expired. Please request a new one.", "danger")
+        return redirect(url_for("auth.forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm_password")
+
+        password_errors = validate_registration_password(password, confirm_password)
+        if password_errors:
+            flash(" ".join(password_errors), "danger")
+            return render_template("reset_password.html", token=token)
+
+        hashed = bcrypt.generate_password_hash(password).decode("utf-8")
+        db.user.update_one(
+            {"_id": user_doc["_id"]},
+            {"$set": {"password": hashed},
+             "$unset": {"reset_token": "", "reset_token_expires_at": ""}},
+        )
+        flash("Password reset successfully. You can now log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("reset_password.html", token=token)
 
 
 # GSSoC Registration password complexity regex
