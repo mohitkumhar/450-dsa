@@ -15,6 +15,7 @@ from streaks import compute_streak
 
 
 CACHE_TTL = 3600
+CARD_HTTP_MAX_AGE = 300
 CACHE_MAXSIZE = 500
 card_cache = TTLCache(maxsize=CACHE_MAXSIZE, ttl=CACHE_TTL)
 _cache_lock = Lock()
