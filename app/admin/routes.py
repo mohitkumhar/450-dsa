@@ -225,3 +225,59 @@ def delete_user(user_id):
     display_name = target_user.get("name") or target_user.get("email") or "user"
     flash(f"Deleted account for {display_name}.", "success")
     return redirect(url_for("admin.dashboard", q=search_term, page=page))
+
+
+@admin_bp.route("/questions/save", methods=["POST"])
+@login_required
+@admin_required
+def save_question():
+    """Admin endpoint to create or update questions dynamically for Issue #295."""
+    form_token = request.form.get("csrf_token", "")
+    session_token = session.get("csrf_token", "")
+    if not form_token or not session_token or form_token != session_token:
+        abort(400)
+
+    question_id = request.form.get("question_id", "").strip()
+    title = request.form.get("title", "").strip()
+    url = request.form.get("url", "").strip()
+    difficulty = request.form.get("difficulty", "Medium").strip()
+    topic = request.form.get("topic", "").strip()
+    position = _safe_int(request.form.get("position"), 0)
+
+    if not title or not topic:
+        flash("Title and Topic fields are required.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    # FIX: Reject invalid topics completely instead of falling back to a string
+    if not ObjectId.is_valid(topic):
+        flash("Invalid Topic ID layout pattern.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    # Confirm the topic actually exists in the database
+    topic_exists = db.topics.find_one({"_id": ObjectId(topic)}) if hasattr(db, 'topics') else db.topic.find_one({"_id": ObjectId(topic)})
+    if not topic_exists:
+        flash("Topic does not exist in the collection.", "danger")
+        return redirect(url_for("admin.dashboard"))
+
+    question_data = {
+        "problem": title,
+        "url": url,
+        "difficulty": difficulty,
+        "topic": ObjectId(topic),
+        "position": position,
+        "updated_at": datetime.now(timezone.utc)
+    }
+
+    if question_id:
+        if not ObjectId.is_valid(question_id):
+            flash("Invalid Question ID.", "danger")
+            return redirect(url_for("admin.dashboard"))
+        db.question.update_one({"_id": ObjectId(question_id)}, {"$set": question_data})
+        flash(f"Successfully updated question: {title}", "success")
+    else:
+        question_data["created_at"] = datetime.now(timezone.utc)
+        db.question.insert_one(question_data)
+        flash(f"Successfully created new question: {title}", "success")
+
+    invalidate_leaderboard_cache()
+    return redirect(url_for("admin.dashboard"))
