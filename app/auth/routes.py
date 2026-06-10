@@ -219,12 +219,22 @@ def register():
 @login_required
 def logout():
     token = request.form.get("csrf_token", "")
-    expected = session.get("csrf_token", "")
+    expected = session.pop("logout_csrf_token", None)
     if not token or not expected or token != expected:
         abort(403)
 
     logout_user()
     return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/logout/token", methods=["GET"])
+@login_required
+def logout_token():
+    """Generate and return a CSRF token for the logout form."""
+    token = secrets.token_hex(32)
+    session["logout_csrf_token"] = token
+    from flask import jsonify
+    return jsonify({"csrf_token": token})
 
 
 @auth_bp.route("/delete_account", methods=["POST"])
