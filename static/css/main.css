@@ -897,11 +897,19 @@ body {
 
         .mt-8 {
             margin-top: 8px;
-      }
-      .mt-12 {
-        margin-top: 12px;
-    }
+        }
+        .mt-12 {
+            margin-top: 12px;
+        }
 
+        .ui-btn-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        
         .pill-btn {
             display: flex;
             align-items: center;
