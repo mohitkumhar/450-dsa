@@ -27,4 +27,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  document.querySelectorAll(".show-code-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const targetId = button.dataset.target;
+      const codeBlock = document.getElementById(targetId);
+      if (!codeBlock) return;
+      const isHidden = codeBlock.classList.contains("hidden");
+      codeBlock.classList.toggle("hidden");
+      button.innerHTML = isHidden
+        ? '<i class="bi bi-code" aria-hidden="true"></i> Hide Code'
+        : '<i class="bi bi-code" aria-hidden="true"></i> Show Code';
+    });
+  });
 });

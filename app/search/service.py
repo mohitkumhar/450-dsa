@@ -181,7 +181,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
         except InvalidId:
             return empty_payload()
 
-    projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1, "editorial_links": 1}
+    projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1, "editorial_links": 1, "solutionUrl": 1, "codeSnippet": 1}
     post_fetch_filters = bool(
         requested_platforms
         or difficulty_filter in DIFFICULTY_FILTERS
