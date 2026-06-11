@@ -3,7 +3,12 @@
   <div class="modal-bx" style="{{ box_style }}">
     <div style="{{ header_style }}">
       <h3 id="{{ title_id }}" style="margin-bottom:0">{{ title|safe }}</h3>
-      <button type="button" onclick="{{ close_action }}" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close dialog">✕</button>
+      <button type="button"
+class="ui-btn-close"
+onclick="{{ close_action }}"
+aria-label="Close dialog">
+✕
+</button>
     </div>
     {{ caller() }}
   </div>

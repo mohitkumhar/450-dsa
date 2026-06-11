@@ -109,8 +109,12 @@
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
+    <button class="ui-btn ui-btn-secondary ui-btn-block mt-12"
+    onclick="openEditProfile()"
+    aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button class="ui-btn ui-btn-danger ui-btn-block mt-8"
+    onclick="openDeleteModal()"
+    aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -432,7 +436,11 @@
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button
+    class="ui-btn ui-btn-primary ui-btn-block"
+    onclick="showToast('Profile card copied! 📋')">
+    Share Card
+    </button>
 {% endcall %}
 
 <!-- Edit Profile Modal -->
@@ -494,7 +502,11 @@
   <div class="modal-bx" style="max-width:500px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <h3 id="importModalTitle" style="margin-bottom:0"><i class="bi bi-upload" style="color:var(--accent)"></i> Import Progress</h3>
-      <button type="button" onclick="closeImportModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close dialog">✕</button>
+      <button type="button"
+      onclick="closeImportModal()"
+      style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer"
+      aria-label="Close dialog">✕
+    </button>
     </div>
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:15px">Upload a previously exported CSV or JSON progress backup file.</p>
     
