@@ -181,7 +181,14 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
         except InvalidId:
             return empty_payload()
 
-    projection = {"problem": 1, "topic": 1, "url": 1, "url2": 1, "editorial_links": 1}
+    projection = {
+    "problem": 1,
+    "topic": 1,
+    "url": 1,
+    "url2": 1,
+    "editorial_links": 1,
+    "difficulty": 1,
+}
     post_fetch_filters = bool(
         requested_platforms
         or difficulty_filter in DIFFICULTY_FILTERS
@@ -229,7 +236,6 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
 
         if status_filter == "undone" and progress_item.get("done"):
             continue
-
         results.append(
             {
                 "id": q_id_str,
@@ -237,6 +243,7 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
                 "topic": topic_name,
                 "topic_id": str(question.get("topic")),
                 "topic_position": topic_doc.get("position", 999),
+                "difficulty": question.get("difficulty", "Medium"),
                 "links": links,
                 "editorial_links": question_editorial_links(question),
                 "external_searches": build_external_searches(problem, requested_platforms),

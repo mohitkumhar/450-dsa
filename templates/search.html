@@ -297,6 +297,11 @@
         <option value="medium">Medium</option>
         <option value="hard">Hard</option>
       </select>
+      <select id="sortDifficulty" class="filter-select" aria-label="Sort by difficulty">
+        <option value="">Default Order</option>
+        <option value="asc">Easy → Hard</option>
+        <option value="desc">Hard → Easy</option>
+      </select>
       <select id="filterPlatform" class="filter-select" aria-label="Filter by result platform">
         <option value="">All Platforms</option>
         {% for name, meta in PLATFORM_META.items() %}
@@ -347,6 +352,12 @@ const filterTopic = document.getElementById('filterTopic');
 const filterDifficulty = document.getElementById('filterDifficulty');
 const filterPlatform = document.getElementById('filterPlatform');
 const filterStatus = document.getElementById('filterStatus');
+const sortDifficulty = document.getElementById('sortDifficulty');
+const difficultyOrder = {
+  easy: 1,
+  medium: 2,
+  hard: 3
+};
 let activeToken = '';
 let debounceTimer = null;
 let controller = null;
@@ -372,6 +383,19 @@ function hasActiveFilters() {
   return Object.values(getFilters()).some(Boolean);
 }
 
+function buildSearchParams(query) {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+
+  const filters = getFilters();
+  if (filters.topic_id) params.set('topic_id', filters.topic_id);
+  if (filters.difficulty) params.set('difficulty', filters.difficulty);
+  if (filters.platform) params.set('platform', filters.platform);
+  if (filters.status) params.set('status', filters.status);
+
+  return params;
+}
+
 function setFilterActiveStates() {
   [filterTopic, filterDifficulty, filterPlatform, filterStatus].forEach(filter => {
     if (filter) filter.classList.toggle('active', !!filter.value);
@@ -386,17 +410,6 @@ function restoreStateFromUrl() {
   if (filterPlatform && params.get('platform')) filterPlatform.value = params.get('platform');
   if (filterStatus && params.get('status')) filterStatus.value = params.get('status');
   setFilterActiveStates();
-}
-
-function buildSearchParams(query) {
-  const params = new URLSearchParams();
-  if (query) params.set('q', query);
-  const filters = getFilters();
-  if (filters.topic_id) params.set('topic_id', filters.topic_id);
-  if (filters.difficulty) params.set('difficulty', filters.difficulty);
-  if (filters.platform) params.set('platform', filters.platform);
-  if (filters.status) params.set('status', filters.status);
-  return params;
 }
 
 function updateUrl(query) {
@@ -514,6 +527,38 @@ function renderPlatformPrompt() {
 
 function renderResults(payload) {
   const count = payload.results.length;
+  console.log("Sort:", sortDifficulty?.value);
+  console.table(
+  payload.results.map(item => ({
+    problem: item.problem,
+    difficulty: item.difficulty
+  }))
+);
+  if (sortDifficulty?.value) {
+  payload.results = payload.results
+    .map((item, index) => ({ ...item, index }))
+    .sort((a, b) => {
+      const da = difficultyOrder[(a.difficulty || "").toLowerCase()] || 999;
+      const db = difficultyOrder[(b.difficulty || "").toLowerCase()] || 999;
+
+      if (sortDifficulty.value === "asc") {
+        return da - db;
+      }
+
+      return db - da;
+    });
+}
+
+console.log("After sort");
+console.table(
+  payload.results.map(item => ({
+    difficulty: item.difficulty,
+    problem: item.problem
+  }))
+);
+
+console.log("Sort value =", sortDifficulty?.value);
+
   const platforms = payload.requested_platforms || [];
   meta.textContent = count ? `${count} result${count === 1 ? '' : 's'}${platforms.length ? ' with ' + platforms.join(', ') : ''}` : '';
 
@@ -537,7 +582,6 @@ function renderResults(payload) {
     results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart" aria-hidden="true"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
     return;
   }
-
   results.innerHTML = payload.results.map(item => {
     const directLinks = (item.links || []).map(link =>
       `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="View on ${escapeHtml(link.platform)} (opens new tab)">
@@ -595,7 +639,13 @@ async function runSearch() {
   try {
     const params = buildSearchParams(query);
     const res = await fetch(`${endpointConfig.searchQuestions}?${params}`, { signal: controller.signal });
-    renderResults(await res.json());
+    const data = await res.json();
+
+try {
+    renderResults(data);
+} catch (e) {
+    console.error("renderResults error:", e);
+}
     rememberRecentSearch(input.value, activeToken);
     meta.setAttribute('aria-busy', 'false');
   } catch (err) {
@@ -634,7 +684,7 @@ chips.forEach(chip => {
   });
   chip.setAttribute('aria-pressed', 'false');
 });
-[filterTopic, filterDifficulty, filterPlatform, filterStatus].forEach(filter => {
+[filterTopic, filterDifficulty, sortDifficulty, filterPlatform, filterStatus].forEach(filter => {
   if (!filter) return;
   filter.addEventListener('change', () => {
     setFilterActiveStates();
