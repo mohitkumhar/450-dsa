@@ -1,15 +1,23 @@
-{% macro notes_modal(modal_id='notesModal', title_id='notesModalTitle', textarea_id='notesTextarea', question_id_input='currentQuestionId', cancel_id='modalCancel', save_id='saveNotesBtn', textarea_label='Notes for this question', textarea_placeholder='Write your notes here...') -%}
+{% macro notes_modal(modal_id='notesModal', title_id='notesModalTitle', textarea_id='notesTextarea', preview_id='notesPreview', status_id='notesSaveStatus', tab_edit_id='tabEdit', tab_preview_id='tabPreview', question_id_input='currentQuestionId', cancel_id='modalCancel', save_id='saveNotesBtn', textarea_label='Notes for this question', textarea_placeholder='Write your notes here...') -%}
 <div class="app-modal" id="{{ modal_id }}" role="dialog" aria-modal="true" aria-labelledby="{{ title_id }}">
   <div class="app-modal__dialog">
     <h3 class="app-modal__title" id="{{ title_id }}">
       <i class="bi bi-journal-text" aria-hidden="true"></i>
       <span>Notes</span>
     </h3>
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" id="{{ tab_edit_id }}" class="ui-btn ui-btn-primary ui-btn-sm">Edit</button>
+      <button type="button" id="{{ tab_preview_id }}" class="ui-btn ui-btn-secondary ui-btn-sm">Preview</button>
+    </div>
     <textarea class="app-modal__textarea" id="{{ textarea_id }}" placeholder="{{ textarea_placeholder }}" aria-label="{{ textarea_label }}"></textarea>
+    <div id="{{ preview_id }}" class="app-modal__textarea d-none overflow-y-auto markdown-body"></div>
     <input type="hidden" id="{{ question_id_input }}">
-    <div class="app-modal__actions">
-      <button class="ui-btn ui-btn-secondary" id="{{ cancel_id }}" aria-label="Cancel editing notes">Cancel</button>
-      <button class="ui-btn ui-btn-primary" id="{{ save_id }}" aria-label="Save notes">Save Notes</button>
+    <div class="app-modal__actions d-flex justify-content-between align-items-center w-100 mt-3">
+      <span id="{{ status_id }}" class="text-muted small" aria-live="polite"></span>
+      <div class="d-flex gap-2">
+        <button class="ui-btn ui-btn-secondary" id="{{ cancel_id }}" aria-label="Close notes">Close</button>
+        <button class="ui-btn ui-btn-primary" id="{{ save_id }}" aria-label="Save notes">Save Notes</button>
+      </div>
     </div>
   </div>
 </div>
