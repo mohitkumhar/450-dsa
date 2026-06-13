@@ -77,6 +77,47 @@ def build_profile_updates(data):
 
         update_fields['profile_visibility'] = visibility
 
+    if 'ui_theme' in data:
+        theme = data['ui_theme']
+        if not isinstance(theme, str):
+            return None, 'ui_theme must be text'
+        theme = theme.strip().lower()
+        if theme not in {'dark', 'light'}:
+            return None, 'ui_theme must be one of: dark, light'
+        update_fields['ui_theme'] = theme
+
+    if 'accent_color' in data:
+        accent_color = data['accent_color']
+        if not isinstance(accent_color, str):
+            return None, 'accent_color must be text'
+        accent_color = accent_color.strip()
+        if not re.fullmatch(r'^#[0-9A-Fa-f]{6}$', accent_color):
+            return None, 'accent_color must be a valid hex color'
+        update_fields['accent_color'] = accent_color
+
+    if 'compact_mode' in data:
+        compact_mode = data['compact_mode']
+        if isinstance(compact_mode, str):
+            compact_mode = compact_mode.strip().lower()
+            if compact_mode in {'true', '1', 'yes', 'on'}:
+                compact_mode = True
+            elif compact_mode in {'false', '0', 'no', 'off'}:
+                compact_mode = False
+            else:
+                return None, 'compact_mode must be a boolean'
+        elif not isinstance(compact_mode, bool):
+            return None, 'compact_mode must be a boolean'
+        update_fields['compact_mode'] = compact_mode
+
+    if 'chart_palette' in data:
+        palette = data['chart_palette']
+        if not isinstance(palette, str):
+            return None, 'chart_palette must be text'
+        palette = palette.strip().lower()
+        if palette not in {'default', 'cool', 'warm', 'monochrome'}:
+            return None, 'chart_palette must be one of: default, cool, warm, monochrome'
+        update_fields['chart_palette'] = palette
+
     return update_fields, None
 
 

@@ -26,6 +26,41 @@
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
+.compact .sidebar {
+    padding: 8px 0;
+}
+
+.compact .topbar {
+    min-height: 50px;
+}
+
+.compact .topbar-right .pill-btn,
+.compact .topbar-right .icon-btn,
+.compact .sidebar-link {
+    padding: 6px 10px;
+}
+
+.compact .card,
+.compact .modal-bx,
+.compact .m-inp,
+.compact .sidebar-nav,
+.compact .form-group,
+.compact .page-header {
+    padding: 12px;
+}
+
+.compact .m-actions {
+    gap: 8px;
+}
+
+.compact .m-inp {
+    padding: 8px 10px;
+}
+
+.compact .toast-notification {
+    padding: 10px 12px;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;

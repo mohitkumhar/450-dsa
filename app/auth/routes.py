@@ -53,6 +53,10 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
         provider_field: provider_id,
         "progress": {},
         "profile_visibility": "public",
+        "ui_theme": "dark",
+        "accent_color": "#ff6b00",
+        "compact_mode": False,
+        "chart_palette": "default",
         "is_admin": False,
         "created_at": utc_now(),
     }
@@ -204,6 +208,10 @@ def register():
         "password": hashed_password,
         "progress": {},
         "profile_visibility": "public",
+        "ui_theme": "dark",
+        "accent_color": "#ff6b00",
+        "compact_mode": False,
+        "chart_palette": "default",
         "is_admin": False,
         "created_at": utc_now(),
     }
