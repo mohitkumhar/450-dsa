@@ -131,8 +131,15 @@ def api_leaderboard():
               x-nullable: true
     """
     mode = request.args.get("mode", "cscore")
-    page = int(request.args.get("page", 1))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    try:
+        page = int(request.args.get("page", 1))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid page parameter"}), 400
+    try:
+        per_page = min(int(request.args.get("per_page", 20)), 100)
+    except (ValueError, TypeError):
+        per_page = 20
+    page = max(page, 1)
     
     entries = build_leaderboard_data()
 
