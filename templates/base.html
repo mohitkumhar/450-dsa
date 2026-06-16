@@ -557,10 +557,13 @@
         </nav>
         <div class="sidebar-bottom">
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('logout') }}" class="sidebar-link" title="Logout" id="nav-logout">
-                <i class="bi bi-box-arrow-right"></i>
-                <span class="tooltip-label">Logout</span>
-            </a>
+            <form action="{{ url_for('logout') }}" method="POST" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="sidebar-link" title="Logout" id="nav-logout" style="background:none;border:none;cursor:pointer;width:100%">
+                    <i class="bi bi-box-arrow-right"></i>
+                    <span class="tooltip-label">Logout</span>
+                </button>
+            </form>
             {% else %}
             <a href="{{ url_for('login') }}" class="sidebar-link" id="nav-login">
                 <i class="bi bi-box-arrow-in-right"></i>

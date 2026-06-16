@@ -18,6 +18,10 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'supersecretkey')
 
+@app.context_processor
+def inject_csrf():
+    return dict(csrf_token=session.get('csrf_token', ''))
+
 # Connect to MongoDB
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/dsa_tracker')
 client = MongoClient(MONGO_URI)
@@ -357,6 +361,8 @@ def before_request():
     if not _db_initialized:
         init_db()
         _db_initialized = True
+    if 'csrf_token' not in session:
+        session['csrf_token'] = os.urandom(16).hex()
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -396,9 +402,16 @@ def register():
             flash('An error occurred during registration.', 'danger')
     return render_template('register.html')
 
-@app.route('/logout')
+@app.route('/logout', methods=['GET', 'POST'])
 def logout():
+    if request.method == 'GET':
+        flash('Please use the logout button to sign out.', 'info')
+        return redirect(url_for('index'))
+    if request.form.get('csrf_token') != session.get('csrf_token'):
+        flash('Invalid request. Please try again.', 'danger')
+        return redirect(url_for('index'))
     logout_user()
+    session.pop('csrf_token', None)
     return redirect(url_for('login'))
 
 @app.route('/login/github')
