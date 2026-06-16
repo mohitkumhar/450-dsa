@@ -314,6 +314,12 @@ def update_question(question_id):
         if field in data and not isinstance(data[field], bool):
             return jsonify({"success": False, "error": f"{field} must be a boolean"}), 400
 
+    if "notes" in data and not isinstance(data.get("notes"), str):
+        return jsonify({"success": False, "error": "notes must be a string"}), 400
+
+    if "notes" in data and len(data.get("notes", "")) > 10000:
+        return jsonify({"success": False, "error": "notes must be at most 10000 characters"}), 400
+
     if data.get("done") is True and data.get("skipped") is True:
         data["skipped"] = False
 
@@ -541,6 +547,8 @@ def export_json():
                 "last_reviewed":
                 (
                     item_progress.get("last_reviewed").isoformat()
+                    if hasattr(item_progress.get("last_reviewed"), "isoformat")
+                    else str(item_progress.get("last_reviewed"))
                     if item_progress.get("last_reviewed")
                     else None
                 ),
