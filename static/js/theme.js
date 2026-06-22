@@ -268,6 +268,8 @@
     );
   }
 })();
+
+document.addEventListener("DOMContentLoaded", () => {
 // Theme Toggle
 const themeToggle = document.getElementById("theme-toggle");
 const themeIcon = document.getElementById("theme-icon");
@@ -411,6 +413,10 @@ themeToggle.addEventListener("click", () => {
 const themeUtils = window.themeColorUtils;
 const defaultThemePrefs = themeUtils.defaultPrefs;
 const themePrefsStorageKey = "theme_prefs";
+const themeConfig = window.__themeConfig || {};
+const themePrefsUrl = themeConfig.themePrefsUrl;
+const themeCsrfToken = themeConfig.themeCsrfToken;
+const serverThemePrefs = themeConfig.serverThemePrefs;
 const themeUserAuthenticated = document.body.dataset.authenticated === "1";
 const themeSettingsBtn = document.getElementById("theme-settings-btn");
 const themeSettingsModal = document.getElementById("theme-settings-modal");
@@ -791,3 +797,4 @@ setTimeout(() => {
       (fc.style.transition = "0.5s"),
       setTimeout(() => fc.remove(), 500));
 }, 4000);
+});

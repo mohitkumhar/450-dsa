@@ -69,19 +69,13 @@
         })();
 
         /* only Jinja2-dependent value */
-        window.__themeServerPrefs = {% if current_user.is_authenticated %}{
-            {
-                {
-                    "theme_accent": current_user.theme_accent,
-                        "theme_density": current_user.theme_density,
-                            "theme_chart_palette": current_user.theme_chart_palette,
-                                "theme_preferences_customized": current_user.theme_preferences_customized,
-        } | tojson
-            }
-        } {% else %} null{% endif %};
+        window.__themeServerPrefs = {% if current_user.is_authenticated %}{{ {
+            "theme_accent": current_user.theme_accent,
+            "theme_density": current_user.theme_density,
+            "theme_chart_palette": current_user.theme_chart_palette,
+            "theme_preferences_customized": current_user.theme_preferences_customized,
+        } | tojson }}{% else %} null{% endif %};
     </script>
-
-    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </head>
 
 <body{% if current_user.is_authenticated %} data-authenticated="1" {% endif %}>
@@ -327,20 +321,18 @@
     <script>
         /* only the 3 Jinja2-dependent values stay inline */
         window.__themeConfig = {
-            serverThemePrefs: {% if current_user.is_authenticated %}{
-                {
-                    {
-                        "theme_accent": current_user.theme_accent,
-                            "theme_density": current_user.theme_density,
-                                "theme_chart_palette": current_user.theme_chart_palette,
-                                    "theme_preferences_customized": current_user.theme_preferences_customized,
-            } | tojson
-                }
-        } {% else %} null{% endif %},
-        themePrefsUrl: "{{ url_for('auth.get_theme_preferences') }}",
-            themeCsrfToken: { { csrf_token() | tojson } },
+            serverThemePrefs: {% if current_user.is_authenticated %}{{ {
+                "theme_accent": current_user.theme_accent,
+                "theme_density": current_user.theme_density,
+                "theme_chart_palette": current_user.theme_chart_palette,
+                "theme_preferences_customized": current_user.theme_preferences_customized,
+            } | tojson }}{% else %} null{% endif %},
+            themePrefsUrl: "{{ url_for('auth.get_theme_preferences') }}",
+            themeCsrfToken: {{ csrf_token() | tojson }},
         };
     </script>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
     <!-- inlined: js/pwa-install.js -->
     <script>
