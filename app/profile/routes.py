@@ -6,20 +6,49 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
+
+
+
+def _get_db():
+    global db
+    from app.extensions import db as original_db
+    if db is not original_db:
+        return db
+    import app
+    return app.db
+
+def _get_cache():
+    global cache
+    from app.extensions import cache as original_cache
+    if cache is not original_cache:
+        return cache
+    import app
+    return app.cache
+
+def _get_limiter():
+    global limiter
+    from app.extensions import limiter as original_limiter
+    if limiter is not original_limiter:
+        return limiter
+    import app
+    return app.limiter
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
 from app.profile.card_service import CACHE_TTL, get_public_card_image, warm_public_card_cache
+from app.profile.certificate_service import generate_milestone_certificate
 from app.profile.sync_service import (
     build_sync_platforms_response,
     clear_profile_caches,
     sync_user_platforms,
 )
 from app.utils import (
+    coerce_non_negative_number,
     compute_in_sheet_platform_counts,
     get_merged_daily_counts,
     json_error,
     json_success,
     merge_platform_counts,
+    normalize_timestamp,
     update_computed_stats,
     utc_now,
 )
@@ -32,6 +61,12 @@ __all__ = ["CACHE_TTL", "build_sync_platforms_response", "get_public_card_image"
 
 UNIVERSITY_SEARCH_TIMEOUT_SECONDS = 5
 HEATMAP_DAYS = 168
+
+MILESTONE_DEFS = {
+  "100-solved": {"label": "100 Problems Solved", "threshold": 100},
+  "250-solved": {"label": "250 Problems Solved", "threshold": 250},
+  "sheet-completed": {"label": "450 DSA Sheet Completed", "threshold": "all"},
+}
 
 
 def filter_heatmap_counts(daily_counts, today=None, days=HEATMAP_DAYS):
@@ -114,9 +149,9 @@ def sync_platforms():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return json_error("Request body must be a JSON object.", status_code=400)
-    payload, status_code = sync_user_platforms(current_user, data, db, cache)
+    payload, status_code = sync_user_platforms(current_user, data, _get_db(), _get_cache())
     if payload.get("success"):
-        warm_public_card_cache(current_user.id, db_handle=db)
+        warm_public_card_cache(current_user.id, db_handle=_get_db())
     return jsonify(payload), status_code
 
 
@@ -185,45 +220,61 @@ def edit_profile():
       401:
         description: Login required.
     """
-    data = request.get_json()
-    if not data:
-        return json_error("No data", status_code=400)
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"success": False, "error": "Request body must be a JSON object."}), 400
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
     if update_fields:
-        db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
+        _get_db().user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
         invalidate_leaderboard_cache()
-        clear_profile_caches(cache, current_user.id)
-        warm_public_card_cache(current_user.id, db_handle=db)
+        clear_profile_caches(_get_cache(), current_user.id)
+        warm_public_card_cache(current_user.id, db_handle=_get_db())
     return json_success()
 
 
 @profile_bp.route("/u/<user_id>/card.png")
 def public_card(user_id):
     from bson.objectid import ObjectId
+
     try:
         object_id = ObjectId(user_id)
     except Exception:
         return "Invalid User ID", 400
 
     try:
-        user_doc = db.user.find_one({"_id": object_id}, {"is_deactivated": 1})
+        user_doc = _get_db().user.find_one(
+            {"_id": object_id},
+            {"is_deactivated": 1, "profile_visibility": 1},
+        )
     except TypeError:
         # Some lightweight test doubles implement a simpler find_one(query) API.
-        user_doc = db.user.find_one({"_id": object_id})
+        user_doc = _get_db().user.find_one({"_id": object_id})
+
     if not user_doc or user_doc.get("is_deactivated"):
         return "User not found", 404
 
+    visibility = user_doc.get("profile_visibility", "public")
+    viewer_is_owner = (
+        current_user.is_authenticated
+        and str(current_user.id) == str(object_id)
+    )
+
+    if visibility == "private" and not viewer_is_owner:
+        return "Profile is private", 403
+
+    if visibility == "stats_only" and not viewer_is_owner:
+        return "Profile card is unavailable for stats-only profiles", 403
+
     try:
-        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
+        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=_get_db())
     except LookupError:
         return "User not found", 404
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
-
     try:
         img_io.seek(0)
         response = send_file(img_io, mimetype="image/png")
@@ -236,9 +287,64 @@ def public_card(user_id):
     except Exception:
         current_app.logger.exception("Failed to generate public progress card")
         return "Unable to generate progress card", 500
+@profile_bp.route("/certificate/<milestone_id>")
+@login_required
+def milestone_certificate(milestone_id):
+    milestone = MILESTONE_DEFS.get(milestone_id)
+    if not milestone:
+        return "Milestone not found", 404
 
+    progress_data = current_user.progress or {}
+    dsa_done = sum(1 for progress_item in progress_data.values() if progress_item.get("done"))
+    total_questions = _get_db().question.count_documents({})
 
+    threshold = milestone["threshold"]
+    if threshold == "all":
+        eligible = total_questions > 0 and dsa_done >= total_questions
+    else:
+        eligible = dsa_done >= int(threshold)
+
+    if not eligible:
+        return "Milestone not reached", 403
+
+    awarded_on = utc_now().date().isoformat()
+    img_io = generate_milestone_certificate(current_user.name, milestone["label"], awarded_on=awarded_on)
+    filename = f"certificate-{milestone_id}.png"
+    return send_file(img_io, mimetype="image/png", as_attachment=True, download_name=filename)
+
+def _validate_theme_preferences(data):
+    """Validate and return theme preference updates and errors."""
+    updates = {}
+    errors = {}
+
+    # Validate theme_accent
+    if "theme_accent" in data:
+        accent = data["theme_accent"]
+        if not isinstance(accent, str) or not accent.startswith("#") or len(accent) != 7:
+            errors["theme_accent"] = "Must be a valid hex color code (e.g., #ba5912)"
+        else:
+            updates["theme_accent"] = accent.lower()
+
+    # Validate theme_density
+    if "theme_density" in data:
+        density = data["theme_density"]
+        if density not in ("comfortable", "compact"):
+            errors["theme_density"] = "Must be either 'comfortable' or 'compact'"
+        else:
+            updates["theme_density"] = density
+
+    # Validate theme_chart_palette
+    if "theme_chart_palette" in data:
+        palette = data["theme_chart_palette"]
+        if palette not in ("default", "colorblind"):
+            errors["theme_chart_palette"] = "Must be either 'default' or 'colorblind'"
+        else:
+            updates["theme_chart_palette"] = palette
+
+    return updates, errors
 @profile_bp.route("/search_universities")
+@limiter.limit("30 per minute")
+@cache.cached(timeout=300, query_string=True)
 def search_universities():
     """Return matching universities for an autocomplete query.
     ---
@@ -291,6 +397,41 @@ def search_universities():
     except Exception:
         return jsonify([])
 
+
+@profile_bp.route("/theme_preferences", methods=["GET"])
+@login_required
+def get_theme_preferences():
+    user_doc = _get_db().user.find_one({"_id": current_user.id})
+    if not user_doc:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({
+        "theme_accent": user_doc.get("theme_accent", "#ba5912"),
+        "theme_density": user_doc.get("theme_density", "comfortable"),
+        "theme_chart_palette": user_doc.get("theme_chart_palette", "default"),
+        "theme_preferences_customized": bool(user_doc.get("theme_preferences_updated_at"))
+    })
+
+@profile_bp.route("/theme_preferences", methods=["POST"])
+@login_required
+def update_theme_preferences():
+    data = request.get_json(silent=True) or {}
+    updates, errors = _validate_theme_preferences(data)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    if not updates:
+        return jsonify({"error": "No valid fields provided."}), 400
+
+    updates["theme_preferences_updated_at"] = utc_now()
+    _get_db().user.update_one({"_id": current_user.id}, {"$set": updates})
+    current_user.reload()
+    user_doc = _get_db().user.find_one({"_id": current_user.id}) or {}
+    return jsonify({
+        "success": True,
+        "theme_accent": user_doc.get("theme_accent", "#ba5912"),
+        "theme_density": user_doc.get("theme_density", "comfortable"),
+        "theme_chart_palette": user_doc.get("theme_chart_palette", "default"),
+        "theme_preferences_customized": bool(user_doc.get("theme_preferences_updated_at"))
+    })
 
 @profile_bp.route("/upload_photo", methods=["POST"])
 @login_required
@@ -345,7 +486,8 @@ def profile():
     user = current_user
     solved_items = {question_id: progress for question_id, progress in user.progress.items() if progress.get("done")}
     dsa_done = len(solved_items)
-    current_streak, longest_streak = compute_streak(user.progress)
+    merged_daily_counts = get_merged_daily_counts(user)
+    current_streak, longest_streak = compute_streak(user.progress, external_daily_counts=merged_daily_counts)
 
     pre = current_app.config.get("_PRECOMPUTED")
     if pre:
@@ -355,8 +497,8 @@ def profile():
         topic_question_count = pre["topic_question_count"]
         total_questions = pre["total_questions"]
     else:
-        topics = list(db.topic.find().sort("position", 1))
-        all_questions = list(db.question.find())
+        topics = list(_get_db().topic.find().sort("position", 1))
+        all_questions = list(_get_db().question.find())
         difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
         topic_question_count = {}
         for question in all_questions:
@@ -383,13 +525,13 @@ def profile():
     for question in all_questions:
         question_id = str(question["_id"])
         if question_id in solved_items:
-            solved_at = solved_items[question_id].get("timestamp") or utc_now()
-            day = solved_at.strftime("%Y-%m-%d")
+            day = normalize_timestamp(solved_items[question_id].get("timestamp"))
+            if day is None:
+                continue
             daily_counts[day] = daily_counts.get(day, 0) + 1
 
-    ext_daily = get_merged_daily_counts(user)
-    if ext_daily:
-        for day, count in ext_daily.items():
+    if merged_daily_counts:
+        for day, count in merged_daily_counts.items():
             daily_counts[day] = daily_counts.get(day, 0) + count
 
     total_active_days = len(daily_counts)
@@ -416,23 +558,23 @@ def profile():
 
         # Avoid clobbering concurrent $inc updates from /update_question by setting only
         # if the field is still absent at write time.
-        update_result = db.user.update_one(
+        update_result = _get_db().user.update_one(
             {"_id": user.id, "in_sheet_platform_counts": {"$exists": False}},
             {"$set": {"in_sheet_platform_counts": in_sheet_counts}},
         )
 
         effective_counts = in_sheet_counts
         if not getattr(update_result, "modified_count", 0):
-            refreshed = db.user.find_one({"_id": user.id}, {"in_sheet_platform_counts": 1}) or {}
+            refreshed = _get_db().user.find_one({"_id": user.id}, {"in_sheet_platform_counts": 1}) or {}
             refreshed_counts = refreshed.get("in_sheet_platform_counts")
             if isinstance(refreshed_counts, dict):
                 effective_counts = refreshed_counts
 
         platforms = merge_platform_counts(effective_counts, ext_platform_totals)
 
-    lc_easy = dsa_easy
-    lc_medium = dsa_medium
-    lc_hard = dsa_hard
+    lc_easy = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Easy", 0))
+    lc_medium = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Medium", 0))
+    lc_hard = coerce_non_negative_number(ext_platform_totals.get("LeetCode_Hard", 0))
 
     lc_contests = ext_platform_totals.get("LeetCode_Contests", 0)
     lc_rating = ext_platform_totals.get("LeetCode_Rating", 0)
@@ -477,7 +619,7 @@ def profile():
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
-    update_computed_stats(user.id, user.progress, db, total_questions)
+    update_computed_stats(user.id, user.progress, _get_db(), total_questions, user)
 
     return render_template(
         "profile.html",

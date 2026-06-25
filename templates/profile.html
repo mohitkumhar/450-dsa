@@ -4,7 +4,6 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
 {% block content %}
-
 <div class="prof-layout">
 
 <!-- ── LEFT SIDEBAR ── -->
@@ -75,6 +74,25 @@
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
       <i class="bi bi-calendar-event" style="margin-right:6px" aria-hidden="true"></i> Export Study Calendar
     </a>
+    {% set milestone_certs = [
+      {'id': '100-solved', 'label': '100 Solved', 'eligible': dsa_done >= 100},
+      {'id': '250-solved', 'label': '250 Solved', 'eligible': dsa_done >= 250},
+      {'id': 'sheet-completed', 'label': 'Sheet Completed', 'eligible': dsa_done >= total_questions}
+    ] %}
+    <div style="margin-top:12px">
+      <div class="sec-title">Milestone Certificates</div>
+      {% for cert in milestone_certs %}
+        {% if cert.eligible %}
+          <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('profile.milestone_certificate', milestone_id=cert.id) }}" aria-label="Download {{ cert.label }} certificate">
+            <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> {{ cert.label }} Certificate
+          </a>
+        {% else %}
+          <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" disabled aria-disabled="true">
+            <i class="bi bi-lock" style="margin-right:6px" aria-hidden="true"></i> {{ cert.label }} Certificate
+          </button>
+        {% endif %}
+      {% endfor %}
+    </div>
     <div class="prof-bio">{{ user.bio or 'Software Engineer | Problem Solver | DSA Enthusiast' }}</div>
     <div class="social-row">
       {% if user.email %}<a href="mailto:{{ user.email }}" class="social-icon" title="Email" aria-label="Send email to {{ user.email }}"><i class="bi bi-envelope" aria-hidden="true"></i></a>{% endif %}
@@ -102,31 +120,31 @@
     </div>
     <div class="sec-title">Problem Solving Stats</div>
     <div class="platform-row">
-      <span><i class="bi bi-code-slash" style="color:var(--chart-5);margin-right:6px" aria-hidden="true"></i>LeetCode</span>
+      <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:6px" aria-hidden="true"></i>LeetCode</span>
       <span style="display:flex;align-items:center;gap:6px">
         {% if user.leetcode_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.leetcode_username | platform_url('leetcode') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="LeetCode profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect LeetCode account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-braces" style="color:var(--chart-3);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
+      <span><i class="bi bi-braces" style="color:var(--success);margin-right:6px" aria-hidden="true"></i>GeeksForGeeks</span>
       <span style="display:flex;align-items:center;gap:6px">
         {% if user.gfg_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.gfg_username | platform_url('gfg') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="GFG profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect GFG account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-lightning-charge" style="color:var(--chart-4);margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
+      <span><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:6px" aria-hidden="true"></i>Coding Ninjas</span>
       <span style="display:flex;align-items:center;gap:6px">
         {% if user.codingninjas_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codingninjas_username | platform_url('codingninjas') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Coding Ninjas profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Coding Ninjas account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-terminal" style="color:var(--chart-2);margin-right:6px" aria-hidden="true"></i>HackerRank</span>
+      <span><i class="bi bi-terminal" style="color:#00bd6c;margin-right:6px" aria-hidden="true"></i>HackerRank</span>
       <span style="display:flex;align-items:center;gap:6px">
         {% if user.hackerrank_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.hackerrank_username | platform_url('hackerrank') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="HackerRank profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect HackerRank account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
     </div>
     <div class="platform-row">
-      <span><i class="bi bi-trophy" style="color:var(--chart-6);margin-right:6px" aria-hidden="true"></i>AtCoder</span>
+      <span><i class="bi bi-trophy" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>AtCoder</span>
       <span style="display:flex;align-items:center;gap:6px">
         {% if user.atcoder_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.atcoder_username | platform_url('atcoder') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="AtCoder profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect AtCoder account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       </span>
@@ -154,7 +172,7 @@
       <i class="bi bi-bar-chart-fill" style="color:var(--accent);font-size:1.4rem" aria-hidden="true"></i>
       <span class="rank-num">{{ profile_leaderboard_rank if profile_leaderboard_rank is not none else "—" }}</span>
     </div>
-    <a href="https://codolio.com/leaderboard" target="_blank" rel="noopener noreferrer" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View global leaderboard (opens in new tab)">View Leaderboard</a>
+    <a href="{{ url_for('leaderboard.leaderboard') }}" class="view-lb-btn ui-btn ui-btn-primary ui-btn-block" aria-label="View app leaderboard">View Leaderboard</a>
     <div class="meta-footer">
       <span><span>Profile Views:</span><span>{{ [dsa_done // 10, 1]|max }}</span></span>
       <span><span>Profile Visibility:</span><span>Public</span></span>
@@ -198,7 +216,7 @@
       <div class="stat-lbl" style="margin-bottom:8px;text-align:center">Total Contests</div>
       <div class="big-num" style="text-align:center">{{ lc_contests }}</div>
       <div style="margin-top:14px;background:var(--bg-secondary);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:.8rem">
-        <span><i class="bi bi-code-slash" style="color:var(--chart-5);margin-right:4px" aria-hidden="true"></i>LeetCode</span>
+        <span><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px" aria-hidden="true"></i>LeetCode</span>
         <strong>{{ lc_contests }}</strong>
       </div>
     </div>
@@ -240,7 +258,7 @@
       {% for badge in hr_badges %}
       {% set earned = badge.stars|int if badge.stars else 0 %}
       <div class="award-badge" title="{{ badge.name }} — {{ earned }} star{{ 's' if earned != 1 else '' }}" role="listitem">
-        <i class="bi bi-terminal" style="font-size:.9rem;color:var(--chart-2)" aria-hidden="true"></i>
+        <i class="bi bi-terminal" style="font-size:.9rem;color:#00bd6c" aria-hidden="true"></i>
         <div class="hr-stars">
           {% for i in range(earned) %}
             <span class="s-on">★</span>
@@ -316,10 +334,8 @@
     <div>
       {% for name in ['LeetCode', 'GFG', 'Coding Ninjas', 'HackerRank', 'AtCoder', 'Codewars'] %}
       <div class="legend-item">
-
         <span><span class="legend-dot" style="background:{{ PLATFORM_META[name].brand_color }}"></span><span style="color:{{ PLATFORM_META[name].brand_color }};font-weight:700">{{ name }}</span></span>
         <strong>{{ platforms[name] }}</strong>
-
       </div>
       {% endfor %}
       <div class="legend-item">
@@ -330,10 +346,10 @@
 
     <hr style="border-color:var(--border-color);margin:16px 0">
 
-    <!-- DSA difficulty -->
+    <!-- LeetCode difficulty -->
     <div style="font-size:.8rem;font-weight:700;display:flex;justify-content:space-between;align-items:center;color:var(--text-secondary);margin-bottom:12px">
-      <span style="flex:1;text-align:center;padding-left:24px">DSA</span>
-      <button onclick="exportChart('difficultyChart', 'dsa-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
+      <span style="flex:1;text-align:center;padding-left:24px">LeetCode</span>
+      <button onclick="exportChart('difficultyChart', 'leetcode-difficulty.png')" title="Export Chart as Image" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;transition:color 0.2s;width:24px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'" aria-label="Export difficulty chart">
         <i class="bi bi-download" aria-hidden="true"></i>
       </button>
     </div>
@@ -352,7 +368,7 @@
         <strong>{{ lc_medium }}</strong>
       </div>
       <div class="legend-item">
-        <span><span class="legend-dot" style="background:var(--chart-4)"></span><span style="color:var(--chart-4);font-weight:700">Hard</span></span>
+        <span><span class="legend-dot" style="background:#ff375f"></span><span style="color:#ff375f;font-weight:700">Hard</span></span>
         <strong>{{ lc_hard }}</strong>
       </div>
     </div>
@@ -382,22 +398,20 @@
 <!-- Sync Modal -->
 {% call modal_shell('syncModal', '<i class="bi bi-link-45deg" style="color:var(--accent)"></i> Connect Coding Profiles', 'syncModalTitle', 'closeSyncModal()', box_style='max-width:480px', header_style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px') %}
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:20px">Enter your usernames to sync activity heatmap and stats from external platforms.</p>
-    <label class="m-lbl"><i class="bi bi-code-slash" style="color:var(--chart-5);margin-right:4px"></i>LeetCode Username</label>
+    <label class="m-lbl"><i class="bi bi-code-slash" style="color:#ffb800;margin-right:4px"></i>LeetCode Username</label>
     <input class="m-inp" id="lc_username" placeholder="e.g. neetcode" value="{{ user.leetcode_username or '' }}">
     <label class="m-lbl"><i class="bi bi-github" style="margin-right:4px"></i>GitHub Username</label>
     <input class="m-inp" id="gh_username" placeholder="e.g. torvalds" value="{{ user.github_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--chart-3);margin-right:4px"></i>GeeksForGeeks Username</label>
+    <label class="m-lbl"><i class="bi bi-braces" style="color:var(--success);margin-right:4px"></i>GeeksForGeeks Username</label>
     <input class="m-inp" id="gfg_username" placeholder="e.g. geek" value="{{ user.gfg_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:var(--chart-4);margin-right:4px"></i>Coding Ninjas Username</label>
+    <label class="m-lbl"><i class="bi bi-lightning-charge" style="color:#8b5cf6;margin-right:4px"></i>Coding Ninjas Username</label>
     <input class="m-inp" id="cn_username" placeholder="e.g. Harshydv or full profile URL" value="{{ user.codingninjas_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-h-square" style="color:var(--chart-2);margin-right:4px"></i>HackerRank Username</label>
+    <label class="m-lbl"><i class="bi bi-h-square" style="color:#00bd6c;margin-right:4px"></i>HackerRank Username</label>
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
-
-    <label class="m-lbl"><i class="bi bi-trophy" style="color:var(--chart-6);margin-right:4px"></i>AtCoder Handle</label>
+    <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
     <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
-    <label class="m-lbl"><i class="bi bi-fire" style="color:var(--chart-1);margin-right:4px"></i>Codewars Username</label>
+    <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
     <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
-
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
     <div class="m-actions">
       <button class="m-cancel" onclick="closeSyncModal()">Cancel</button>
@@ -406,9 +420,9 @@
 {% endcall %}
 
 <!-- Codolio Card Modal -->
-{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,var(--bg-card),var(--bg-secondary));border-color:var(--accent-surface-strong)') %}
-    <div style="background:var(--accent-surface-gradient);border:1px solid var(--accent-surface-strong);border-radius:16px;padding:24px;text-align:center">
-      <div style="width:70px;height:70px;border-radius:50%;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:var(--accent-foreground);margin:0 auto 12px">{{ user.name[0]|upper }}</div>
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
+    <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
+      <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
       <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
       <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@{{ user.leetcode_username or user.name|lower|replace(' ','') }}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
@@ -418,7 +432,7 @@
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied!')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:var(--accent-foreground);font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
 {% endcall %}
 
 <!-- Edit Profile Modal -->
@@ -427,7 +441,7 @@
     <!-- Photo Upload -->
     <div style="text-align:center;margin-bottom:20px">
       <div style="position:relative;display:inline-block">
-        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:var(--accent-gradient);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:var(--accent-foreground);overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
+        <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
           {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
         <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
@@ -457,7 +471,18 @@
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
-    </div><!-- end scrollable body -->
+    <div style="margin-bottom:16px">
+  <label class="m-lbl"><i class="bi bi-shield-lock" style="color:var(--accent)"></i> Profile Visibility</label>
+  <select class="m-inp" id="ep_profile_visibility">
+    <option value="public" {% if (user.profile_visibility or 'public') == 'public' %}selected{% endif %}>Public - show full profile</option>
+    <option value="private" {% if user.profile_visibility == 'private' %}selected{% endif %}>Private - hide public profile</option>
+    <option value="stats_only" {% if user.profile_visibility == 'stats_only' %}selected{% endif %}>Stats Only - show only progress stats</option>
+  </select>
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">
+    Control what other users can see on your public profile page.
+  </div>
+</div>
+  </div><!-- end scrollable body -->
     <div style="flex-shrink:0;display:flex;justify-content:flex-end;gap:10px;padding:14px 24px;border-top:1px solid var(--border-color)">
       <button class="m-cancel" onclick="closeEditProfile()">Cancel</button>
       <button class="m-save" id="btnSaveProfile" onclick="handleSaveProfile(this)"><span id="saveProfileContent" style="display:inline-flex;align-items:center;gap:6px"><i class="bi bi-check2-circle"></i> Save Profile</span></button>
@@ -540,7 +565,7 @@
 
 <!-- Sync Loading Overlay -->
 <div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
-  <div style="width:60px;height:60px;border:4px solid var(--accent-surface-strong);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
+  <div style="width:60px;height:60px;border:4px solid rgba(255,107,0,.3);border-top-color:var(--accent);border-radius:50%;animation:spin .9s linear infinite"></div>
   <div style="color:#fff;font-size:1rem;font-weight:600" id="syncOverlayMsg">Syncing your profiles...</div>
   <div style="color:rgba(255,255,255,.5);font-size:.8rem">This may take 15–30 seconds</div>
   <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:4px" id="syncSteps"></div>
@@ -564,16 +589,17 @@ const csrfToken = {{ csrf_token()|tojson }};
 window.handleSaveProfile = function(btn){
   const contentEl=document.getElementById('saveProfileContent');
   const payload={
-    name: document.getElementById('ep_name').value,
-    bio: document.getElementById('ep_bio').value,
-    headline: document.getElementById('ep_headline').value,
-    location: document.getElementById('ep_location').value,
-    college: document.getElementById('ep_college').value,
-    linkedin_url: document.getElementById('ep_linkedin').value,
-    twitter_url: document.getElementById('ep_twitter').value,
-    website_url: document.getElementById('ep_website').value,
-    resume_url: document.getElementById('ep_resume').value,
-  };
+  name: document.getElementById('ep_name').value,
+  bio: document.getElementById('ep_bio').value,
+  headline: document.getElementById('ep_headline').value,
+  location: document.getElementById('ep_location').value,
+  college: document.getElementById('ep_college').value,
+  linkedin_url: document.getElementById('ep_linkedin').value,
+  twitter_url: document.getElementById('ep_twitter').value,
+  website_url: document.getElementById('ep_website').value,
+  resume_url: document.getElementById('ep_resume').value,
+  profile_visibility: document.getElementById('ep_profile_visibility').value,
+};
   window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
   fetch(endpointConfig.editProfile,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},body:JSON.stringify(payload)})
     .then(r=>r.json())
@@ -596,17 +622,15 @@ window.handleQuickSync = function(btn) {
   const icon = document.getElementById('quickSyncIcon');
   if (btn.disabled) return;
   
-  const lc = '{{ user.leetcode_username or "" }}';
-  const gh = '{{ user.github_username or "" }}';
-  const gfg = '{{ user.gfg_username or "" }}';
-  const hr = '{{ user.hackerrank_username or "" }}';
-  const cn = '{{ user.codingninjas_username or "" }}';
-  const ac = '{{ user.atcoder_username or "" }}';
-
-  const cw = '{{ user.codewars_username or "" }}';
+  const lc = {{ (user.leetcode_username or "")|tojson }};
+  const gh = {{ (user.github_username or "")|tojson }};
+  const gfg = {{ (user.gfg_username or "")|tojson }};
+  const hr = {{ (user.hackerrank_username or "")|tojson }};
+  const cn = {{ (user.codingninjas_username or "")|tojson }};
+  const ac = {{ (user.atcoder_username or "")|tojson }};
+  const cw = {{ (user.codewars_username or "")|tojson }};
   
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
-
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
@@ -617,10 +641,8 @@ window.handleQuickSync = function(btn) {
   
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
-
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})
-
   })
   .then(r => r.json())
   .then(res => {
@@ -648,10 +670,8 @@ window.handleSyncProfile = function(btn){
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
   const ac=document.getElementById('ac_username').value.trim();
-
   const cw=document.getElementById('cw_username').value.trim();
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
-
 
   // Disable button & show spinner
   window.setButtonBusyState(btn, syncContent, { busy: true, busyLabel: 'Syncing...' });
@@ -696,10 +716,8 @@ window.handleSyncProfile = function(btn){
 
   fetch(endpointConfig.syncPlatforms,{
     method:'POST',
-
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
     body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw}),
-
     signal:ctrl.signal
   })
   .then(r=>{clearTimeout(timer);return r.json();})
@@ -728,21 +746,6 @@ window.handleSyncProfile = function(btn){
   });
 };
 
-
-// ── Chart & Visualization Code ──
-const themeStyles = getComputedStyle(document.documentElement);
-const chartThemeColor = (name, fallback) => themeStyles.getPropertyValue(name).trim() || fallback;
-const chartAccent = chartThemeColor('--accent', '#ba5912');
-const chartAccentDim = chartThemeColor('--accent-dim', 'rgba(194,65,12,.16)');
-const chartPalette = [
-  chartThemeColor('--chart-5', '#a16207'),
-  chartThemeColor('--chart-3', '#22c55e'),
-  chartThemeColor('--chart-4', '#be185d'),
-  chartThemeColor('--chart-2', '#3b82f6'),
-  chartThemeColor('--chart-6', '#64748b'),
-  chartThemeColor('--chart-1', '#ba5912'),
-];
-
 const dailyCounts = {{ daily_counts | tojson }};
 const heatmap = document.getElementById('heatmap');
 function exportChart(id,file){
@@ -770,42 +773,11 @@ for(let i=0;i<days;i++){
 
 const ratingHistory = {{ rating_history | tojson }};
 const cumData = {{ cumulative_data | tojson }};
-
 const pData = {{ platforms | tojson }};
 const chartShells=['progressChartShell','platformsChartShell','difficultyChartShell'].map(i=>document.getElementById(i)).filter(Boolean);let chartJsPromise;
 function loadChartJs(){return window.Chart?Promise.resolve(window.Chart):chartJsPromise||(chartJsPromise=new Promise((ok,bad)=>{let add=(src,err)=>{let s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>ok(window.Chart);s.onerror=err||bad;document.head.appendChild(s)};add('https://cdn.jsdelivr.net/npm/chart.js',()=>add('https://unpkg.com/chart.js@4/dist/chart.umd.js'))}))}
-function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:chartAccent,backgroundColor:chartAccentDim,borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:chartAccent}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
+function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
 if('IntersectionObserver'in window&&chartShells.length){const io=new IntersectionObserver((e,o)=>{if(e.some(x=>x.isIntersecting)){o.disconnect();renderProfileCharts()}},{rootMargin:'160px'});chartShells.forEach(s=>io.observe(s))}else renderProfileCharts();
-
-
-window.refreshThemedCharts = function(){
-  const styles = getComputedStyle(document.documentElement);
-  const color = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
-  const nextPalette = [
-    color('--chart-5', '#a16207'),
-    color('--chart-3', '#22c55e'),
-    color('--chart-4', '#be185d'),
-    color('--chart-2', '#3b82f6'),
-    color('--chart-6', '#64748b'),
-    color('--chart-1', '#ba5912'),
-  ];
-
-  if(progressChartInstance){
-    const dataset = progressChartInstance.data.datasets[0];
-    dataset.borderColor = color('--accent', '#ba5912');
-    dataset.backgroundColor = color('--accent-dim', 'rgba(194,65,12,.16)');
-    dataset.pointBackgroundColor = color('--accent', '#ba5912');
-    progressChartInstance.update('none');
-  }
-  if(platformsChartInstance){
-    platformsChartInstance.data.datasets[0].backgroundColor = nextPalette;
-    platformsChartInstance.update('none');
-  }
-  if(difficultyChartInstance){
-    difficultyChartInstance.data.datasets[0].backgroundColor = [nextPalette[1], nextPalette[0], nextPalette[2]];
-    difficultyChartInstance.update('none');
-  }
-};
 
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
@@ -911,4 +883,28 @@ function handlePhotoUpload(e){
 })();
 </script>
 <script src="{{ url_for('static', filename='js/profile-import.js') }}"></script>
+<style>
+  @media screen and (max-width:768px)
+  {
+    .prof-layout
+    {
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+      padding:10px;
+    }
+    .card
+    {
+      width:100%;
+      border-radius:12px;
+      margin-bottom: 15px;
+    }
+    img
+    {
+      max-width: 100%;
+      height: auto;
+    }
+  }
+</style>
+
 {% endblock %}

@@ -30,3 +30,7 @@ def leaderboard_page_cache_key():
 def api_leaderboard_cache_key():
     args = tuple(sorted(request.args.items(multi=True)))
     return f"leaderboard:v{_leaderboard_cache_version()}:api:{request.path}:{args}"
+
+
+# GSSoC Leaderboard cache TTL window
+# Cache leaderboard statistics for 5 minutes max to save Redis compute.

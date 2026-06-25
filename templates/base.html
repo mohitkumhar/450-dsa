@@ -327,7 +327,7 @@
                 "theme_chart_palette": current_user.theme_chart_palette,
                 "theme_preferences_customized": current_user.theme_preferences_customized,
             } | tojson }}{% else %} null{% endif %},
-            themePrefsUrl: "{{ url_for('auth.get_theme_preferences') }}",
+            themePrefsUrl: "{{ url_for('profile.get_theme_preferences') }}",
             themeCsrfToken: {{ csrf_token() | tojson }},
         };
     </script>

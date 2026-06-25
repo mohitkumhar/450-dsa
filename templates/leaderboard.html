@@ -32,8 +32,8 @@
 .lb-tab:hover { color: var(--text-primary); }
 .lb-tab.active {
   background: var(--accent);
-  color: var(--accent-foreground);
-  box-shadow: 0 2px 8px var(--accent-surface-strong);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255,107,0,0.3);
 }
 .lb-tab:focus-visible {
   outline: 2px solid var(--accent);
@@ -86,7 +86,7 @@
   box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
 }
 .current-user-pinned td {
-  background: var(--accent-surface);
+  background: rgba(255,107,0,0.1);
 }
 
 .lb-table-wrap {
@@ -117,10 +117,10 @@
 .lb-table tbody tr:last-child { border-bottom: none; }
 .lb-table tbody tr:hover { background: var(--bg-secondary); }
 .lb-table tbody tr.me-row {
-  background: var(--accent-surface);
+  background: rgba(255,107,0,0.06);
   border-left: 3px solid var(--accent);
 }
-.lb-table tbody tr.me-row:hover { background: var(--accent-surface-strong); }
+.lb-table tbody tr.me-row:hover { background: rgba(255,107,0,0.1); }
 .lb-table tbody td { padding: 12px 16px; font-size: 0.85rem; vertical-align: middle; }
 
 .rank-cell { font-weight: 800; color: var(--text-muted); font-size: 0.9rem; min-width: 44px; }
@@ -133,13 +133,13 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, var(--accent), #ff375f);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--accent-foreground);
+  color: #fff;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -159,16 +159,16 @@
   font-size: 0.73rem;
   font-weight: 700;
 }
-.stat-badge.lc { background: color-mix(in srgb, var(--chart-5) 16%, transparent); color: var(--chart-5); border: 1px solid color-mix(in srgb, var(--chart-5) 28%, transparent); }
-.stat-badge.gfg { background: color-mix(in srgb, var(--chart-3) 16%, transparent); color: var(--chart-3); border: 1px solid color-mix(in srgb, var(--chart-3) 28%, transparent); }
-.stat-badge.cn { background: color-mix(in srgb, var(--chart-4) 16%, transparent); color: var(--chart-4); border: 1px solid color-mix(in srgb, var(--chart-4) 28%, transparent); }
-.stat-badge.hr { background: color-mix(in srgb, var(--chart-2) 16%, transparent); color: var(--chart-2); border: 1px solid color-mix(in srgb, var(--chart-2) 28%, transparent); }
-.stat-badge.dsa { background: var(--accent-surface); color: var(--accent); border: 1px solid var(--accent-surface-strong); }
+.stat-badge.lc { background: rgba(255,184,0,0.12); color: #ffb800; border: 1px solid rgba(255,184,0,0.2); }
+.stat-badge.gfg { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+.stat-badge.cn { background: rgba(139,92,246,0.12); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.2); }
+.stat-badge.hr { background: rgba(0,189,108,0.12); color: #00bd6c; border: 1px solid rgba(0,189,108,0.2); }
+.stat-badge.dsa { background: rgba(255,107,0,0.12); color: var(--accent); border: 1px solid rgba(255,107,0,0.2); }
 
 .score-cell { font-weight: 900; font-size: 1rem; color: var(--accent); }
-.score-cell.rating-mode { color: var(--chart-5); }
+.score-cell.rating-mode { color: #ffb800; }
 .score-cell.questions-mode { color: var(--success); }
-.score-cell.college-mode { color: var(--chart-2); }
+.score-cell.college-mode { color: #38bdf8; }
 
 .me-tag {
   display: inline-flex;
@@ -176,7 +176,7 @@
   gap: 3px;
   padding: 1px 8px;
   background: var(--accent);
-  color: var(--accent-foreground);
+  color: #fff;
   border-radius: 10px;
   font-size: 0.65rem;
   font-weight: 700;
@@ -199,9 +199,9 @@
   .lb-table tbody td:nth-child(5) { display: none; }
 }
 .current-user-pinned a {
-  background: var(--accent-surface-strong) !important;
-  color: var(--accent) !important;
-  border: 1px solid var(--accent);
+  background: rgba(255, 107, 0, 0.25) !important;
+  color: #ffab4a !important;
+  border: 1px solid rgba(255, 107, 0, 0.5);
   padding: 4px 12px;
   border-radius: 20px;
   font-weight: 700;
@@ -211,7 +211,7 @@
 
 .current-user-pinned a:hover {
   background: var(--accent) !important;
-  color: var(--accent-foreground) !important;
+  color: white !important;
   text-decoration: none;
 }
 .current-user-pinned a:focus-visible {
@@ -272,8 +272,10 @@ const endpointConfig = {{ {
   "publicProfileBase": url_for('public.public_profile', user_id='__USER_ID__'),
   "compareBase": url_for('leaderboard.compare', user_id='__USER_ID__'),
 }|tojson }};
-let activeMode = 'cscore';
-let currentPage = 1;
+const VALID_MODES = ['cscore', 'questions', 'rating', 'college'];
+const urlParams = new URLSearchParams(window.location.search);
+let activeMode = VALID_MODES.includes(urlParams.get('mode')) ? urlParams.get('mode') : 'cscore';
+let currentPage = Math.max(1, parseInt(urlParams.get('page'), 10) || 1);
 let totalPages = 1;
 let currentUserRank = null;
 let isLoading = false;
@@ -439,7 +441,7 @@ function renderTable(entries, mode) {
       <td colspan="5" style="text-align: center; padding: 12px;">
         <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
         You are ranked #${escapeHTML(currentUserRank)} in this category. 
-        <a href="?page=${targetPage}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
+        <a href="?page=${targetPage}&mode=${encodeURIComponent(activeMode)}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
       </td>
     </tr>`;
   }
@@ -472,15 +474,28 @@ function switchTab(mode) {
   activeTab.classList.add('active');
   activeTab.setAttribute('aria-selected', 'true');
   
+  const url = new URL(window.location);
+  url.searchParams.set('mode', mode);
+  url.searchParams.delete('page');
+  window.history.replaceState({}, '', url);
+
   loadLeaderboard(1);
 }
 
+function goToPage(page) {
+  loadLeaderboard(page);
+  const url = new URL(window.location);
+  url.searchParams.set('page', page);
+  url.searchParams.set('mode', activeMode);
+  window.history.replaceState({}, '', url);
+}
+
 document.getElementById('prevBtn').addEventListener('click', () => {
-  if (currentPage > 1) loadLeaderboard(currentPage - 1);
+  if (currentPage > 1) goToPage(currentPage - 1);
 });
 
 document.getElementById('nextBtn').addEventListener('click', () => {
-  if (currentPage < totalPages) loadLeaderboard(currentPage + 1);
+  if (currentPage < totalPages) goToPage(currentPage + 1);
 });
 
 document.querySelectorAll('.lb-tab').forEach(tab => {
@@ -489,6 +504,12 @@ document.querySelectorAll('.lb-tab').forEach(tab => {
   });
 });
 
-loadLeaderboard(1);
+// Activate initial tab from URL params
+document.querySelectorAll('.lb-tab').forEach(tab => {
+  tab.classList.toggle('active', tab.dataset.mode === activeMode);
+  tab.setAttribute('aria-selected', tab.dataset.mode === activeMode ? 'true' : 'false');
+});
+
+loadLeaderboard(currentPage);
 </script>
 {% endblock %}

@@ -2,7 +2,7 @@ import re
 import secrets
 
 from bson import ObjectId
-from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import UserMixin, current_user, login_required, login_user, logout_user
 
 from app.extensions import bcrypt, cache, db, github, google, limiter, login_manager
@@ -47,16 +47,16 @@ def resolve_oauth_user(provider_field, provider_id, name, email=None):
         return user_doc, "linked"
 
     result = db.user.insert_one(
-        {
-            "name": name,
-            "email": email,
-            provider_field: provider_id,
-            "progress": {},
-            "is_admin": False,
-            "created_at": utc_now(),
-            **DEFAULT_THEME_PREFERENCES,
-        }
-    )
+    {
+        "name": name,
+        "email": email,
+        provider_field: provider_id,
+        "progress": {},
+        "profile_visibility": "public",
+        "is_admin": False,
+        "created_at": utc_now(),
+    }
+)
     user_doc = db.user.find_one({"_id": result.inserted_id})
     return user_doc, "created"
 
@@ -91,39 +91,11 @@ def normalize_email(email):
     return email.strip().lower()
 
 
-DEFAULT_THEME_PREFERENCES = {
-    "theme_accent": "#ba5912",
-    "theme_density": "comfortable",
-    "theme_chart_palette": "default",
-}
-THEME_PREFERENCE_FIELDS = set(DEFAULT_THEME_PREFERENCES)
-HEX_COLOR_PATTERN = re.compile(r"^#[0-9a-fA-F]{6}$")
-THEME_DENSITIES = {"comfortable", "compact"}
-CHART_PALETTES = {"default", "pastel", "vivid", "colorblind"}
-
-
 class UserWrapper(UserMixin):
     """Wrap a pymongo user dict for flask-login compatibility."""
 
     def __init__(self, user_doc):
         self._doc = user_doc or {}
-
-    @property
-    def theme_accent(self):
-        return self._doc.get("theme_accent", DEFAULT_THEME_PREFERENCES["theme_accent"])
-
-    @property
-    def theme_density(self):
-        return self._doc.get("theme_density", DEFAULT_THEME_PREFERENCES["theme_density"])
-
-    @property
-    def theme_chart_palette(self):
-        return self._doc.get("theme_chart_palette", DEFAULT_THEME_PREFERENCES["theme_chart_palette"])
-
-    @property
-    def theme_preferences_customized(self):
-        preferences = _theme_preferences_from_user(self._doc)
-        return preferences["theme_preferences_customized"]
 
     def get_id(self):
         return str(self._doc["_id"])
@@ -177,75 +149,6 @@ def load_user(user_id):
         return None
 
 
-def _theme_preferences_from_user(user_doc):
-    preferences = {
-        key: user_doc.get(key, default)
-        for key, default in DEFAULT_THEME_PREFERENCES.items()
-    }
-    preferences["theme_preferences_customized"] = bool(
-        user_doc.get("theme_preferences_updated_at")
-        or any(
-            preferences[key] != DEFAULT_THEME_PREFERENCES[key]
-            for key in THEME_PREFERENCE_FIELDS
-        )
-    )
-    return preferences
-
-
-def _validate_theme_preferences(data):
-    updates = {}
-    errors = {}
-
-    if "theme_accent" in data:
-        accent = str(data["theme_accent"]).strip()
-        if HEX_COLOR_PATTERN.match(accent):
-            updates["theme_accent"] = accent.lower()
-        else:
-            errors["theme_accent"] = "Accent color must be a 6-digit hex value."
-
-    if "theme_density" in data:
-        density = str(data["theme_density"]).strip()
-        if density in THEME_DENSITIES:
-            updates["theme_density"] = density
-        else:
-            errors["theme_density"] = "Density must be comfortable or compact."
-
-    if "theme_chart_palette" in data:
-        palette = str(data["theme_chart_palette"]).strip()
-        if palette in CHART_PALETTES:
-            updates["theme_chart_palette"] = palette
-        else:
-            errors["theme_chart_palette"] = "Chart palette is not supported."
-
-    return updates, errors
-
-
-@auth_bp.route("/theme_preferences", methods=["GET"])
-@login_required
-def get_theme_preferences():
-    user_doc = db.user.find_one({"_id": current_user.id})
-    if not user_doc:
-        return jsonify({"error": "User not found"}), 404
-    return jsonify(_theme_preferences_from_user(user_doc))
-
-
-@auth_bp.route("/theme_preferences", methods=["POST"])
-@login_required
-def update_theme_preferences():
-    data = request.get_json(silent=True) or {}
-    updates, errors = _validate_theme_preferences(data)
-    if errors:
-        return jsonify({"errors": errors}), 400
-    if not updates:
-        return jsonify({"error": "No valid fields provided."}), 400
-
-    updates["theme_preferences_updated_at"] = utc_now()
-    db.user.update_one({"_id": current_user.id}, {"$set": updates})
-    current_user.reload()
-    user_doc = db.user.find_one({"_id": current_user.id}) or {}
-    return jsonify({"success": True, **_theme_preferences_from_user(user_doc)})
-
-
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute", methods=["POST"])
 def login():
@@ -275,13 +178,16 @@ def register():
         password = request.form.get("password")
         confirm_password = request.form.get("confirm_password")
 
+        if not name:
+            flash("Name is required", "danger")
+            return redirect(url_for("auth.register"))
+        if not email:
+            flash("Email is required", "danger")
+            return redirect(url_for("auth.register"))
+
         password_errors = validate_registration_password(password, confirm_password)
         if password_errors:
             flash(" ".join(password_errors), "danger")
-            return redirect(url_for("auth.register"))
-
-        if not name:
-            flash("Name is required", "danger")
             return redirect(url_for("auth.register"))
 
         existing_user = db.user.find_one({"email": email})
@@ -292,16 +198,16 @@ def register():
         hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
         try:
             db.user.insert_one(
-                {
-                    "name": name,
-                    "email": email,
-                    "password": hashed_password,
-                    "progress": {},
-                    "is_admin": False,
-                    "created_at": utc_now(),
-                    **DEFAULT_THEME_PREFERENCES,
-                }
-            )
+    {
+        "name": name,
+        "email": email,
+        "password": hashed_password,
+        "progress": {},
+        "profile_visibility": "public",
+        "is_admin": False,
+        "created_at": utc_now(),
+    }
+)
             flash("Your account has been created! You can now log in.", "success")
             return redirect(url_for("auth.login"))
         except Exception:
@@ -522,3 +428,7 @@ def authorize_google():
     user_doc = reactivate_user_if_needed(user_doc)
     login_user(UserWrapper(user_doc))
     return redirect(url_for("tracker.index"))
+
+
+# GSSoC Registration password complexity regex
+# Requires at least one uppercase, lowercase, digit, and special char.
