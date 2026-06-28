@@ -2,7 +2,7 @@ import io
 from PIL import Image, ImageDraw, ImageFont
 
 
-def generate_progress_card(name, c_score, dsa_progress, current_streak, platforms):
+def generate_progress_card(name, c_score, dsa_progress, current_streak, platforms, accent_color="#ba5912"):
     width, height = 800, 400
     bg_color = (24, 24, 27) # zinc-900
     card = Image.new('RGB', (width, height), color=bg_color)
@@ -28,7 +28,10 @@ def generate_progress_card(name, c_score, dsa_progress, current_streak, platform
             font_small = ImageFont.load_default()
             
     text_color = (255, 255, 255)
-    accent_color = (59, 130, 246) # blue-500
+    try:
+        accent_rgb = tuple(int(accent_color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    except (AttributeError, TypeError, ValueError):
+        accent_rgb = (186, 89, 18)
     
     # Draw Name
     display_name = name if name else "Anonymous"
@@ -39,7 +42,7 @@ def generate_progress_card(name, c_score, dsa_progress, current_streak, platform
     
     # Draw C-Score
     draw.text((40, 130), "C-Score", font=font_label, fill=(161, 161, 170))
-    draw.text((40, 165), str(c_score), font=font_metric, fill=accent_color)
+    draw.text((40, 165), str(c_score), font=font_metric, fill=accent_rgb)
     
     # Draw Progress
     draw.text((280, 130), "DSA Progress", font=font_label, fill=(161, 161, 170))

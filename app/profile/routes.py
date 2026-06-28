@@ -6,6 +6,32 @@ from flask import Blueprint, current_app, jsonify, render_template, request, sen
 from flask_login import current_user, login_required
 
 from app.extensions import cache, db, limiter
+
+
+
+def _get_db():
+    global db
+    from app.extensions import db as original_db
+    if db is not original_db:
+        return db
+    import app
+    return app.db
+
+def _get_cache():
+    global cache
+    from app.extensions import cache as original_cache
+    if cache is not original_cache:
+        return cache
+    import app
+    return app.cache
+
+def _get_limiter():
+    global limiter
+    from app.extensions import limiter as original_limiter
+    if limiter is not original_limiter:
+        return limiter
+    import app
+    return app.limiter
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
 from app.profile.card_service import CACHE_TTL, get_public_card_image, warm_public_card_cache
@@ -123,9 +149,9 @@ def sync_platforms():
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return json_error("Request body must be a JSON object.", status_code=400)
-    payload, status_code = sync_user_platforms(current_user, data, db, cache)
+    payload, status_code = sync_user_platforms(current_user, data, _get_db(), _get_cache())
     if payload.get("success"):
-        warm_public_card_cache(current_user.id, db_handle=db)
+        warm_public_card_cache(current_user.id, db_handle=_get_db())
     return jsonify(payload), status_code
 
 
@@ -201,11 +227,11 @@ def edit_profile():
     if error:
         return json_error(error, status_code=400)
     if update_fields:
-        db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
+        _get_db().user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
         invalidate_leaderboard_cache()
-        clear_profile_caches(cache, current_user.id)
-        warm_public_card_cache(current_user.id, db_handle=db)
+        clear_profile_caches(_get_cache(), current_user.id)
+        warm_public_card_cache(current_user.id, db_handle=_get_db())
     return json_success()
 
 
@@ -219,13 +245,13 @@ def public_card(user_id):
         return "Invalid User ID", 400
 
     try:
-        user_doc = db.user.find_one(
+        user_doc = _get_db().user.find_one(
             {"_id": object_id},
             {"is_deactivated": 1, "profile_visibility": 1},
         )
     except TypeError:
         # Some lightweight test doubles implement a simpler find_one(query) API.
-        user_doc = db.user.find_one({"_id": object_id})
+        user_doc = _get_db().user.find_one({"_id": object_id})
 
     if not user_doc or user_doc.get("is_deactivated"):
         return "User not found", 404
@@ -243,7 +269,7 @@ def public_card(user_id):
         return "Profile card is unavailable for stats-only profiles", 403
 
     try:
-        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=db)
+        img_io, etag, last_modified = get_public_card_image(user_id, object_id, db_handle=_get_db())
     except LookupError:
         return "User not found", 404
     except Exception:
@@ -270,7 +296,7 @@ def milestone_certificate(milestone_id):
 
     progress_data = current_user.progress or {}
     dsa_done = sum(1 for progress_item in progress_data.values() if progress_item.get("done"))
-    total_questions = db.question.count_documents({})
+    total_questions = _get_db().question.count_documents({})
 
     threshold = milestone["threshold"]
     if threshold == "all":
@@ -285,6 +311,37 @@ def milestone_certificate(milestone_id):
     img_io = generate_milestone_certificate(current_user.name, milestone["label"], awarded_on=awarded_on)
     filename = f"certificate-{milestone_id}.png"
     return send_file(img_io, mimetype="image/png", as_attachment=True, download_name=filename)
+
+def _validate_theme_preferences(data):
+    """Validate and return theme preference updates and errors."""
+    updates = {}
+    errors = {}
+
+    # Validate theme_accent
+    if "theme_accent" in data:
+        accent = data["theme_accent"]
+        if not isinstance(accent, str) or not accent.startswith("#") or len(accent) != 7:
+            errors["theme_accent"] = "Must be a valid hex color code (e.g., #ba5912)"
+        else:
+            updates["theme_accent"] = accent.lower()
+
+    # Validate theme_density
+    if "theme_density" in data:
+        density = data["theme_density"]
+        if density not in ("comfortable", "compact"):
+            errors["theme_density"] = "Must be either 'comfortable' or 'compact'"
+        else:
+            updates["theme_density"] = density
+
+    # Validate theme_chart_palette
+    if "theme_chart_palette" in data:
+        palette = data["theme_chart_palette"]
+        if palette not in ("default", "colorblind"):
+            errors["theme_chart_palette"] = "Must be either 'default' or 'colorblind'"
+        else:
+            updates["theme_chart_palette"] = palette
+
+    return updates, errors
 @profile_bp.route("/search_universities")
 @limiter.limit("30 per minute")
 @cache.cached(timeout=300, query_string=True)
@@ -340,6 +397,41 @@ def search_universities():
     except Exception:
         return jsonify([])
 
+
+@profile_bp.route("/theme_preferences", methods=["GET"])
+@login_required
+def get_theme_preferences():
+    user_doc = _get_db().user.find_one({"_id": current_user.id})
+    if not user_doc:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify({
+        "theme_accent": user_doc.get("theme_accent", "#ba5912"),
+        "theme_density": user_doc.get("theme_density", "comfortable"),
+        "theme_chart_palette": user_doc.get("theme_chart_palette", "default"),
+        "theme_preferences_customized": bool(user_doc.get("theme_preferences_updated_at"))
+    })
+
+@profile_bp.route("/theme_preferences", methods=["POST"])
+@login_required
+def update_theme_preferences():
+    data = request.get_json(silent=True) or {}
+    updates, errors = _validate_theme_preferences(data)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    if not updates:
+        return jsonify({"error": "No valid fields provided."}), 400
+
+    updates["theme_preferences_updated_at"] = utc_now()
+    _get_db().user.update_one({"_id": current_user.id}, {"$set": updates})
+    current_user.reload()
+    user_doc = _get_db().user.find_one({"_id": current_user.id}) or {}
+    return jsonify({
+        "success": True,
+        "theme_accent": user_doc.get("theme_accent", "#ba5912"),
+        "theme_density": user_doc.get("theme_density", "comfortable"),
+        "theme_chart_palette": user_doc.get("theme_chart_palette", "default"),
+        "theme_preferences_customized": bool(user_doc.get("theme_preferences_updated_at"))
+    })
 
 @profile_bp.route("/upload_photo", methods=["POST"])
 @login_required
@@ -405,8 +497,8 @@ def profile():
         topic_question_count = pre["topic_question_count"]
         total_questions = pre["total_questions"]
     else:
-        topics = list(db.topic.find().sort("position", 1))
-        all_questions = list(db.question.find())
+        topics = list(_get_db().topic.find().sort("position", 1))
+        all_questions = list(_get_db().question.find())
         difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
         topic_question_count = {}
         for question in all_questions:
@@ -466,14 +558,14 @@ def profile():
 
         # Avoid clobbering concurrent $inc updates from /update_question by setting only
         # if the field is still absent at write time.
-        update_result = db.user.update_one(
+        update_result = _get_db().user.update_one(
             {"_id": user.id, "in_sheet_platform_counts": {"$exists": False}},
             {"$set": {"in_sheet_platform_counts": in_sheet_counts}},
         )
 
         effective_counts = in_sheet_counts
         if not getattr(update_result, "modified_count", 0):
-            refreshed = db.user.find_one({"_id": user.id}, {"in_sheet_platform_counts": 1}) or {}
+            refreshed = _get_db().user.find_one({"_id": user.id}, {"in_sheet_platform_counts": 1}) or {}
             refreshed_counts = refreshed.get("in_sheet_platform_counts")
             if isinstance(refreshed_counts, dict):
                 effective_counts = refreshed_counts
@@ -527,7 +619,7 @@ def profile():
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
 
-    update_computed_stats(user.id, user.progress, db, total_questions, user)
+    update_computed_stats(user.id, user.progress, _get_db(), total_questions, user)
 
     return render_template(
         "profile.html",

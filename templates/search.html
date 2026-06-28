@@ -22,7 +22,7 @@
   padding: 0 12px;
   transition: all 0.2s;
 }
-.search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255,107,0,0.12); }
+.search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-surface); }
 .search-box i { color: var(--text-muted); font-size: 1rem; }
 .search-input {
   width: 100%;
@@ -50,7 +50,7 @@
   justify-content: center;
   transition: all 0.2s;
 }
-.clear-btn:hover { color: var(--accent); background: rgba(255,107,0,0.08); }
+.clear-btn:hover { color: var(--accent); background: var(--accent-surface); }
 .clear-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -90,7 +90,7 @@
   transition: all 0.2s;
 }
 .platform-chip:hover,
-.platform-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(255,107,0,0.08); }
+.platform-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-surface); }
 .platform-chip:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -192,9 +192,9 @@
   margin-bottom: 6px;
   padding: 2px 9px;
   border-radius: 999px;
-  background: rgba(99,102,241,0.12);
-  color: #818cf8;
-  border: 1px solid rgba(99,102,241,0.22);
+  background: var(--accent-surface);
+  color: var(--accent);
+  border: 1px solid var(--accent-surface-strong);
   font-size: 0.72rem;
   font-weight: 700;
   text-decoration: none;
@@ -224,6 +224,12 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+.badge-lc { background: color-mix(in srgb, var(--chart-5) 16%, transparent); color: var(--chart-5); border: 1px solid color-mix(in srgb, var(--chart-5) 30%, transparent); }
+.badge-gfg { background: color-mix(in srgb, var(--chart-3) 16%, transparent); color: var(--chart-3); border: 1px solid color-mix(in srgb, var(--chart-3) 30%, transparent); }
+.badge-cn { background: color-mix(in srgb, var(--chart-4) 16%, transparent); color: var(--chart-4); border: 1px solid color-mix(in srgb, var(--chart-4) 30%, transparent); }
+.badge-hr { background: color-mix(in srgb, var(--chart-3) 16%, transparent); color: var(--chart-3); border: 1px solid color-mix(in srgb, var(--chart-3) 30%, transparent); }
+.badge-link { background: color-mix(in srgb, var(--chart-2) 16%, transparent); color: var(--chart-2); border: 1px solid color-mix(in srgb, var(--chart-2) 30%, transparent); }
 
 .result-actions { display: flex; align-items: flex-start; gap: 8px; }
 .topic-open {

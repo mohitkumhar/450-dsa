@@ -35,59 +35,87 @@
             window.setTimeout(releasePageLoading, 2500);
         })();
     </script>
-   
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
+
     {% block head %}{% endblock %}
     <script>
-        if (localStorage.getItem('theme') === 'light') {
-            document.documentElement.style.setProperty('--bg-primary', '#f0f2f5');
-            document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
-            document.documentElement.style.setProperty('--bg-card', '#ffffff');
-            document.documentElement.style.setProperty('--text-primary', '#111111');
-            document.documentElement.style.setProperty('--text-secondary', '#555555');
-            document.documentElement.style.setProperty('--border-color', '#e0e0e0');
-        }
+        (() => {
+            let savedTheme = 'dark';
+            try { savedTheme = localStorage.getItem('theme') || 'dark'; } catch { }
+            const rootStyle = document.documentElement.style;
+            const themeVars = savedTheme === 'light'
+                ? {
+                    '--bg-primary': '#f0f2f5', '--bg-secondary': '#ffffff', '--bg-card': '#ffffff',
+                    '--bg-card-hover': '#f5f5f5', '--border-color': '#e0e0e0', '--border-subtle': '#ececec',
+                    '--text-primary': '#111111', '--text-secondary': '#555555', '--text-muted': '#999999'
+                }
+                : {
+                    '--bg-primary': '#111111', '--bg-secondary': '#1a1a1a', '--bg-card': '#1e1e1e',
+                    '--bg-card-hover': '#252525', '--border-color': '#2a2a2a', '--border-subtle': '#222222',
+                    '--text-primary': '#f0f0f0', '--text-secondary': '#a0a0a0', '--text-muted': '#666666'
+                };
+            Object.entries(themeVars).forEach(([k, v]) => rootStyle.setProperty(k, v));
+            document.documentElement.dataset.theme = savedTheme;
+        })();
+
+        /* only Jinja2-dependent value */
+        window.__themeServerPrefs = {% if current_user.is_authenticated %}{{ {
+            "theme_accent": current_user.theme_accent,
+            "theme_density": current_user.theme_density,
+            "theme_chart_palette": current_user.theme_chart_palette,
+            "theme_preferences_customized": current_user.theme_preferences_customized,
+        } | tojson }}{% else %} null{% endif %};
     </script>
 </head>
 
-<body>
+<body{% if current_user.is_authenticated %} data-authenticated="1" {% endif %}>
 
     <!-- Skip to main content link - Accessibility -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <!-- ─── Left Sidebar ─── -->
+    <!-- â”€â”€â”€ Left Sidebar â”€â”€â”€ -->
     <aside class="sidebar" role="navigation" aria-label="Main navigation">
         <a href="{{ url_for('tracker.index') }}" class="sidebar-logo" title="450 DSA" aria-label="Home">D</a>
         <nav class="sidebar-nav">
-            <a href="{{ url_for('tracker.index') }}" class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home" aria-label="Home">
+            <a href="{{ url_for('tracker.index') }}"
+                class="sidebar-link {% if request.endpoint == 'tracker.index' %}active{% endif %}" id="nav-home"
+                aria-label="Home">
                 <i class="bi bi-house-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Home</span>
             </a>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile" aria-label="Profile">
+            <a href="{{ url_for('profile.profile') }}"
+                class="sidebar-link {% if request.endpoint == 'profile.profile' %}active{% endif %}" id="nav-profile"
+                aria-label="Profile">
                 <i class="bi bi-person-circle" aria-hidden="true"></i>
                 <span class="tooltip-label">Profile</span>
             </a>
-            <a href="{{ url_for('tracker.bookmarks') }}" class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}" id="nav-bookmarks" aria-label="Bookmarks">
+            <a href="{{ url_for('tracker.bookmarks') }}"
+                class="sidebar-link {% if request.endpoint == 'tracker.bookmarks' %}active{% endif %}"
+                id="nav-bookmarks" aria-label="Bookmarks">
                 <i class="bi bi-bookmark-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Bookmarks</span>
             </a>
-            <a href="{{ url_for('cohort.index') }}" class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}" id="nav-cohorts" aria-label="Cohorts">
+            <a href="{{ url_for('cohort.index') }}"
+                class="sidebar-link {% if request.endpoint == 'cohort.index' or request.endpoint.startswith('cohort.') %}active{% endif %}"
+                id="nav-cohorts" aria-label="Cohorts">
                 <i class="bi bi-people-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Cohorts</span>
             </a>
             {% endif %}
-            <a href="{{ url_for('search.search') }}" class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search" aria-label="Search">
+            <a href="{{ url_for('search.search') }}"
+                class="sidebar-link {% if request.endpoint == 'search.search' %}active{% endif %}" id="nav-search"
+                aria-label="Search">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <span class="tooltip-label">Search</span>
             </a>
@@ -95,13 +123,16 @@
                 <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Stats</span>
             </a>
-            <a href="{{ url_for('leaderboard.leaderboard') }}" class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}" id="nav-leaderboard" aria-label="Leaderboard">
+            <a href="{{ url_for('leaderboard.leaderboard') }}"
+                class="sidebar-link {% if request.endpoint == 'leaderboard.leaderboard' %}active{% endif %}"
+                id="nav-leaderboard" aria-label="Leaderboard">
                 <i class="bi bi-trophy-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Leaderboard</span>
             </a>
             {% if current_user.is_authenticated and current_user.is_admin %}
             <a href="{{ url_for('admin.dashboard') }}"
-                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin" aria-label="Admin Dashboard">
+                class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}" id="nav-admin"
+                aria-label="Admin Dashboard">
                 <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
                 <span class="tooltip-label">Admin</span>
             </a>
@@ -125,29 +156,38 @@
         </div>
     </aside>
 
-    <!-- ─── Top Bar ─── -->
+    <!-- â”€â”€â”€ Top Bar â”€â”€â”€ -->
     <header class="topbar" role="banner">
         <div class="topbar-left">
             <a href="{{ url_for('tracker.index') }}" class="topbar-brand">450 DSA Cracker</a>
         </div>
         <div class="topbar-right">
-            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn" aria-label="Monthly Rewind">
+            <a href="/monthly-rewind" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" id="monthly-rewind-btn"
+                aria-label="Monthly Rewind">
                 <i class="bi bi-rewind-fill" style="color: var(--accent);" aria-hidden="true"></i>
                 <span>Monthly Rewind</span>
             </a>
-            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question" class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/mohitkumhar/companywise-dsa-interview-question"
+                class="pill-btn accent ui-btn ui-btn-primary ui-btn-pill" id="company-kit-btn" target="_blank"
+                rel="noopener noreferrer">
                 <i class="bi bi-briefcase-fill"></i>
                 <span>Company Wise Kit</span>
             </a>
-            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle" aria-label="Toggle dark/light theme">
+            <button class="icon-btn ui-btn ui-btn-secondary ui-btn-icon" id="theme-toggle"
+                aria-label="Toggle dark/light theme">
                 <i class="bi bi-moon-fill" id="theme-icon" aria-hidden="true"></i>
             </button>
+            <button class="icon-btn" id="theme-settings-btn" aria-label="Theme settings">
+                <i class="bi bi-palette-fill"></i>
+            </button>
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}" aria-label="Profile: {{ current_user.name }}">
+            <a href="{{ url_for('profile.profile') }}" class="user-avatar-sm" title="{{ current_user.name }}"
+                aria-label="Profile: {{ current_user.name }}">
                 {{ current_user.name[0]|upper }}
             </a>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill" aria-label="Login">
+            <a href="{{ url_for('auth.login') }}" class="pill-btn ui-btn ui-btn-secondary ui-btn-pill"
+                aria-label="Login">
                 <i class="bi bi-person" aria-hidden="true"></i>
                 <span>Login</span>
             </a>
@@ -155,16 +195,111 @@
         </div>
     </header>
 
-    <!-- ─── Toast Container (TOP RIGHT) ─── -->
+    <!-- Theme Settings Modal -->
+    <div class="modal-ov theme-settings-modal" id="theme-settings-modal" tabindex="-1" aria-modal="true" role="dialog"
+        aria-labelledby="theme-settings-title">
+        <div class="modal-bx theme-settings-panel">
+            <div class="theme-settings-head">
+                <div>
+                    <h3 id="theme-settings-title">Theme Settings</h3>
+                </div>
+                <button class="icon-btn" id="theme-settings-close" type="button" aria-label="Close theme settings">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <label class="m-lbl" for="accent-hue-input">Accent color</label>
+            <div class="accent-picker">
+                <div class="accent-picker-preview" id="accent-picker-preview" aria-hidden="true"></div>
+                <div class="accent-picker-control">
+                    <input type="range" id="accent-hue-input" class="accent-hue-range" min="0" max="359" value="18"
+                        aria-label="Custom accent hue">
+                    <div class="accent-picker-meta">
+                        <strong id="accent-picker-label">Accessible orange</strong>
+                        <span id="accent-picker-value">#BA5912</span>
+                    </div>
+                </div>
+            </div>
+            <div class="accent-presets" aria-label="Accent presets">
+                <button class="accent-swatch" type="button" data-accent="#ba5912" style="--swatch:#ba5912"
+                    aria-label="Orange accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#a16207" style="--swatch:#a16207"
+                    aria-label="Amber accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#b91c1c" style="--swatch:#b91c1c"
+                    aria-label="Red accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#be185d" style="--swatch:#be185d"
+                    aria-label="Rose accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#7e22ce" style="--swatch:#7e22ce"
+                    aria-label="Purple accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#4338ca" style="--swatch:#4338ca"
+                    aria-label="Indigo accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#2563eb" style="--swatch:#2563eb"
+                    aria-label="Blue accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#0369a1" style="--swatch:#0369a1"
+                    aria-label="Sky accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#0f766e" style="--swatch:#0f766e"
+                    aria-label="Teal accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#15803d" style="--swatch:#15803d"
+                    aria-label="Green accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#4d7c0f" style="--swatch:#4d7c0f"
+                    aria-label="Olive accent"></button>
+                <button class="accent-swatch" type="button" data-accent="#475569" style="--swatch:#475569"
+                    aria-label="Slate accent"></button>
+            </div>
+
+            <span class="m-lbl" id="density-label">Density</span>
+            <div class="theme-segment" role="group" aria-labelledby="density-label">
+                <button class="theme-segment-btn" type="button" data-density="comfortable"
+                    aria-pressed="true">Comfortable</button>
+                <button class="theme-segment-btn" type="button" data-density="compact"
+                    aria-pressed="false">Compact</button>
+            </div>
+
+            <span class="m-lbl" id="chart-palette-label">Chart palette</span>
+            <div class="palette-options" role="group" aria-labelledby="chart-palette-label">
+                <button class="palette-choice" type="button" data-palette="default" aria-pressed="true">
+                    <span class="palette-choice-label">Default</span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                </button>
+                <button class="palette-choice" type="button" data-palette="pastel" aria-pressed="false">
+                    <span class="palette-choice-label">Pastel</span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                </button>
+                <button class="palette-choice" type="button" data-palette="vivid" aria-pressed="false">
+                    <span class="palette-choice-label">Vivid</span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                </button>
+                <button class="palette-choice" type="button" data-palette="colorblind" aria-pressed="false">
+                    <span class="palette-choice-label">Colorblind safe</span>
+                    <span class="chart-palette-preview"
+                        aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                </button>
+            </div>
+
+            <div class="m-actions">
+                <button class="m-cancel" id="theme-settings-reset" type="button">Reset</button>
+                <button class="m-save" id="theme-settings-save" type="button">
+                    <i class="bi bi-check2"></i>
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- â”€â”€â”€ Toast Container (TOP RIGHT) â”€â”€â”€ -->
     <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
-    <!-- ─── Flash Messages (legacy) ─── -->
+    <!-- â”€â”€â”€ Flash Messages (legacy) â”€â”€â”€ -->
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="flash-messages" id="flash-container" role="alert" aria-live="polite">
         {% for category, message in messages %}
         <div class="flash-alert {{ category }}" role="alert">
-            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}" aria-hidden="true"></i>
+            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}x-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"
+                aria-hidden="true"></i>
             {{ message }}
         </div>
         {% endfor %}
@@ -172,159 +307,107 @@
     {% endif %}
     {% endwith %}
 
-    <!-- ─── Main Content ─── -->
+    <!-- â”€â”€â”€ Main Content â”€â”€â”€ -->
     <main class="main-wrapper" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
-    <!-- ─── Footer ─── -->
+    <!-- â”€â”€â”€ Footer â”€â”€â”€ -->
     {% include 'partials/footer.html' %}
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
-        
-        // Theme Toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
-        const root = document.documentElement;
-
-        const toastConfig = {
-            success: { title: 'Success', icon: 'bi-check-circle-fill' },
-            error: { title: 'Error', icon: 'bi-x-circle-fill' },
-            danger: { title: 'Error', icon: 'bi-x-circle-fill' },
-            warning: { title: 'Warning', icon: 'bi-exclamation-triangle-fill' },
-            info: { title: 'Info', icon: 'bi-info-circle-fill' },
+        /* only the 3 Jinja2-dependent values stay inline */
+        window.__themeConfig = {
+            serverThemePrefs: {% if current_user.is_authenticated %}{{ {
+                "theme_accent": current_user.theme_accent,
+                "theme_density": current_user.theme_density,
+                "theme_chart_palette": current_user.theme_chart_palette,
+                "theme_preferences_customized": current_user.theme_preferences_customized,
+            } | tojson }}{% else %} null{% endif %},
+            themePrefsUrl: "{{ url_for('profile.get_theme_preferences') }}",
+            themeCsrfToken: {{ csrf_token() | tojson }},
         };
+    </script>
 
-        window.showToast = function(message, type = 'info', timeout = 4000) {
-            const container = document.getElementById('toastContainer');
-            if (!container) return;
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
-            const normalizedType = type === 'danger' ? 'error' : type;
-            const variant = toastConfig[normalizedType] || toastConfig.info;
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${normalizedType}`;
-            toast.setAttribute('role', 'alert');
-
-            const icon = document.createElement('i');
-            icon.className = `bi ${variant.icon} toast-icon`;
-
-            const content = document.createElement('div');
-            content.className = 'toast-content';
-
-            const title = document.createElement('div');
-            title.className = 'toast-title';
-            title.textContent = variant.title;
-
-            const body = document.createElement('div');
-            body.className = 'toast-message';
-            body.textContent = message;
-
-            const close = document.createElement('button');
-            close.type = 'button';
-            close.className = 'toast-close';
-            close.setAttribute('aria-label', 'Dismiss notification');
-            close.innerHTML = '<i class="bi bi-x-lg"></i>';
-
-            content.append(title, body);
-            toast.append(icon, content, close);
-            container.appendChild(toast);
-
-            const removeToast = () => {
-                toast.style.animation = 'toastSlideOut 0.25s ease forwards';
-                setTimeout(() => toast.remove(), 250);
-            };
-
-            close.addEventListener('click', (event) => {
-                event.stopPropagation();
-                removeToast();
-            });
-            toast.addEventListener('click', removeToast);
-            setTimeout(removeToast, timeout);
-        };
-
-        window.setButtonBusyState = function(button, contentEl, options = {}) {
-            if (!button || !contentEl) return;
-
-            const {
-                busy = false,
-                busyLabel = 'Working...',
-                idleHTML = contentEl.dataset.idleHtml || contentEl.innerHTML,
-            } = options;
-
-            if (!contentEl.dataset.idleHtml) {
-                contentEl.dataset.idleHtml = idleHTML;
-            }
-
-            if (busy) {
-                button.disabled = true;
-                contentEl.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span> ${busyLabel}`;
+    <!-- inlined: js/pwa-install.js -->
+    <script>
+        (function () {
+            if (!("serviceWorker" in navigator) || !window.isSecureContext) {
                 return;
             }
 
-            button.disabled = false;
-            contentEl.innerHTML = contentEl.dataset.idleHtml;
-        };
+            let deferredPrompt = null;
+            let installButton = null;
 
-        window.setIconBusyState = function(icon, options = {}) {
-            if (!icon) return;
+            function ensureInstallButton() {
+                if (installButton) {
+                    return installButton;
+                }
 
-            const idleClassName = options.idleClassName || icon.dataset.idleClassName || icon.className;
-            if (!icon.dataset.idleClassName) {
-                icon.dataset.idleClassName = idleClassName;
+                const button = document.createElement("button");
+                button.type = "button";
+                button.hidden = true;
+                button.setAttribute("aria-label", "Install app");
+                button.textContent = "Install App";
+                button.style.position = "fixed";
+                button.style.right = "20px";
+                button.style.bottom = "20px";
+                button.style.zIndex = "10001";
+                button.style.padding = "10px 14px";
+                button.style.border = "1px solid rgba(255, 107, 0, 0.35)";
+                button.style.borderRadius = "999px";
+                button.style.background = "rgba(17, 17, 17, 0.96)";
+                button.style.color = "#f0f0f0";
+                button.style.font = "600 0.85rem Inter, -apple-system, BlinkMacSystemFont, sans-serif";
+                button.style.cursor = "pointer";
+                button.style.boxShadow = "0 10px 32px rgba(0, 0, 0, 0.28)";
+
+                button.addEventListener("click", async function () {
+                    if (!deferredPrompt) {
+                        return;
+                    }
+
+                    deferredPrompt.prompt();
+                    try {
+                        await deferredPrompt.userChoice;
+                    } finally {
+                        deferredPrompt = null;
+                        button.hidden = true;
+                    }
+                });
+
+                document.body.appendChild(button);
+                installButton = button;
+                return button;
             }
 
-            icon.className = options.busy
-                ? `${icon.dataset.idleClassName} btn-spinner`
-                : icon.dataset.idleClassName;
-        };
+            window.addEventListener("beforeinstallprompt", (event) => {
+                event.preventDefault();
+                deferredPrompt = event;
+                ensureInstallButton().hidden = false;
+            });
 
-        function applyTheme(theme) {
-            if (theme === 'light') {
-                root.style.setProperty('--bg-primary', '#f0f2f5');
-                root.style.setProperty('--bg-secondary', '#ffffff');
-                root.style.setProperty('--bg-card', '#ffffff');
-                root.style.setProperty('--bg-card-hover', '#f5f5f5');
-                root.style.setProperty('--border-color', '#e0e0e0');
-                root.style.setProperty('--border-subtle', '#ececec');
-                root.style.setProperty('--text-primary', '#111111');
-                root.style.setProperty('--text-secondary', '#555555');
-                root.style.setProperty('--text-muted', '#6b7280');
-                themeIcon.className = 'bi bi-sun-fill';
-            } else {
-                root.style.setProperty('--bg-primary', '#111111');
-                root.style.setProperty('--bg-secondary', '#1a1a1a');
-                root.style.setProperty('--bg-card', '#1e1e1e');
-                root.style.setProperty('--bg-card-hover', '#252525');
-                root.style.setProperty('--border-color', '#2a2a2a');
-                root.style.setProperty('--border-subtle', '#222222');
-                root.style.setProperty('--text-primary', '#f0f0f0');
-                root.style.setProperty('--text-secondary', '#a0a0a0');
-                root.style.setProperty('--text-muted', '#8a8a8a');
-                themeIcon.className = 'bi bi-moon-fill';
-            }
-        }
+            window.addEventListener("appinstalled", () => {
+                deferredPrompt = null;
+                if (installButton) {
+                    installButton.hidden = true;
+                }
+            });
 
-        const saved = localStorage.getItem('theme') || 'dark';
-        applyTheme(saved);
-
-        themeToggle.addEventListener('click', () => {
-            const curr = localStorage.getItem('theme') || 'dark';
-            const next = curr === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('theme', next);
-            applyTheme(next);
-            showToast(`Switched to ${next} mode`, 'info');
-        });
-
-        // Auto-dismiss flash messages
-        setTimeout(() => {
-            const fc = document.getElementById('flash-container');
-            if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
-        }, 4000);
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => {
+                    // Safe no-op: PWA install support should never break the page.
+                });
+            });
+        })();
 
     </script>
     {% block scripts %}{% endblock %}
-</body>
+    </body>
 
 </html>
