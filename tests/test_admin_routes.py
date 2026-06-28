@@ -1,6 +1,12 @@
 from datetime import datetime, timezone
 
-import mongomock
+try:
+    import mongomock
+except ImportError:
+    import pytest
+
+    pytest.skip("mongomock is required for these tests", allow_module_level=True)
+
 from bson import ObjectId
 
 import app as app_module
