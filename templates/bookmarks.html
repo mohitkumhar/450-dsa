@@ -2,96 +2,28 @@
 {% from "macros/modals.html" import notes_modal %}
 {% block content %}
 <style>
-  .page-title {
-    font-size: 1.6rem;
-    font-weight: 800;
-    margin-bottom: 6px
-  }
-
-  .page-sub {
-    color: var(--text-secondary);
-    font-size: .88rem;
-    margin-bottom: 24px
-  }
-
-  .empty-state {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 60px 24px;
-    text-align: center
-  }
-
-  .empty-state i {
-    font-size: 3rem;
-    color: var(--text-muted);
-    margin-bottom: 16px;
-    display: block
-  }
-
-  .empty-state p {
-    color: var(--text-secondary);
-    margin-bottom: 20px
-  }
-
-  .empty-state a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    background: var(--accent);
-    border-radius: 10px;
-    color: #fff;
-    text-decoration: none;
-    font-weight: 700;
-    font-size: .88rem
-  }
-
-  .empty-state a:hover {
-    background: var(--accent-hover);
-    color: #fff
-  }
-
-  .topic-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 10px;
-    background: rgba(99, 102, 241, .12);
-    border: 1px solid rgba(99, 102, 241, .2);
-    color: #818cf8;
-    border-radius: 20px;
-    font-size: .73rem;
-    font-weight: 700;
-    text-decoration: none
-  }
-
-  .bookmark-btn {
-    color: var(--warning);
-  }
-
-  .bookmarks-table-wrap .q-table thead th {
-    font-size: .73rem;
-  }
-
-  .bookmarks-table-wrap .q-table tbody td {
-    font-size: .87rem;
-  }
-
-  .bookmarks-table-wrap .q-num {
-    font-size: .78rem;
-  }
-
+  .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+  .page-sub { color: var(--text-secondary); font-size: .88rem; margin-bottom: 24px; }
+  .empty-state { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 60px 24px; text-align: center; }
+  .empty-state i { font-size: 3rem; color: var(--text-muted); margin-bottom: 16px; display: block; }
+  .empty-state p { color: var(--text-secondary); margin-bottom: 20px; }
+  .empty-state a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--accent); border-radius: 10px; color: #fff; text-decoration: none; font-weight: 700; font-size: .88rem; }
+  .empty-state a:hover { background: var(--accent-hover); color: #fff; }
+  .topic-tag { display: inline-flex; align-items: center; padding: 2px 10px; background: rgba(99, 102, 241, .12); border: 1px solid rgba(99, 102, 241, .2); color: #818cf8; border-radius: 20px; font-size: .73rem; font-weight: 700; text-decoration: none; }
+  .bookmark-btn { color: var(--warning); }
+  .bookmarks-table-wrap .q-table thead th { font-size: .73rem; }
+  .bookmarks-table-wrap .q-table tbody td { font-size: .87rem; }
+  .bookmarks-table-wrap .q-num { font-size: .78rem; }
+  .filter-buttons { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .batch-bar { display: flex; gap: 10px; align-items: center; padding: 10px 14px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .batch-bar.hidden { display: none; }
+  .batch-bar .count { font-size: .85rem; font-weight: 600; color: var(--text-secondary); }
   @media(max-width:640px) {
-
-    .q-table thead th:nth-child(1),
-    .q-table tbody td:nth-child(1) {
-      display: none
-    }
-
-    .q-table thead th:nth-child(3),
-    .q-table tbody td:nth-child(3) {
-      display: none
-    }
+    .q-table thead th:nth-child(1), .q-table tbody td:nth-child(1) { display: none; }
+    .q-table thead th:nth-child(4), .q-table tbody td:nth-child(4) { display: none; }
   }
 </style>
 
@@ -100,15 +32,44 @@
 <div class="page-sub">Your saved questions for quick review</div>
 
 {% if questions %}
+<div class="filter-buttons" id="bookmarkFilters">
+  <select class="filter-btn" id="topicFilter" aria-label="Filter by topic">
+    <option value="all">All Topics</option>
+    {% for topic_name in topic_names %}
+    <option value="{{ topic_name }}">{{ topic_name }}</option>
+    {% endfor %}
+  </select>
+  <select class="filter-btn" id="statusFilter" aria-label="Filter by status">
+    <option value="all">All Status</option>
+    <option value="todo">To Do</option>
+    <option value="done">Done</option>
+  </select>
+  <select class="filter-btn" id="difficultyFilter" aria-label="Filter by difficulty">
+    <option value="all">All Difficulty</option>
+    <option value="Easy">Easy</option>
+    <option value="Medium">Medium</option>
+    <option value="Hard">Hard</option>
+  </select>
+</div>
+
+<div class="batch-bar hidden" id="batchBar">
+  <span class="count" id="selectedCount">0 selected</span>
+  <button class="filter-btn" id="batchMarkDone" aria-label="Mark selected as done">Mark Done</button>
+  <button class="filter-btn" id="batchRemoveBookmark" aria-label="Remove bookmark from selected">Remove Bookmark</button>
+  <button class="filter-btn" id="batchClear" aria-label="Clear selection">Clear</button>
+</div>
+
 <div class="questions-table-wrap bookmarks-table-wrap">
-  <table class="q-table" aria-label="Bookmarked questions">
+  <table class="q-table" id="bookmarksTable" aria-label="Bookmarked questions">
     <caption class="visually-hidden">Bookmarked questions</caption>
     <thead>
       <tr>
+        <th scope="col"><input type="checkbox" id="selectAll" aria-label="Select all questions"></th>
         <th scope="col">#</th>
         <th scope="col">Done</th>
         <th scope="col">Topic</th>
         <th scope="col">Problem</th>
+        <th scope="col">Difficulty</th>
         <th scope="col">Save</th>
         <th scope="col">Notes</th>
         <th scope="col">Revision</th>
@@ -118,7 +79,9 @@
       {% for q in questions %}
       {% set q_id_str = q._id | string %}
       {% set p = progress_dict.get(q_id_str) %}
-      <tr id="brow-{{ q_id_str }}">
+      {% set difficulty = q.get('difficulty', 'Medium') %}
+      <tr id="brow-{{ q_id_str }}" data-topic="{{ q.topic_name }}" data-difficulty="{{ difficulty }}" data-done="{{ 'true' if p and p.done else 'false' }}">
+        <td><input type="checkbox" class="row-select" data-id="{{ q_id_str }}" aria-label="Select {{ q.problem }}"></td>
         <td class="q-num">{{ loop.index }}</td>
         <td><input type="checkbox" class="q-checkbox status-checkbox" data-id="{{ q_id_str }}"
             aria-label="Mark '{{ q.problem }}' as done"
@@ -134,6 +97,9 @@
               class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{
               q.url2|platform_name }}</a>{% endif %}
           </div>
+        </td>
+        <td>
+          <span class="difficulty-badge difficulty-{{ difficulty|lower }}">{{ difficulty }}</span>
         </td>
         <td>
           <button class="action-icon bookmark-btn" data-id="{{ q_id_str }}" data-bookmarked="true"
@@ -210,12 +176,123 @@
 
   function updateQuestion(id, data, callback) {
     fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify(data) })
-      .then(r => r.json()).then(res => { if (res.success) callback(); })
+      .then(r => r.json()).then(res => { if (res.success) { if (callback) callback(); } })
       .catch(() => alert('Error updating.'));
   }
-  document.querySelectorAll('.status-checkbox').forEach(cb => {
-    cb.addEventListener('change', function () { updateQuestion(this.dataset.id, { done: this.checked }, () => { }); });
+
+  // Filtering
+  const topicFilter = document.getElementById('topicFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  const difficultyFilter = document.getElementById('difficultyFilter');
+
+  function applyFilters() {
+    const topic = topicFilter.value;
+    const status = statusFilter.value;
+    const difficulty = difficultyFilter.value;
+    document.querySelectorAll('#bookmarksTable tbody tr').forEach(row => {
+      const rowTopic = row.dataset.topic;
+      const rowDifficulty = row.dataset.difficulty;
+      const rowDone = row.dataset.done === 'true';
+      let show = true;
+      if (topic !== 'all' && rowTopic !== topic) show = false;
+      if (difficulty !== 'all' && rowDifficulty !== difficulty) show = false;
+      if (status === 'done' && !rowDone) show = false;
+      if (status === 'todo' && rowDone) show = false;
+      row.style.display = show ? '' : 'none';
+    });
+  }
+
+  topicFilter.addEventListener('change', applyFilters);
+  statusFilter.addEventListener('change', applyFilters);
+  difficultyFilter.addEventListener('change', applyFilters);
+
+  // Batch actions
+  const batchBar = document.getElementById('batchBar');
+  const selectedCount = document.getElementById('selectedCount');
+  const selectAll = document.getElementById('selectAll');
+
+  function updateBatchBar() {
+    const selected = document.querySelectorAll('.row-select:checked');
+    const count = selected.length;
+    if (count > 0) {
+      batchBar.classList.remove('hidden');
+      selectedCount.textContent = count + ' selected';
+    } else {
+      batchBar.classList.add('hidden');
+    }
+  }
+
+  document.querySelectorAll('.row-select').forEach(cb => {
+    cb.addEventListener('change', updateBatchBar);
   });
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      const checked = this.checked;
+      document.querySelectorAll('.row-select').forEach(cb => {
+        const row = cb.closest('tr');
+        if (row.style.display !== 'none') {
+          cb.checked = checked;
+        }
+      });
+      updateBatchBar();
+    });
+  }
+
+  document.getElementById('batchMarkDone').addEventListener('click', function() {
+    const selected = document.querySelectorAll('.row-select:checked');
+    let completed = 0;
+    selected.forEach(cb => {
+      const id = cb.dataset.id;
+      updateQuestion(id, { done: true }, () => {
+        const row = document.getElementById('brow-' + id);
+        if (row) row.dataset.done = 'true';
+        const statusCb = row.querySelector('.status-checkbox');
+        if (statusCb) statusCb.checked = true;
+        completed++;
+        if (completed === selected.length) {
+          cb.checked = false;
+          selectAll.checked = false;
+          updateBatchBar();
+          applyFilters();
+        }
+      });
+    });
+  });
+
+  document.getElementById('batchRemoveBookmark').addEventListener('click', function() {
+    const selected = document.querySelectorAll('.row-select:checked');
+    let completed = 0;
+    selected.forEach(cb => {
+      const id = cb.dataset.id;
+      updateQuestion(id, { bookmark: false }, () => {
+        const row = document.getElementById('brow-' + id);
+        if (row) { row.style.transition = 'opacity .3s'; row.style.opacity = '0'; setTimeout(() => row.remove(), 300); }
+        completed++;
+        if (completed === selected.length) {
+          updateBatchBar();
+        }
+      });
+    });
+  });
+
+  document.getElementById('batchClear').addEventListener('click', function() {
+    document.querySelectorAll('.row-select:checked').forEach(cb => cb.checked = false);
+    if (selectAll) selectAll.checked = false;
+    updateBatchBar();
+  });
+
+  // Individual actions
+  document.querySelectorAll('.status-checkbox').forEach(cb => {
+    cb.addEventListener('change', function () {
+      updateQuestion(this.dataset.id, { done: this.checked }, () => {
+        const row = document.getElementById('brow-' + this.dataset.id);
+        if (row) row.dataset.done = this.checked ? 'true' : 'false';
+        applyFilters();
+      });
+    });
+  });
+
   document.querySelectorAll('.bookmark-btn').forEach(btn => {
     btn.addEventListener('click', function () {
       updateQuestion(this.dataset.id, { bookmark: false }, () => {
@@ -224,6 +301,7 @@
       });
     });
   });
+
   document.querySelectorAll('.notes-btn').forEach(btn => {
     btn.addEventListener('click', function () {
       document.getElementById('currentQuestionId').value = this.dataset.id;
@@ -231,8 +309,10 @@
       openModal(this);
     });
   });
+
   document.getElementById('modalCancel').addEventListener('click', closeModal);
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
   document.getElementById('saveNotesBtn').addEventListener('click', function () {
     const qId = document.getElementById('currentQuestionId').value;
     const notes = document.getElementById('notesTextarea').value;

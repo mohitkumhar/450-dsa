@@ -57,6 +57,7 @@ BOOKMARKS_QUESTION_PROJECTION = {
     "url": 1,
     "url2": 1,
     "editorial_links": 1,
+    "difficulty": 1,
 }
 CSV_EXPORT_QUESTION_PROJECTION = {
     "topic": 1,
@@ -416,8 +417,9 @@ def bookmarks():
     topic_docs = {topic["_id"]: topic["name"] for topic in db.topic.find({"_id": {"$in": topic_ids}})}
     for question in questions:
         question["topic_name"] = topic_docs.get(question["topic"], "Unknown")
+    topic_names = sorted(set(topic_docs.values()))
 
-    return render_template("bookmarks.html", questions=questions, progress_dict=progress)
+    return render_template("bookmarks.html", questions=questions, progress_dict=progress, topic_names=topic_names)
 
 
 @tracker_bp.route("/export/csv")
