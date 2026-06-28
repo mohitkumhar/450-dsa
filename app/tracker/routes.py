@@ -9,6 +9,7 @@ from app.profile.card_service import warm_public_card_cache
 from app.utils import (
     compute_in_sheet_platform_counts,
     json_error,
+    json_response,
     json_success,
     platform_from_question_url,
     question_editorial_links,
@@ -738,3 +739,84 @@ def import_commit():
     update_computed_stats(user_id, new_progress, db, total_questions)
 
     return jsonify({"success": True, "message": "Progress imported successfully!"})
+
+
+@tracker_bp.route("/api/continue")
+@login_required
+def continue_where_left_off():
+    """Return the next unsolved question based on the user's most recent progress."""
+    progress = current_user.progress
+
+    # Find the most recently touched question (has a timestamp and is done)
+    last_question_id = None
+    last_timestamp = None
+    for question_id, item in progress.items():
+        if item.get("done") and item.get("timestamp"):
+            ts = item["timestamp"]
+            if last_timestamp is None or ts > last_timestamp:
+                last_timestamp = ts
+                last_question_id = question_id
+
+    pre = current_app.config.get("_PRECOMPUTED")
+    topics = pre["topics"] if pre else list(db.topic.find().sort("position", 1))
+    topic_question_count = pre["topic_question_count"] if pre else None
+
+    if topic_question_count is None:
+        all_questions = list(db.question.find({}, {"topic": 1}))
+        topic_question_count = {}
+        for q in all_questions:
+            tid = str(q["topic"])
+            topic_question_count.setdefault(tid, []).append(str(q["_id"]))
+
+    last_topic_id = None
+    last_topic_name = None
+
+    if last_question_id:
+        q_doc = db.question.find_one(
+            {"_id": ObjectId(last_question_id)},
+            {"topic": 1, "problem": 1}
+        )
+        if q_doc:
+            last_topic_id = str(q_doc["topic"])
+            topic_doc = db.topic.find_one({"_id": q_doc["topic"]}, {"name": 1})
+            last_topic_name = topic_doc["name"] if topic_doc else None
+
+    # Find next unsolved question in last topic, or fall back to first incomplete topic
+    resume_question = None
+    resume_topic_name = None
+    resume_topic_id = None
+
+    search_order = []
+    if last_topic_id:
+        # Put last topic first, then the rest in order
+        search_order = [t for t in topics if str(t["_id"]) == last_topic_id]
+        search_order += [t for t in topics if str(t["_id"]) != last_topic_id]
+    else:
+        search_order = topics
+
+    for topic_doc in search_order:
+        tid = str(topic_doc["_id"])
+        question_ids = topic_question_count.get(tid, [])
+        for qid in question_ids:
+            if not progress.get(qid, {}).get("done") and not progress.get(qid, {}).get("skipped"):
+                q = db.question.find_one({"_id": ObjectId(qid)}, {"problem": 1, "url": 1, "topic": 1})
+                if q:
+                    resume_question = {
+                        "id": str(q["_id"]),
+                        "problem": q.get("problem", ""),
+                        "url": q.get("url", ""),
+                        "topic_id": tid,
+                    }
+                    resume_topic_name = topic_doc.get("name", "")
+                    resume_topic_id = tid
+                    break
+        if resume_question:
+            break
+
+    return json_response({
+        "last_topic": last_topic_name,
+        "last_topic_id": last_topic_id,
+        "resume_question": resume_question,
+        "resume_topic_name": resume_topic_name,
+        "resume_topic_id": resume_topic_id,
+    })
