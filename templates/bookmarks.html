@@ -80,6 +80,8 @@
   .bookmarks-table-wrap .q-num {
     font-size: .78rem;
   }
+  .bookmarks-table-wrap .code-block { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-top: 6px; font-size: .75rem; overflow-x: auto; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+  .bookmarks-table-wrap .code-block.hidden { display: none; }
 
   @media(max-width:640px) {
 
@@ -133,7 +135,17 @@
             {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
               class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{
               q.url2|platform_name }}</a>{% endif %}
+            {% if q.solutionUrl %}<a href="{{ q.solutionUrl }}" target="_blank" rel="noopener noreferrer"
+              class="q-badge badge-link"><i class="bi bi-code-slash" style="font-size:.7rem"></i> Solution</a>{% endif %}
           </div>
+          {% if q.codeSnippet %}
+          <div class="code-snippet-container" style="margin-top:6px;">
+            <button type="button" class="show-code-btn ui-btn ui-btn-secondary ui-btn-sm" data-target="code-block-{{ q_id_str }}" style="font-size:.73rem;">
+              <i class="bi bi-code" aria-hidden="true"></i> Show Code
+            </button>
+            <pre class="code-block hidden" id="code-block-{{ q_id_str }}"><code>{{ q.codeSnippet }}</code></pre>
+          </div>
+          {% endif %}
         </td>
         <td>
           <button class="action-icon bookmark-btn" data-id="{{ q_id_str }}" data-bookmarked="true"
@@ -246,6 +258,18 @@
         btn.innerHTML = `<i class="bi bi-journal-text" aria-hidden="true"></i> ${label}`;
         btn.setAttribute('aria-label', `${label} notes for this question`);
       }
+    });
+  });
+  document.querySelectorAll('.show-code-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const targetId = this.dataset.target;
+      const codeBlock = document.getElementById(targetId);
+      if (!codeBlock) return;
+      const isHidden = codeBlock.classList.contains('hidden');
+      codeBlock.classList.toggle('hidden');
+      this.innerHTML = isHidden
+        ? '<i class="bi bi-code" aria-hidden="true"></i> Hide Code'
+        : '<i class="bi bi-code" aria-hidden="true"></i> Show Code';
     });
   });
 </script>

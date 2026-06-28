@@ -196,6 +196,8 @@ def create_app(config_class=None):
                             "url2": question.get("URL2", ""),
                             "editorial_links": question_editorial_links(question),
                             "difficulty": difficulty,
+                            "solutionUrl": question.get("solutionUrl", ""),
+                            "codeSnippet": question.get("codeSnippet", ""),
                         }
                         if "hints" in question:
                             q_data["hints"] = question["hints"]
@@ -231,6 +233,8 @@ def create_app(config_class=None):
                     "url2": question.get("URL2", ""),
                     "editorial_links": question_editorial_links(question),
                     "difficulty": difficulty,
+                    "solutionUrl": question.get("solutionUrl", ""),
+                    "codeSnippet": question.get("codeSnippet", ""),
                 }
                 if "hints" in question:
                     set_fields["hints"] = question["hints"]
@@ -280,6 +284,8 @@ def create_app(config_class=None):
                 "url2": q.get("url2", ""),
                 "difficulty": q.get("difficulty", "Medium"),
                 "editorial_links": q.get("editorial_links", []),
+                "solutionUrl": q.get("solutionUrl", ""),
+                "codeSnippet": q.get("codeSnippet", ""),
             })
 
         topics_pc = [

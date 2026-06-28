@@ -48,6 +48,8 @@ TOPIC_PAGE_QUESTION_PROJECTION = {
     "url2": 1,
     "editorial_links": 1,
     "hints": 1,
+    "solutionUrl": 1,
+    "codeSnippet": 1,
 }
 TOPIC_NOTES_EXPORT_PROJECTION = {"problem": 1}
 QUESTION_STATUS_PROJECTION = {"problem": 1, "url": 1}
@@ -57,6 +59,8 @@ BOOKMARKS_QUESTION_PROJECTION = {
     "url": 1,
     "url2": 1,
     "editorial_links": 1,
+    "solutionUrl": 1,
+    "codeSnippet": 1,
 }
 CSV_EXPORT_QUESTION_PROJECTION = {
     "topic": 1,
