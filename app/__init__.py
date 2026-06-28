@@ -25,6 +25,7 @@ from app.security import (
 from app.search import search_bp
 from app.tracker import tracker_bp
 from app.cohort.routes import cohort_bp
+from app.mylist import mylist_bp
 from app.utils import (
     platform_color_filter,
     platform_name_filter,
@@ -368,6 +369,7 @@ def create_app(config_class=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_bp)
     app.register_blueprint(cohort_bp)
+    app.register_blueprint(mylist_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
