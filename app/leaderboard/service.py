@@ -36,7 +36,10 @@ def build_leaderboard_data():
         name = user.get("name", "Anonymous")
         if not name or name.strip() == "":
             continue
-        stats = compute_c_score(user, all_questions=all_questions)
+        try:
+            stats = compute_c_score(user, all_questions=all_questions)
+        except Exception:
+            continue
         entries.append(
             {
                 "user_id": str(user["_id"]),
