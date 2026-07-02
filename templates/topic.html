@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% from "macros/modals.html" import notes_modal %}
+{% from "macros/link_badges.html" import external_link_badge %}
 {% block content %}
 <style>
 .topic-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
@@ -164,26 +165,14 @@
                     <div class="q-links">
                         {% if q.url %}
                             {% set p1 = q.url|platform_name %}
-                            <a href="{{ q.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {{ p1 | platform_badge }}"
-                               aria-label="Solve on {{ p1 }} (opens in new tab)">
-                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p1 }}
-                            </a>
+                            {{ external_link_badge(q.url, 'Solve on ' ~ p1, p1, p1 | platform_badge) }}
                         {% endif %}
                         {% if q.url2 %}
                             {% set p2 = q.url2|platform_name %}
-                            <a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge {{ p2 | platform_badge }}"
-                               aria-label="Solve on {{ p2 }} (opens in new tab)">
-                               <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> {{ p2 }}
-                            </a>
+                            {{ external_link_badge(q.url2, 'Solve on ' ~ p2, p2, p2 | platform_badge) }}
                         {% endif %}
                         {% for editorial in q.editorial_links %}
-                            <a href="{{ editorial.url }}" target="_blank" rel="noopener noreferrer"
-                               class="q-badge badge-link"
-                               aria-label="Read {{ editorial.label }} (opens in new tab)">
-                               <i class="bi bi-journal-text" aria-hidden="true"></i> {{ editorial.label }}
-                            </a>
+                            {{ external_link_badge(editorial.url, 'Read ' ~ editorial.label, editorial.label, 'badge-link', 'bi-journal-text') }}
                         {% endfor %}
                     </div>
                     {% if q.hints %}

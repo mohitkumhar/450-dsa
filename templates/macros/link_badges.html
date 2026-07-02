@@ -1,0 +1,7 @@
+{% macro external_link_badge(url, label, platform_name, badge_class="badge-link", icon_class="bi-box-arrow-up-right") -%}
+<a href="{{ url }}" target="_blank" rel="noopener noreferrer"
+   class="q-badge {{ badge_class }}"
+   aria-label="{{ label }} (opens in new tab)">
+    <i class="bi {{ icon_class }}" aria-hidden="true"></i> {{ platform_name }}
+</a>
+{%- endmacro %}
