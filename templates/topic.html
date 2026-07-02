@@ -268,7 +268,7 @@
                     {% if p and p.get('last_reviewed') %}
                     <div style="font-size:11px;color:#888;margin-top:4px;">
                         Last reviewed:
-                        {{ p.get('last_reviewed').strftime('%d %b %Y %H:%M') }}
+                        {{ p.get('last_reviewed_display') }}
                     </div>
                     {% endif %}
                 </td>

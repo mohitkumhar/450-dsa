@@ -119,6 +119,37 @@ def test_export_json_route(monkeypatch):
     assert data["progress"][0]["revision_status"] == "Reviewed"
     assert data["progress"][0]["last_reviewed"] is not None
 
+
+def test_export_json_route_ignores_non_datetime_last_reviewed(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id
+    question_id = test_db.question.insert_one({
+        "topic": topic_id,
+        "problem": "Two Sum",
+        "url": "https://leetcode.com/problems/two-sum/",
+        "url2": ""
+    }).inserted_id
+
+    progress = {
+        str(question_id): {
+            "done": True,
+            "bookmark": True,
+            "notes": "Good notes",
+            "revision_status": "Reviewed",
+            "last_reviewed": "2026-06-01T10:00:00",
+        }
+    }
+
+    user_id = test_db.user.insert_one({"email": "user@example.com", "progress": progress, "is_admin": False}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.get("/export/json")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["progress"][0]["last_reviewed"] is None
+
 def test_import_preview_route(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
     topic_id = test_db.topic.insert_one({"name": "Arrays", "position": 1}).inserted_id

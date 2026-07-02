@@ -1,5 +1,6 @@
 from bson import ObjectId
 from bson.errors import InvalidId
+from datetime import datetime
 from flask import Blueprint, Response, current_app, jsonify, render_template, request
 from flask_login import current_user, login_required
 
@@ -34,6 +35,12 @@ REVISION_STATUSES = {
     "Reviewed",
     "Needs Practice",
 }
+
+
+def format_last_reviewed(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return None
 
 def normalize_difficulty_filter(raw_filter):
     value = (raw_filter or "all").strip().lower()
@@ -123,6 +130,8 @@ def topic(topic_id):
     for question in questions:
         question["editorial_links"] = question_editorial_links(question)
     progress_dict = current_user.progress if current_user.is_authenticated else {}
+    for progress_item in progress_dict.values():
+        progress_item["last_reviewed_display"] = format_last_reviewed(progress_item.get("last_reviewed"))
 
     # Calculate counts based on the unfiltered list of questions
     total_count = len(questions)
@@ -402,6 +411,8 @@ def update_question(question_id):
 @login_required
 def bookmarks():
     progress = current_user.progress
+    for progress_item in progress.values():
+        progress_item["last_reviewed_display"] = format_last_reviewed(progress_item.get("last_reviewed"))
     bookmarked_question_ids = [question_id for question_id, progress_item in progress.items() if progress_item.get("bookmark")]
 
     object_ids = []
@@ -538,12 +549,7 @@ def export_json():
                     "To Review"
                 ),
 
-                "last_reviewed":
-                (
-                    item_progress.get("last_reviewed").isoformat()
-                    if item_progress.get("last_reviewed")
-                    else None
-                ),
+                "last_reviewed": format_last_reviewed(item_progress.get("last_reviewed")),
             })
 
     backup_data = {
