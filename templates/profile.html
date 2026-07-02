@@ -22,8 +22,8 @@
       @{{ user.leetcode_username or user.github_username or user.name|lower|replace(' ','') }}
       <i class="bi bi-patch-check-fill" style="color:var(--success);font-size:.85rem" aria-hidden="true"></i>
     </div>
-    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" onclick="showCodelioCard()" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
-    <button class="card-btn ui-btn ui-btn-success ui-btn-block" onclick="copyProgressCardUrl()" aria-label="Share progress image URL">
+    <button class="card-btn ui-btn ui-btn-primary ui-btn-block" data-profile-action="show-card" aria-label="Get your Codolio profile card">Get your Codolio Card</button>
+    <button class="card-btn ui-btn ui-btn-success ui-btn-block" data-profile-action="copy-progress-card" aria-label="Share progress image URL">
       <i class="bi bi-share-fill" style="margin-right:6px" aria-hidden="true"></i> Share Progress (Image)
     </button>
     <div id="progress-card-copy-fallback" style="display:none;margin-top:8px">
@@ -68,7 +68,7 @@
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_json') }}" aria-label="Export progress as JSON file">
       <i class="bi bi-download" style="margin-right:6px" aria-hidden="true"></i> Export Progress JSON
     </a>
-    <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openImportModal()" aria-label="Import progress from backup file">
+    <button class="card-btn ui-btn ui-btn-secondary ui-btn-block" data-profile-action="open-import" aria-label="Import progress from backup file">
       <i class="bi bi-upload" style="margin-right:6px" aria-hidden="true"></i> Import Progress (CSV/JSON)
     </button>
     <a class="card-btn ui-btn ui-btn-secondary ui-btn-block" href="{{ url_for('tracker.export_study_plan_ics') }}" aria-label="Export study plan calendar file">
@@ -109,8 +109,8 @@
     <div class="meta-row"><i class="bi bi-geo-alt" style="color:var(--accent)" aria-hidden="true"></i> India</div>
     <div class="meta-row"><i class="bi bi-mortarboard" style="color:var(--info)" aria-hidden="true"></i> Computer Science</div>
     {% endif %}
-    <button class="ui-btn ui-btn-secondary ui-btn-block" onclick="openEditProfile()" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
-    <button class="ui-btn ui-btn-danger ui-btn-block" onclick="openDeleteModal()" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
+    <button class="ui-btn ui-btn-secondary ui-btn-block" data-profile-action="open-edit" style="margin-top:12px" aria-label="Edit your profile"><i class="bi bi-pencil-square" aria-hidden="true"></i> Edit Profile</button>
+    <button class="ui-btn ui-btn-danger ui-btn-block" data-profile-action="open-delete" style="margin-top:8px" aria-label="Delete your account permanently"><i class="bi bi-trash3" aria-hidden="true"></i> Delete Account</button>
   </div>
 
   <div class="card">
@@ -444,10 +444,10 @@
         <div id="editAvatarPreview" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;overflow:hidden;margin:0 auto 8px;border:3px solid var(--border-color)">
           {% if user.profile_photo %}<img src="{{ user.profile_photo }}" width="80" height="80" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" alt="{{ user.name }} profile preview">{% else %}{{ user.name[0]|upper }}{% endif %}
         </div>
-        <label for="photoInput" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'">
+        <label for="photoInput" data-profile-action="photo-label" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:.8rem;color:var(--text-secondary);transition:all .2s">
           <i class="bi bi-camera"></i> Upload Photo
         </label>
-        <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+        <input type="file" id="photoInput" accept="image/*" style="display:none" data-profile-action="photo-input">
       </div>
       <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">Max 2MB • PNG, JPG, GIF, WebP</div>
     </div>
@@ -784,10 +784,34 @@ function closeSyncModal(){document.getElementById('syncModal').classList.remove(
 function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
+function openDeleteModal(){document.getElementById('deleteModal').classList.add('open')}
+function openImportModal(){document.getElementById('importModal').classList.add('open')}
 
 ['syncModal','cardModal','editProfileModal'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('click',e=>{if(e.target.id===id)el.classList.remove('open');});
+});
+
+document.querySelectorAll('[data-profile-action]').forEach((element) => {
+  const action = element.dataset.profileAction;
+  if (action === 'show-card') element.addEventListener('click', showCodelioCard);
+  if (action === 'copy-progress-card') element.addEventListener('click', copyProgressCardUrl);
+  if (action === 'open-import') element.addEventListener('click', openImportModal);
+  if (action === 'open-edit') element.addEventListener('click', openEditProfile);
+  if (action === 'open-delete') element.addEventListener('click', openDeleteModal);
+  if (action === 'photo-label') {
+    element.addEventListener('mouseenter', () => {
+      element.style.borderColor = 'var(--accent)';
+      element.style.color = 'var(--accent)';
+    });
+    element.addEventListener('mouseleave', () => {
+      element.style.borderColor = 'var(--border-color)';
+      element.style.color = 'var(--text-secondary)';
+    });
+  }
+  if (action === 'photo-input') {
+    element.addEventListener('change', handlePhotoUpload);
+  }
 });
 
 function handlePhotoUpload(e){
