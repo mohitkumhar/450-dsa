@@ -298,6 +298,37 @@ def test_admin_delete_rejects_missing_csrf(monkeypatch):
     assert test_db.user.find_one({"_id": victim_id}) is not None
 
 
+def test_admin_delete_rejects_mismatched_csrf(monkeypatch):
+    flask_app, test_db = create_test_app(monkeypatch)
+    admin_id = test_db.user.insert_one(
+        {
+            "name": "Main Admin",
+            "email": "admin@example.com",
+            "is_admin": True,
+            "progress": {},
+        }
+    ).inserted_id
+    victim_id = test_db.user.insert_one(
+        {
+            "name": "Victim",
+            "email": "victim@example.com",
+            "is_admin": False,
+            "progress": {},
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_as(client, admin_id)
+        set_csrf_token(client, "expected-token")
+        response = client.post(
+            f"/admin/users/{victim_id}/delete",
+            data={"q": "", "page": 1, "csrf_token": "wrong-token"},
+        )
+
+    assert response.status_code == 403
+    assert test_db.user.find_one({"_id": victim_id}) is not None
+
+
 def test_non_admin_cannot_delete_users(monkeypatch):
     flask_app, test_db = create_test_app(monkeypatch)
     user_id = test_db.user.insert_one(

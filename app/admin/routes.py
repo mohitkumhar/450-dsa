@@ -12,6 +12,7 @@ from flask_login import current_user, login_required
 from app.decorators import admin_required
 from app.extensions import cache, db
 from app.leaderboard.cache import invalidate_leaderboard_cache
+from app.security import validate_csrf_request
 from app.profile.sync_service import clear_profile_caches
 
 
@@ -196,9 +197,7 @@ def delete_user(user_id):
     search_term = (request.form.get("q") or request.args.get("q") or "").strip()
     page = max(_safe_int(request.form.get("page") or request.args.get("page"), 1), 1)
 
-    form_token = request.form.get("csrf_token", "")
-    session_token = session.get("csrf_token", "")
-    if not form_token or not session_token or form_token != session_token:
+    if not validate_csrf_request():
         abort(400)
 
     if not ObjectId.is_valid(user_id):
