@@ -1,5 +1,6 @@
 import re
 import secrets
+from secrets import compare_digest
 
 from bson import ObjectId
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, session, url_for
@@ -220,7 +221,7 @@ def register():
 def logout():
     token = request.form.get("csrf_token", "")
     expected = session.get("csrf_token", "")
-    if not token or not expected or token != expected:
+    if not token or not expected or not compare_digest(token, expected):
         abort(403)
 
     logout_user()
@@ -233,7 +234,7 @@ def delete_account():
     # CSRF check — consume token immediately (single-use)
     token = request.form.get("csrf_token", "")
     expected = session.pop("delete_csrf_token", None)
-    if not token or not expected or token != expected:
+    if not token or not expected or not compare_digest(token, expected):
         abort(403)
 
     user_doc = db.user.find_one({"_id": current_user.id})
@@ -262,7 +263,7 @@ def delete_account():
 def deactivate_account():
     token = request.form.get("csrf_token", "")
     expected = session.pop(DEACTIVATE_CSRF_SESSION_KEY, None)
-    if not token or not expected or token != expected:
+    if not token or not expected or not compare_digest(token, expected):
         abort(403)
 
     user_doc = db.user.find_one({"_id": current_user.id})

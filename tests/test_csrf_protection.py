@@ -55,3 +55,20 @@ def test_delete_account_rejects_missing_csrf_token(monkeypatch):
 
     assert response.status_code == 403
     assert test_db.user.find_one({"_id": user_id}) is not None
+
+
+def test_deactivate_account_rejects_mismatched_csrf_token(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+    user_id = test_db.user.insert_one(
+        {"email": "oauth@example.com", "progress": {}, "is_admin": False}
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        with client.session_transaction() as session:
+            session["deactivate_csrf_token"] = "expected-token"
+
+        response = client.post("/deactivate_account", data={"csrf_token": "wrong-token"})
+
+    assert response.status_code == 403
+    assert test_db.user.find_one({"_id": user_id, "is_deactivated": True}) is None
