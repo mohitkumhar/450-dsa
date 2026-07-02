@@ -427,6 +427,41 @@ def test_offline_queue_notes_syncs_on_reconnect(monkeypatch):
     assert user["progress"][str(question_id)]["notes"] == "use slow/fast pointer"
 
 
+def test_update_question_rejects_non_string_notes(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"notes": {"nested": "value"}},
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {"success": False, "error": "notes must be a string"}
+
+
+def test_update_question_rejects_overlong_notes(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
+    question_id = test_db.question.insert_one({"problem": "Two Sum"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, test_db)
+        response = client.post(
+            f"/update_question/{question_id}",
+            json={"notes": "x" * 2001},
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "success": False,
+        "error": "notes must be at most 2000 characters",
+    }
+
+
 def test_offline_queue_merged_payload_syncs_on_reconnect(monkeypatch):
     """Merged offline queue entry (done + bookmark + notes) flushes in one request."""
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(tracker_routes,))
