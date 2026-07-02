@@ -1,8 +1,8 @@
 from pathlib import Path
 
 
-def test_dockerfile_starts_gunicorn_from_run_module():
+def test_dockerfile_starts_gunicorn_from_app_module():
     dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
 
-    assert '"run:app"' in dockerfile
-    assert '"app:app"' not in dockerfile
+    assert '"app:app"' in dockerfile
+    assert '"run:app"' not in dockerfile
