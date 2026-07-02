@@ -14,6 +14,13 @@ from app.leaderboard.service import (
 leaderboard_bp = Blueprint("leaderboard", __name__)
 
 
+def _safe_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 @leaderboard_bp.route("/leaderboard")
 @limiter.limit("20 per minute")
 @cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=leaderboard_page_cache_key)
@@ -131,8 +138,8 @@ def api_leaderboard():
               x-nullable: true
     """
     mode = request.args.get("mode", "cscore")
-    page = int(request.args.get("page", 1))
-    per_page = min(int(request.args.get("per_page", 20)), 100)
+    page = _safe_int(request.args.get("page"), 1)
+    per_page = min(_safe_int(request.args.get("per_page"), 20), 100)
     
     entries = build_leaderboard_data()
 
