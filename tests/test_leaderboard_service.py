@@ -103,6 +103,21 @@ def test_build_leaderboard_data_skips_users_that_fail_scoring(monkeypatch):
     assert entries[0]["name"] == "Alice"
 
 
+def test_build_leaderboard_data_skips_users_with_null_scoring(monkeypatch):
+    users = [
+        {"_id": ObjectId(), "name": "Alice", "college": "A College"},
+        {"_id": ObjectId(), "name": "Bob", "college": "B College"},
+    ]
+    fake_db = FakeDB(users, [{"url": "https://leetcode.com/problems/two-sum"}])
+
+    monkeypatch.setattr("app.leaderboard.service.db", fake_db)
+    monkeypatch.setattr("app.leaderboard.service.compute_c_score", lambda user, all_questions=None: None)
+
+    entries = build_leaderboard_data()
+
+    assert entries == []
+
+
 def test_build_college_leaderboard_data_aggregates_and_sorts():
     entries = [
         {

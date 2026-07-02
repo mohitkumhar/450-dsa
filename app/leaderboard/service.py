@@ -40,6 +40,8 @@ def build_leaderboard_data():
             stats = compute_c_score(user, all_questions=all_questions)
         except Exception:
             continue
+        if not isinstance(stats, dict):
+            continue
         entries.append(
             {
                 "user_id": str(user["_id"]),
