@@ -53,7 +53,7 @@ def test_sync_user_platforms_respects_cooldown():
 
     payload, status_code = sync_user_platforms(user, {}, db, cache, now=now)
 
-    assert status_code == 200
+    assert status_code == 429
     assert payload["success"] is False
     assert "Please wait" in payload["error"]
     assert db.user.updates == []
