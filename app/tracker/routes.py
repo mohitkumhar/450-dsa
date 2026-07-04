@@ -510,6 +510,26 @@ def export_json():
 
     progress = current_user.progress
     exported_progress = []
+    exported_profile = {
+        "name": getattr(current_user, "name", "") or "",
+        "headline": getattr(current_user, "headline", "") or "",
+        "bio": getattr(current_user, "bio", "") or "",
+        "location": getattr(current_user, "location", "") or "",
+        "college": getattr(current_user, "college", "") or "",
+        "profile_visibility": getattr(current_user, "profile_visibility", "public") or "public",
+        "profile_photo": getattr(current_user, "profile_photo", "") or "",
+        "linkedin_url": getattr(current_user, "linkedin_url", "") or "",
+        "twitter_url": getattr(current_user, "twitter_url", "") or "",
+        "website_url": getattr(current_user, "website_url", "") or "",
+        "resume_url": getattr(current_user, "resume_url", "") or "",
+        "leetcode_username": getattr(current_user, "leetcode_username", "") or "",
+        "github_username": getattr(current_user, "github_username", "") or "",
+        "gfg_username": getattr(current_user, "gfg_username", "") or "",
+        "hackerrank_username": getattr(current_user, "hackerrank_username", "") or "",
+        "codingninjas_username": getattr(current_user, "codingninjas_username", "") or "",
+        "atcoder_username": getattr(current_user, "atcoder_username", "") or "",
+        "codewars_username": getattr(current_user, "codewars_username", "") or "",
+    }
 
     for question in questions:
         question_id = str(question.get('_id'))
@@ -524,14 +544,17 @@ def export_json():
             ):
             topic_name = topic_lookup.get(question.get('topic'), 'Unknown')
             exported_progress.append({
+                "question_id": question_id,
                 "topic": topic_name,
                 "problem": question.get('problem', ''),
+                "difficulty": question.get('difficulty', 'Medium'),
                 "done": bool(item_progress.get('done', False)),
                 "bookmark": bool(item_progress.get('bookmark', False)),
                 "skipped": bool(item_progress.get('skipped', False)),
                 "notes": item_progress.get('notes', ''),
                 "url": question.get('url', ''),
                 "url2": question.get('url2', ''),
+                "tags": list(item_progress.get('tags', [])) if isinstance(item_progress.get('tags'), list) else [],
                 "revision_status":
                 item_progress.get(
                     "revision_status",
@@ -549,6 +572,7 @@ def export_json():
     backup_data = {
         "version": "1.0",
         "exported_at": utc_now().isoformat(),
+        "profile": exported_profile,
         "progress": exported_progress
     }
 

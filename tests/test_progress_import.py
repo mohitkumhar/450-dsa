@@ -87,6 +87,7 @@ def test_export_json_route(monkeypatch):
     question_id = test_db.question.insert_one({
         "topic": topic_id,
         "problem": "Two Sum",
+        "difficulty": "Easy",
         "url": "https://leetcode.com/problems/two-sum/",
         "url2": ""
     }).inserted_id
@@ -95,13 +96,36 @@ def test_export_json_route(monkeypatch):
     str(question_id): {
         "done": True,
         "bookmark": True,
+        "tags": ["arrays", "hashmap"],
         "notes": "Good notes",
         "revision_status": "Reviewed",
         "last_reviewed": tracker_routes.utc_now()
     }
 }
 
-    user_id = test_db.user.insert_one({"email": "user@example.com", "progress": progress, "is_admin": False}).inserted_id
+    user_id = test_db.user.insert_one({
+        "email": "user@example.com",
+        "name": "Test User",
+        "headline": "Problem Solver",
+        "bio": "Enjoys building things",
+        "location": "India",
+        "college": "Codex University",
+        "profile_visibility": "public",
+        "profile_photo": "https://example.com/avatar.png",
+        "linkedin_url": "https://linkedin.com/in/test-user",
+        "twitter_url": "https://x.com/test-user",
+        "website_url": "https://example.com",
+        "resume_url": "https://example.com/resume.pdf",
+        "leetcode_username": "test-lc",
+        "github_username": "test-gh",
+        "gfg_username": "test-gfg",
+        "hackerrank_username": "test-hr",
+        "codingninjas_username": "test-cn",
+        "atcoder_username": "test-ac",
+        "codewars_username": "test-cw",
+        "progress": progress,
+        "is_admin": False,
+    }).inserted_id
 
     with flask_app.test_client() as client:
         login_test_user(client, user_id)
@@ -112,10 +136,15 @@ def test_export_json_route(monkeypatch):
     
     data = json.loads(response.data)
     assert data["version"] == "1.0"
+    assert data["profile"]["name"] == "Test User"
+    assert data["profile"]["leetcode_username"] == "test-lc"
     assert len(data["progress"]) == 1
+    assert data["progress"][0]["question_id"] == str(question_id)
     assert data["progress"][0]["problem"] == "Two Sum"
+    assert data["progress"][0]["difficulty"] == "Easy"
     assert data["progress"][0]["done"] is True
     assert data["progress"][0]["notes"] == "Good notes"
+    assert data["progress"][0]["tags"] == ["arrays", "hashmap"]
     assert data["progress"][0]["revision_status"] == "Reviewed"
     assert data["progress"][0]["last_reviewed"] is not None
 
