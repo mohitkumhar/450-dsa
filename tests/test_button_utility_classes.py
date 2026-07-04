@@ -19,6 +19,16 @@ def test_base_template_defines_shared_button_utility_classes():
     assert ".ui-btn-block {" in stylesheet
 
 
+def test_profile_cards_use_theme_safe_surfaces():
+    stylesheet = (STATIC_DIR / "css" / "profile.css").read_text(encoding="utf-8")
+
+    assert ".rank-card{background:var(--bg-card);" in stylesheet
+    assert ".award-badge{width:64px;height:74px;background:var(--bg-secondary);" in stylesheet
+    assert ".chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--bg-card-hover);" in stylesheet
+    assert ".profile-card-shell{background:var(--bg-card);" in stylesheet
+    assert ".profile-card-share-btn{width:100%;margin-top:14px;padding:10px;background:var(--accent);" in stylesheet
+
+
 def test_profile_and_topic_templates_use_button_utilities():
     profile_template = (TEMPLATE_DIR / "profile.html").read_text(encoding="utf-8")
     topic_template = (TEMPLATE_DIR / "topic.html").read_text(encoding="utf-8")

@@ -35,3 +35,15 @@ def test_profile_template_uses_shared_modal_macro():
 
     assert '{% from "_macros.html" import modal_shell %}' in template
     assert template.count("{% call modal_shell(") == 3
+
+
+def test_profile_card_modal_uses_theme_safe_surface_and_real_copy_action():
+    template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
+
+    assert 'class="profile-card-shell"' in template
+    assert 'class="profile-card-stats"' in template
+    assert 'class="profile-card-stat"' in template
+    assert 'class="profile-card-share-btn"' in template
+    assert "copyProfileCardUrl()" in template
+    assert "showToast('Profile card copied! 📋')" not in template
+    assert "background:linear-gradient(135deg,#1a1a2e,#16213e)" not in template

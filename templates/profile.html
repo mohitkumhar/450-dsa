@@ -420,19 +420,19 @@
 {% endcall %}
 
 <!-- Codolio Card Modal -->
-{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-color:#2a2a4a') %}
-    <div style="background:linear-gradient(135deg,rgba(255,107,0,.2),rgba(255,55,95,.15));border:1px solid rgba(255,107,0,.3);border-radius:16px;padding:24px;text-align:center">
+{% call modal_shell('cardModal', 'Your Profile Card', 'cardModalTitle', "document.getElementById('cardModal').classList.remove('open')", box_style='max-width:400px') %}
+    <div class="profile-card-shell">
       <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff375f);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:900;color:#fff;margin:0 auto 12px">{{ user.name[0]|upper }}</div>
       <div style="font-size:1.1rem;font-weight:800;margin-bottom:2px">{{ user.name }}</div>
       <div style="font-size:.8rem;color:var(--accent);margin-bottom:14px">@{{ user.leetcode_username or user.name|lower|replace(' ','') }}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ global_total_solved }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Questions</div></div>
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ total_active_days }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div></div>
-        <div style="background:rgba(255,255,255,.05);border-radius:10px;padding:10px"><div style="font-size:1.2rem;font-weight:900">{{ lc_rating or dsa_done }}</div><div style="font-size:.65rem;color:var(--text-secondary)">{{ 'LC Rating' if lc_rating else 'DSA Done' }}</div></div>
+      <div class="profile-card-stats">
+        <div class="profile-card-stat"><div style="font-size:1.2rem;font-weight:900">{{ global_total_solved }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Questions</div></div>
+        <div class="profile-card-stat"><div style="font-size:1.2rem;font-weight:900">{{ total_active_days }}</div><div style="font-size:.65rem;color:var(--text-secondary)">Active Days</div></div>
+        <div class="profile-card-stat"><div style="font-size:1.2rem;font-weight:900">{{ lc_rating or dsa_done }}</div><div style="font-size:.65rem;color:var(--text-secondary)">{{ 'LC Rating' if lc_rating else 'DSA Done' }}</div></div>
       </div>
       <div style="font-size:.72rem;color:var(--text-muted)">450 DSA Cracker • {{ 2026 }}</div>
     </div>
-    <button onclick="showToast('Profile card copied! 📋')" style="width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit">Share Card</button>
+    <button type="button" class="profile-card-share-btn" onclick="copyProfileCardUrl()" aria-label="Copy your public profile card link">Share Card</button>
 {% endcall %}
 
 <!-- Edit Profile Modal -->
@@ -782,6 +782,15 @@ if('IntersectionObserver'in window&&chartShells.length){const io=new Intersectio
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
 function closeSyncModal(){document.getElementById('syncModal').classList.remove('open')}
 function showCodelioCard(){document.getElementById('cardModal').classList.add('open')}
+function copyProfileCardUrl(){
+  const url=window.location.origin+endpointConfig.publicCardPath;
+  const onSuccess=()=>{if(typeof showToast==='function')showToast('Profile card link copied!','success')};
+  if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function'){
+    window.prompt('Copy your profile card link',url);
+    return;
+  }
+  navigator.clipboard.writeText(url).then(onSuccess).catch(()=>window.prompt('Copy your profile card link',url));
+}
 function openEditProfile(){document.getElementById('editProfileModal').classList.add('open')}
 function closeEditProfile(){document.getElementById('editProfileModal').classList.remove('open')}
 
