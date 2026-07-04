@@ -29,6 +29,7 @@ from app.utils import (
     platform_color_filter,
     platform_name_filter,
     platform_profile_url,
+    question_platform_fields,
     question_editorial_links,
     safe_url_filter,
 )
@@ -59,32 +60,62 @@ def _mongo_client_options(app):
         "maxPoolSize": app.config["MONGO_MAX_POOL_SIZE"],
         "minPoolSize": app.config["MONGO_MIN_POOL_SIZE"],
     }
+    def _dedupe_seeded_questions():
+        if not all(hasattr(db.question, attr) for attr in ("aggregate", "delete_many")):
+            return
 
+        duplicate_groups = db.question.aggregate(
+            [
+                {
+                    "$group": {
+                        "_id": {
+                            "topic": "$topic",
+                            "problem": "$problem",
+                            "url": "$url",
+                        },
+                        "ids": {"$push": "$_id"},
+                        "count": {"$sum": 1},
+                    }
+                },
+                {"$match": {"count": {"$gt": 1}}},
+            ]
+        )
+        for group in duplicate_groups:
+            duplicate_ids = group["ids"][1:]
+            if duplicate_ids:
+                db.question.delete_many({"_id": {"$in": duplicate_ids}})
 
-def _dedupe_seeded_questions():
-    if not all(hasattr(db.question, attr) for attr in ("aggregate", "delete_many")):
-        return
+    def _backfill_question_platform_fields():
+        if not hasattr(db.question, "bulk_write"):
+            return
 
-    duplicate_groups = db.question.aggregate(
-        [
-            {
-                "$group": {
-                    "_id": {
-                        "topic": "$topic",
-                        "problem": "$problem",
-                        "url": "$url",
-                    },
-                    "ids": {"$push": "$_id"},
-                    "count": {"$sum": 1},
-                }
-            },
-            {"$match": {"count": {"$gt": 1}}},
-        ]
-    )
-    for group in duplicate_groups:
-        duplicate_ids = group["ids"][1:]
-        if duplicate_ids:
-            db.question.delete_many({"_id": {"$in": duplicate_ids}})
+        from pymongo import UpdateOne
+
+        try:
+            questions = db.question.find(
+                {},
+                {"_id": 1, "url": 1, "url2": 1, "primary_platform": 1, "secondary_platform": 1},
+            )
+        except Exception:
+            return
+
+        updates = []
+        for question in questions:
+            platform_fields = question_platform_fields(question)
+            if (
+                question.get("primary_platform") == platform_fields["primary_platform"]
+                and question.get("secondary_platform") == platform_fields["secondary_platform"]
+            ):
+                continue
+            updates.append(
+                UpdateOne(
+                    {"_id": question["_id"]},
+                    {"$set": platform_fields},
+                )
+            )
+
+        if updates:
+            db.question.bulk_write(updates)
 
 
 def create_app(config_class=None):
@@ -197,6 +228,7 @@ def create_app(config_class=None):
                             "editorial_links": question_editorial_links(question),
                             "difficulty": difficulty,
                         }
+                        q_data.update(question_platform_fields(q_data))
                         if "hints" in question:
                             q_data["hints"] = question["hints"]
                         questions.append(q_data)
@@ -232,6 +264,7 @@ def create_app(config_class=None):
                     "editorial_links": question_editorial_links(question),
                     "difficulty": difficulty,
                 }
+                set_fields.update(question_platform_fields(question))
                 if "hints" in question:
                     set_fields["hints"] = question["hints"]
                 question_updates.append(
@@ -249,6 +282,7 @@ def create_app(config_class=None):
                 )
         if question_updates:
             db.question.bulk_write(question_updates)
+        _backfill_question_platform_fields()
 
     def _precompute_static_data(app):
         """Precompute static question/topic metadata and store in app config."""

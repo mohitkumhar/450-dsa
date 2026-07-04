@@ -178,6 +178,14 @@ def platform_from_question_url(url):
     return "Other"
 
 
+def question_platform_fields(question):
+    """Return denormalized platform fields for a question document."""
+    return {
+        "primary_platform": platform_from_question_url(question.get("url")),
+        "secondary_platform": platform_from_question_url(question.get("url2")),
+    }
+
+
 def coerce_non_negative_number(value):
     """Return a safe finite non-negative numeric value for persisted stats."""
     if isinstance(value, bool) or value is None:

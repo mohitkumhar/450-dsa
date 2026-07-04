@@ -165,11 +165,17 @@ def search_dsa_questions(raw_query, limit=40, db_handle=None, filters=None, prog
     platform_name = PLATFORM_FILTER_MAP.get(platform_filter, "")
     if platform_name:
         url_keyword = PLATFORM_URL_KEYWORDS.get(platform_name, "")
+        mongo_query["$or"] = [
+            {"primary_platform": platform_name},
+            {"secondary_platform": platform_name},
+        ]
         if url_keyword:
-            mongo_query["$or"] = [
-                {"url": {"$regex": url_keyword, "$options": "i"}},
-                {"url2": {"$regex": url_keyword, "$options": "i"}},
-            ]
+            mongo_query["$or"].extend(
+                [
+                    {"url": {"$regex": url_keyword, "$options": "i"}},
+                    {"url2": {"$regex": url_keyword, "$options": "i"}},
+                ]
+            )
 
     if status_filter in ("done", "bookmarked"):
         flag = "done" if status_filter == "done" else "bookmark"
@@ -263,5 +269,4 @@ def platform_name_filter(url):
             if domain in url:
                 return meta["name"]
     return "Link"
-
 
