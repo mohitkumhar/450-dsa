@@ -32,5 +32,9 @@ def api_leaderboard_cache_key():
     return f"leaderboard:v{_leaderboard_cache_version()}:api:{request.path}:{args}"
 
 
+def leaderboard_snapshot_cache_key():
+    return f"leaderboard:v{_leaderboard_cache_version()}:snapshot"
+
+
 # GSSoC Leaderboard cache TTL window
 # Cache leaderboard statistics for 5 minutes max to save Redis compute.

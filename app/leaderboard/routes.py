@@ -4,10 +4,8 @@ from flask_login import current_user, login_required
 from app.extensions import limiter, cache
 from app.leaderboard.cache import LEADERBOARD_CACHE_TIMEOUT, api_leaderboard_cache_key, leaderboard_page_cache_key
 from app.leaderboard.service import (
-    build_college_leaderboard_data,
-    build_leaderboard_data,
     get_user_rank_by_c_score,
-    sort_leaderboard_entries_by_c_score,
+    get_leaderboard_snapshots,
 )
 
 
@@ -18,22 +16,12 @@ leaderboard_bp = Blueprint("leaderboard", __name__)
 @limiter.limit("20 per minute")
 @cache.cached(timeout=LEADERBOARD_CACHE_TIMEOUT, make_cache_key=leaderboard_page_cache_key)
 def leaderboard():
-    entries = build_leaderboard_data()
-
-    by_cscore = sort_leaderboard_entries_by_c_score(entries)
-    by_questions = sorted(entries, key=lambda item: item["total_solved"], reverse=True)
-    by_rating = sorted(entries, key=lambda item: item["lc_rating"], reverse=True)
-    by_college = build_college_leaderboard_data(entries)
-
-    def assign_ranks(sorted_list, key):
-        for index, entry in enumerate(sorted_list):
-            entry[f"rank_{key}"] = index + 1
-        return sorted_list
-
-    assign_ranks(by_cscore, "cscore")
-    assign_ranks(by_questions, "questions")
-    assign_ranks(by_rating, "rating")
-    assign_ranks(by_college, "college")
+    snapshots = get_leaderboard_snapshots()
+    entries = snapshots["entries"]
+    by_cscore = snapshots["by_cscore"]
+    by_questions = snapshots["by_questions"]
+    by_rating = snapshots["by_rating"]
+    by_college = snapshots["by_college"]
 
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
     current_user_rank = get_user_rank_by_c_score(current_user_id, by_cscore)
@@ -134,16 +122,19 @@ def api_leaderboard():
     page = int(request.args.get("page", 1))
     per_page = min(int(request.args.get("per_page", 20)), 100)
     
-    entries = build_leaderboard_data()
+    snapshots = get_leaderboard_snapshots()
+    entries = snapshots["entries"]
 
     if mode == "questions":
-        entries.sort(key=lambda item: item["total_solved"], reverse=True)
+        entries = snapshots["by_questions"]
     elif mode == "rating":
-        entries.sort(key=lambda item: item["lc_rating"], reverse=True)
+        entries = snapshots["by_rating"]
     elif mode == "college":
-        entries = build_college_leaderboard_data(entries)
+        entries = snapshots["by_college"]
     else:
-        entries.sort(key=lambda item: item["c_score"], reverse=True)
+        entries = snapshots["by_cscore"]
+
+    entries = [dict(entry) for entry in entries]
 
     # Assign ranks
     for index, entry in enumerate(entries):
@@ -178,7 +169,7 @@ def api_leaderboard():
 @login_required
 def compare(user_id):
     """Show a head-to-head comparison between the current user and another public user."""
-    entries = build_leaderboard_data()
+    entries = get_leaderboard_snapshots()["by_cscore"]
     other = next((e for e in entries if e.get("user_id") == user_id), None)
     current_user_id = str(current_user.id) if current_user.is_authenticated else None
     current_entry = next((e for e in entries if e.get("user_id") == current_user_id), None)

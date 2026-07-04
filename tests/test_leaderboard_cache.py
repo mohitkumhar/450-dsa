@@ -4,6 +4,7 @@ from bson import ObjectId
 
 import app.auth.routes as auth_routes
 import app.profile.routes as profile_routes
+import app.leaderboard.service as leaderboard_service
 import app.tracker.routes as tracker_routes
 from app.leaderboard.cache import (
     LEADERBOARD_CACHE_VERSION_KEY,
@@ -12,6 +13,7 @@ from app.leaderboard.cache import (
     invalidate_leaderboard_cache,
     leaderboard_page_cache_key,
 )
+from app.leaderboard.service import get_leaderboard_snapshots
 from conftest import build_test_app, csrf_headers
 
 
@@ -55,6 +57,44 @@ def test_leaderboard_page_cache_key_varies_by_authenticated_user(monkeypatch):
     assert first_user_key != second_user_key
     assert first_user_key.endswith(":user:user-1")
     assert second_user_key.endswith(":user:user-2")
+
+
+def test_leaderboard_snapshots_are_cached_until_invalidation(monkeypatch):
+    flask_app, _ = build_test_app(monkeypatch)
+    calls = []
+
+    monkeypatch.setattr(
+        leaderboard_service,
+        "build_leaderboard_data",
+        lambda: calls.append("built") or [
+            {
+                "user_id": "user-1",
+                "name": "Saurabh",
+                "profile_photo": "",
+                "college": "Test College",
+                "c_score": 100,
+                "total_solved": 50,
+                "dsa_done": 45,
+                "lc_total": 20,
+                "gfg_total": 10,
+                "cn_total": 5,
+                "hr_total": 0,
+                "lc_rating": 1800,
+            }
+        ],
+    )
+
+    cache.clear()
+    with flask_app.app_context():
+        first = get_leaderboard_snapshots()
+        second = get_leaderboard_snapshots()
+        invalidate_leaderboard_cache()
+        third = get_leaderboard_snapshots()
+
+    assert calls == ["built", "built"]
+    assert first["by_cscore"][0]["rank_cscore"] == 1
+    assert second["by_cscore"][0]["rank_cscore"] == 1
+    assert third["by_cscore"][0]["rank_cscore"] == 1
 
 
 def test_update_question_invalidates_leaderboard_cache(monkeypatch):
