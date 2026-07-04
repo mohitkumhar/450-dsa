@@ -175,6 +175,37 @@ def test_create_app_caches_faq_page_render(monkeypatch):
     assert rendered_templates == ["faq.html"]
 
 
+def test_create_app_caches_placeholder_static_pages(monkeypatch):
+    rendered_templates = []
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+    monkeypatch.setattr(app_module, "db", FakeDB())
+    monkeypatch.setattr(app_module.mongo, "init_app", lambda flask_app, **kwargs: None)
+    monkeypatch.setattr(app_module.bcrypt, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.login_manager, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.limiter, "init_app", lambda flask_app: None)
+    monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        faq_routes,
+        "render_template",
+        lambda template_name, **context: rendered_templates.append((template_name, context.get("title"))) or "page",
+    )
+
+    flask_app = app_module.create_app()
+    app_module.cache.clear()
+    client = flask_app.test_client()
+
+    first_response = client.get("/contact")
+    second_response = client.get("/contact")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.get_data(as_text=True) == "page"
+    assert second_response.get_data(as_text=True) == "page"
+    assert rendered_templates == [("placeholder.html", "Contact Us")]
+
+
 def test_create_app_sets_secure_session_cookie_defaults(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
     monkeypatch.delenv("FLASK_ENV", raising=False)
