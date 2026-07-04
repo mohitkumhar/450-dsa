@@ -94,14 +94,17 @@
     const pageInput = document.getElementById("delete-page");
 
     function openModal() {
-        modal.style.display = "flex";
+        modal.classList.add("open");
         modal.setAttribute("aria-hidden", "false");
     }
 
     function closeModal() {
-        modal.style.display = "none";
+        modal.classList.remove("open");
         modal.setAttribute("aria-hidden", "true");
     }
+
+    window.openDeleteModal = openModal;
+    window.closeDeleteModal = closeModal;
 
     document.querySelectorAll(".js-delete-user").forEach((button) => {
         button.addEventListener("click", function () {

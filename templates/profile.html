@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import modal_shell %}
+{% from "_macros.html" import modal_shell, app_modal_shell %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
@@ -490,66 +490,60 @@
 {% endcall %}
 
 <!-- Import Progress Modal -->
-<div class="modal-ov" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
-  <div class="modal-bx" style="max-width:500px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <h3 id="importModalTitle" style="margin-bottom:0"><i class="bi bi-upload" style="color:var(--accent)"></i> Import Progress</h3>
-      <button type="button" onclick="closeImportModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer" aria-label="Close dialog">✕</button>
-    </div>
-    <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:15px">Upload a previously exported CSV or JSON progress backup file.</p>
-    
-    <div style="margin-bottom:15px">
-      <label class="m-lbl">Choose Backup File (.csv, .json)</label>
-      <input type="file" id="importFile" accept=".csv,.json" class="m-inp" onchange="handleImportFileSelect(event)" style="padding:10px">
+{% call app_modal_shell('importModal', '<i class="bi bi-upload" style="color:var(--accent)"></i> Import Progress', 'importModalTitle', 'closeImportModal()', dialog_style='max-width:500px') %}
+  <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:15px">Upload a previously exported CSV or JSON progress backup file.</p>
+
+  <div style="margin-bottom:15px">
+    <label class="m-lbl">Choose Backup File (.csv, .json)</label>
+    <input type="file" id="importFile" accept=".csv,.json" class="m-inp" onchange="handleImportFileSelect(event)" style="padding:10px">
+  </div>
+
+  <!-- Preview Container -->
+  <div id="importPreviewContainer" style="display:none;margin-top:15px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;max-height:300px;overflow-y:auto">
+    <h4 style="margin:0 0 8px 0;font-size:0.9rem">Dry-Run Preview Summary</h4>
+    <table style="width:100%;font-size:0.8rem;border-collapse:collapse;margin-bottom:10px">
+      <tr>
+        <td style="padding:4px 0;color:var(--text-secondary)">Total Parsed:</td>
+        <td><strong id="previewTotal" style="float:right">0</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:var(--text-secondary)">Matched:</td>
+        <td><strong id="previewMatched" style="float:right">0</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:var(--text-secondary)">Unmatched (Skipped):</td>
+        <td><strong id="previewUnmatched" style="float:right">0</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:var(--text-secondary)">Changes Detected:</td>
+        <td><strong id="previewChanges" style="float:right;color:var(--accent)">0</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;color:var(--text-secondary)">Conflicts (e.g. notes):</td>
+        <td><strong id="previewConflicts" style="float:right;color:var(--warning)">0</strong></td>
+      </tr>
+    </table>
+
+    <!-- Option for Import Mode -->
+    <div style="margin:15px 0 10px 0;border-top:1px solid var(--border-color);padding-top:10px">
+      <label class="m-lbl" style="margin-bottom:5px">Import Mode</label>
+      <div style="display:flex;gap:15px;align-items:center">
+        <label style="font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:4px">
+          <input type="radio" name="importMode" value="merge" checked> Merge (Safe append)
+        </label>
+        <label style="font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:4px">
+          <input type="radio" name="importMode" value="replace"> Replace (Overwrite)
+        </label>
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px" id="importModeHelp">
+        Merge will add new progress and combine note differences. Replace will overwrite only the questions found in your import file (unmatched existing progress is preserved).
+      </div>
     </div>
 
-    <!-- Preview Container -->
-    <div id="importPreviewContainer" style="display:none;margin-top:15px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:12px;max-height:300px;overflow-y:auto">
-      <h4 style="margin:0 0 8px 0;font-size:0.9rem">Dry-Run Preview Summary</h4>
-      <table style="width:100%;font-size:0.8rem;border-collapse:collapse;margin-bottom:10px">
-        <tr>
-          <td style="padding:4px 0;color:var(--text-secondary)">Total Parsed:</td>
-          <td><strong id="previewTotal" style="float:right">0</strong></td>
-        </tr>
-        <tr>
-          <td style="padding:4px 0;color:var(--text-secondary)">Matched:</td>
-          <td><strong id="previewMatched" style="float:right">0</strong></td>
-        </tr>
-        <tr>
-          <td style="padding:4px 0;color:var(--text-secondary)">Unmatched (Skipped):</td>
-          <td><strong id="previewUnmatched" style="float:right">0</strong></td>
-        </tr>
-        <tr>
-          <td style="padding:4px 0;color:var(--text-secondary)">Changes Detected:</td>
-          <td><strong id="previewChanges" style="float:right;color:var(--accent)">0</strong></td>
-        </tr>
-        <tr>
-          <td style="padding:4px 0;color:var(--text-secondary)">Conflicts (e.g. notes):</td>
-          <td><strong id="previewConflicts" style="float:right;color:var(--warning)">0</strong></td>
-        </tr>
-      </table>
-
-      <!-- Option for Import Mode -->
-      <div style="margin:15px 0 10px 0;border-top:1px solid var(--border-color);padding-top:10px">
-        <label class="m-lbl" style="margin-bottom:5px">Import Mode</label>
-        <div style="display:flex;gap:15px;align-items:center">
-          <label style="font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:4px">
-            <input type="radio" name="importMode" value="merge" checked> Merge (Safe append)
-          </label>
-          <label style="font-size:0.8rem;cursor:pointer;display:flex;align-items:center;gap:4px">
-            <input type="radio" name="importMode" value="replace"> Replace (Overwrite)
-          </label>
-        </div>
-        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px" id="importModeHelp">
-          Merge will add new progress and combine note differences. Replace will overwrite only the questions found in your import file (unmatched existing progress is preserved).
-        </div>
-      </div>
-      
-      <!-- Change items preview list -->
-      <div id="previewItemsList" style="margin-top:10px;font-size:0.75rem;border-top:1px solid var(--border-color);padding-top:10px">
-        <div style="font-weight:700;margin-bottom:5px">Change Log (First 50 items):</div>
-        <ul id="previewList" style="padding-left:15px;margin:0;max-height:100px;overflow-y:auto;color:var(--text-secondary)"></ul>
-      </div>
+    <!-- Change items preview list -->
+    <div id="previewItemsList" style="margin-top:10px;font-size:0.75rem;border-top:1px solid var(--border-color);padding-top:10px">
+      <div style="font-weight:700;margin-bottom:5px">Change Log (First 50 items):</div>
+      <ul id="previewList" style="padding-left:15px;margin:0;max-height:100px;overflow-y:auto;color:var(--text-secondary)"></ul>
     </div>
 
     <div class="m-actions" style="margin-top:20px">
@@ -560,8 +554,7 @@
         </span>
       </button>
     </div>
-  </div>
-</div>
+{% endcall %}
 
 <!-- Sync Loading Overlay -->
 <div id="syncOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;flex-direction:column;align-items:center;justify-content:center;gap:20px">
