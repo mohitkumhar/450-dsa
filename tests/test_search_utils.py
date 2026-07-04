@@ -1,4 +1,5 @@
 import app.utils as utils
+import app.search.service as search_service
 
 
 class FakeCursor:
@@ -183,6 +184,31 @@ def test_search_filters_requested_platform_without_extra_collection_scan(monkeyp
     ]
 
 
+def test_search_platform_filter_uses_denormalized_platform_fields(monkeypatch):
+    fake_db = FakeDB(
+        questions=[
+            {
+                "_id": "q1",
+                "problem": "Binary Tree Paths",
+                "topic": "trees",
+                "url": "https://leetcode.com/problems/binary-tree-paths/",
+                "url2": "https://practice.geeksforgeeks.org/problems/tree-traversal/",
+                "score": 3.0,
+            }
+        ],
+        topics=[{"_id": "trees", "name": "Trees", "position": 4}],
+    )
+    monkeypatch.setattr(utils, "db", fake_db)
+
+    search_service.search_dsa_questions("binary tree", db_handle=fake_db, filters={"platform": "gfg"})
+
+    platform_query = fake_db.question.find_calls[0][0]["$or"]
+    assert platform_query[:2] == [
+        {"primary_platform": "GFG"},
+        {"secondary_platform": "GFG"},
+    ]
+
+
 def test_search_applies_platform_filter_before_final_limit(monkeypatch):
     lc_questions = [
         {
@@ -217,6 +243,18 @@ def test_search_applies_platform_filter_before_final_limit(monkeypatch):
     assert fake_db.topic.find_calls == [
         ({"_id": {"$in": ["trees"]}}, {"name": 1, "position": 1})
     ]
+
+
+def test_question_platform_fields_derives_primary_and_secondary_platforms():
+    question = {
+        "url": "https://leetcode.com/problems/two-sum/",
+        "url2": "https://practice.geeksforgeeks.org/problems/tree-traversal/",
+    }
+
+    assert utils.question_platform_fields(question) == {
+        "primary_platform": "LeetCode",
+        "secondary_platform": "GFG",
+    }
 
 
 def test_empty_query_returns_without_database_calls(monkeypatch):
