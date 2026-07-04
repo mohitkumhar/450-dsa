@@ -23,6 +23,7 @@ def test_profile_and_topic_templates_use_button_utilities():
     profile_template = (TEMPLATE_DIR / "profile.html").read_text(encoding="utf-8")
     topic_template = (TEMPLATE_DIR / "topic.html").read_text(encoding="utf-8")
     base_template = (TEMPLATE_DIR / "base.html").read_text(encoding="utf-8")
+    bookmarks_template = (TEMPLATE_DIR / "bookmarks.html").read_text(encoding="utf-8")
 
     assert "class=\"card-btn ui-btn ui-btn-primary ui-btn-block\"" in profile_template
     assert "class=\"card-btn ui-btn ui-btn-success ui-btn-block\"" in profile_template
@@ -36,6 +37,11 @@ def test_profile_and_topic_templates_use_button_utilities():
     assert "class=\"pill-btn ui-btn ui-btn-secondary ui-btn-pill\"" in base_template
     assert "class=\"pill-btn accent ui-btn ui-btn-primary ui-btn-pill\"" in base_template
     assert "class=\"icon-btn ui-btn ui-btn-secondary ui-btn-icon\"" in base_template
+
+    assert ".q-checkbox { accent-color: var(--accent);" in topic_template
+    assert ".revision-select {" in topic_template
+    assert ".q-checkbox {" in bookmarks_template
+    assert "background: var(--bg-secondary);" in bookmarks_template
 
 
 def test_app_styles_load_after_bootstrap_for_theme_overrides():
