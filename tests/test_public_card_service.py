@@ -29,11 +29,13 @@ class FakeUserCollection:
 class FakeQuestionCollection:
     def __init__(self, questions):
         self.questions = list(questions)
+        self.find_calls = []
 
     def count_documents(self, query):
         return len(self.questions)
 
-    def find(self, *args, **kwargs):
+    def find(self, query=None, projection=None):
+        self.find_calls.append((query, projection))
         return list(self.questions)
 
 
@@ -77,6 +79,7 @@ def test_get_public_card_image_builds_and_caches(monkeypatch):
     assert first_etag == second_etag
     assert first_etag.startswith("progress-card-")
     assert first_last_modified == second_last_modified
+    assert fake_db.question.find_calls == [({}, {"_id": 1, "url": 1}), ({}, {"_id": 1, "url": 1})]
 
 
 def test_get_public_card_image_raises_for_missing_user(monkeypatch):
