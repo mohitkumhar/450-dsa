@@ -517,12 +517,12 @@ def profile():
     try:
         lc_badges = json.loads(user.lc_badges_json or "[]")
     except json.JSONDecodeError:
-        print("Unable to handle leetcode badges")
+        current_app.logger.warning("Unable to handle leetcode badges", exc_info=True)
 
     try:
         hr_badges = [badge for badge in json.loads(user.hr_badges_json or "[]") if int(badge.get("stars", 0)) > 0]
     except (json.JSONDecodeError, ValueError):
-        print("Unable to handle hackerrank badges")
+        current_app.logger.warning("Unable to handle hackerrank badges", exc_info=True)
 
     leaderboard_entries = build_leaderboard_data()
     profile_leaderboard_rank = get_user_rank_by_c_score(user.id, leaderboard_entries)
