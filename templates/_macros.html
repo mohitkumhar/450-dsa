@@ -9,3 +9,9 @@
   </div>
 </div>
 {%- endmacro %}
+
+{% macro external_link_badge(href, label, color_class='badge-link', icon_class='bi-box-arrow-up-right', aria_label='', extra_class='') -%}
+<a class="q-badge {{ color_class }}{{ ' ' ~ extra_class if extra_class }}" href="{{ href }}" target="_blank" rel="noopener noreferrer" aria-label="{{ aria_label or (label ~ ' (opens in new tab)') }}">
+  <i class="bi {{ icon_class }}" aria-hidden="true"></i>{{ label }}
+</a>
+{%- endmacro %}

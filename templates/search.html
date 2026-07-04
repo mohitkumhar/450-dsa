@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import external_link_badge %}
 {% block content %}
 <style>
 .search-shell { max-width: 980px; }
@@ -331,10 +332,12 @@
 {% endblock %}
 
 {% block scripts %}
+{% set external_badge_template = external_link_badge('__HREF__', '__LABEL__', '__COLOR__', '__ICON__', '__ARIA__') %}
 <script>
 const endpointConfig = {{ {
   "searchQuestions": url_for('search.api_search_questions'),
 }|tojson }};
+const badgeMarkupTemplate = {{ external_badge_template|tojson }};
 const input = document.getElementById('searchInput');
 const results = document.getElementById('results');
 const meta = document.getElementById('searchMeta');
@@ -358,6 +361,15 @@ const platformLabels = {
   cn: 'Coding Ninjas',
   hackerrank: 'HackerRank'
 };
+
+function renderExternalBadge({ href, label, color = 'badge-link', icon = 'bi-box-arrow-up-right', ariaLabel = '' }) {
+  return badgeMarkupTemplate
+    .replaceAll('__HREF__', escapeHtml(href))
+    .replaceAll('__LABEL__', escapeHtml(label))
+    .replaceAll('__COLOR__', escapeHtml(color))
+    .replaceAll('__ICON__', escapeHtml(icon))
+    .replaceAll('__ARIA__', escapeHtml(ariaLabel || `${label} (opens in new tab)`));
+}
 
 function getFilters() {
   return {
@@ -530,9 +542,13 @@ function renderResults(payload) {
 
   if (!count) {
     const external = (payload.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for your query (opens new tab)">
-        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderExternalBadge({
+        href: link.url,
+        label: link.platform,
+        color: badgeClass(link.color),
+        icon: 'bi-box-arrow-up-right',
+        ariaLabel: `Search ${link.platform} for your query (opens new tab)`
+      })
     ).join('');
     results.innerHTML = `<div class="empty-search"><i class="bi bi-search-heart" aria-hidden="true"></i><p>No sheet match found.</p><div class="link-row" style="justify-content:center">${external}</div></div>`;
     return;
@@ -540,19 +556,31 @@ function renderResults(payload) {
 
   results.innerHTML = payload.results.map(item => {
     const directLinks = (item.links || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="View on ${escapeHtml(link.platform)} (opens new tab)">
-        <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderExternalBadge({
+        href: link.url,
+        label: link.platform,
+        color: badgeClass(link.color),
+        icon: 'bi-box-arrow-up-right',
+        ariaLabel: `View on ${link.platform} (opens new tab)`
+      })
     ).join('');
     const editorialLinks = (item.editorial_links || []).map(link =>
-      `<a class="q-badge badge-link" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Read ${escapeHtml(link.label)} (opens new tab)">
-        <i class="bi bi-journal-text" aria-hidden="true"></i>${escapeHtml(link.label)}
-      </a>`
+      renderExternalBadge({
+        href: link.url,
+        label: link.label,
+        color: 'badge-link',
+        icon: 'bi-journal-text',
+        ariaLabel: `Read ${link.label} (opens new tab)`
+      })
     ).join('');
     const platformSearches = (item.external_searches || []).map(link =>
-      `<a class="q-badge ${badgeClass(link.color)}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="Search ${escapeHtml(link.platform)} for this problem (opens new tab)">
-        <i class="bi bi-search" aria-hidden="true"></i>${escapeHtml(link.platform)}
-      </a>`
+      renderExternalBadge({
+        href: link.url,
+        label: link.platform,
+        color: badgeClass(link.color),
+        icon: 'bi-search',
+        ariaLabel: `Search ${link.platform} for this problem (opens new tab)`
+      })
     ).join('');
     const topicUrl = `/topic/${encodeURIComponent(item.topic_id)}`;
 

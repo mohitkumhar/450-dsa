@@ -33,5 +33,5 @@ def test_profile_template_uses_shared_toast_and_button_busy_helpers():
 def test_profile_template_uses_shared_modal_macro():
     template = PROFILE_TEMPLATE.read_text(encoding="utf-8")
 
-    assert '{% from "_macros.html" import modal_shell %}' in template
+    assert '{% from "_macros.html" import modal_shell, external_link_badge %}' in template
     assert template.count("{% call modal_shell(") == 3
