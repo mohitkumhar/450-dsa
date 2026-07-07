@@ -121,7 +121,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
             return {
                 "success": False,
                 "error": f"Please wait {mins}m {secs}s before syncing again.",
-            }, 200
+            }, 429
 
     update_fields = {"last_sync": now}
 
