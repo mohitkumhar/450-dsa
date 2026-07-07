@@ -415,6 +415,7 @@ async function flushQueue() {
 window.addEventListener('online', flushQueue);
 
 function updateQuestion(id, data, callback) {
+
     if (!navigator.onLine) {
         enqueue(id, data);
         showOfflineBanner(true);
@@ -644,11 +645,90 @@ function trapFocus(e) {
     if (e.key === 'Escape') closeModal();
 }
 
+// Notes Tabs and Preview Logic
+const tabEdit = document.getElementById('tabEdit');
+const tabPreview = document.getElementById('tabPreview');
+const notesTextarea = document.getElementById('notesTextarea');
+const notesPreview = document.getElementById('notesPreview');
+const notesSaveStatus = document.getElementById('notesSaveStatus');
+
+if (tabEdit && tabPreview) {
+    tabEdit.addEventListener('click', () => {
+        tabEdit.classList.replace('ui-btn-secondary', 'ui-btn-primary');
+        tabPreview.classList.replace('ui-btn-primary', 'ui-btn-secondary');
+        notesTextarea.classList.remove('d-none');
+        notesPreview.classList.add('d-none');
+    });
+
+    tabPreview.addEventListener('click', () => {
+        tabPreview.classList.replace('ui-btn-secondary', 'ui-btn-primary');
+        tabEdit.classList.replace('ui-btn-primary', 'ui-btn-secondary');
+        notesTextarea.classList.add('d-none');
+        notesPreview.classList.remove('d-none');
+        
+        const rawMarkdown = notesTextarea.value;
+        // Parse markdown and sanitize HTML safely
+        const cleanHTML = typeof DOMPurify !== 'undefined' && typeof marked !== 'undefined' 
+            ? DOMPurify.sanitize(marked.parse(rawMarkdown)) 
+            : rawMarkdown;
+        notesPreview.innerHTML = cleanHTML || '<em class="text-muted">Nothing to preview</em>';
+    });
+}
+
+// Debounce function for autosave
+function debounce(func, wait) {
+    let timeout;
+    const debounced = function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+    debounced.cancel = () => clearTimeout(timeout);
+    return debounced;
+}
+
+// Autosave Logic
+const triggerAutosave = debounce(() => {
+    const qId = document.getElementById('currentQuestionId').value;
+    const notes = notesTextarea.value;
+    if (!qId) return;
+
+    if (notesSaveStatus) notesSaveStatus.textContent = 'Saving...';
+
+    updateQuestion(qId, {notes: notes}, () => {
+        if (notesSaveStatus) notesSaveStatus.textContent = 'Saved';
+        
+        // Sync button state in the background
+        const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
+        if (btn) {
+            btn.dataset.notes = notes;
+            btn.classList.toggle('has-notes', notes.trim() !== '');
+            const label = notes.trim() ? 'Edit' : 'Add';
+            btn.innerHTML = `<i class="bi bi-journal-text" aria-hidden="true"></i> ${label}`;
+            btn.setAttribute('aria-label', `${label} notes for this question`);
+        }
+    }).catch(() => {
+        if (notesSaveStatus) notesSaveStatus.textContent = 'Failed to save';
+    });
+}, 1000);
+
+if (notesTextarea) {
+    notesTextarea.addEventListener('input', () => {
+        if (notesSaveStatus) notesSaveStatus.textContent = 'Draft...';
+        triggerAutosave();
+    });
+}
+
 document.querySelectorAll('.notes-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         if (!isAuthenticated) { window.location.href = "{{ url_for('auth.login') }}"; return; }
         document.getElementById('currentQuestionId').value = this.dataset.id;
         document.getElementById('notesTextarea').value = this.dataset.notes || '';
+        
+        // Reset modal state
+        if (notesSaveStatus) notesSaveStatus.textContent = '';
+        if (tabEdit) tabEdit.click();
+        triggerAutosave.cancel();
+        
         openModal(this);
     });
 });
@@ -657,6 +737,7 @@ document.getElementById('modalCancel').addEventListener('click', closeModal);
 modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
 document.getElementById('saveNotesBtn').addEventListener('click', function() {
+    triggerAutosave.cancel(); // Cancel any pending autosave
     const qId = document.getElementById('currentQuestionId').value;
     const notes = document.getElementById('notesTextarea').value;
     const previousContent = this.innerHTML;
