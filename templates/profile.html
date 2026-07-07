@@ -156,6 +156,26 @@
       </span>
     </div>
     <button class="add-btn ui-btn ui-btn-secondary ui-btn-block" onclick="openSyncModal()" aria-label="Add or connect coding platform accounts"><i class="bi bi-plus" aria-hidden="true"></i> Add Platform</button>
+    {% if last_sync or platform_last_sync %}
+    <div class="sync-history" style="margin-top:12px;padding:8px 10px;background:var(--bg-card-hover);border-radius:8px;font-size:.75rem">
+      <div style="font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Sync History</div>
+      {% if last_sync %}
+      <div style="color:var(--text-secondary);margin-bottom:4px">Last sync: {{ last_sync | datetimeformat }}</div>
+      {% endif %}
+      {% for key, info in (platform_last_sync or {}).items() %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0">
+        <span>{{ key | capitalize }}</span>
+        <span style="color:{% if info.status == 'synced' %}var(--success){% elif info.status == 'failed' %}var(--danger){% else %}var(--text-muted){% endif %}">
+          {% if info.status == 'synced' %}<i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          {% elif info.status == 'failed' %}<i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+          {% else %}<i class="bi bi-dash-circle" aria-hidden="true"></i>{% endif %}
+          {{ info.status | capitalize }}
+          {% if info.status == 'synced' %} {{ info.synced_at | datetimeformat }}{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
     <div class="sec-title" style="margin-top:14px">Development Stats</div>
     <div class="platform-row">
       <span><i class="bi bi-github" style="margin-right:6px" aria-hidden="true"></i>GitHub</span>

@@ -529,6 +529,9 @@ def profile():
 
     update_computed_stats(user.id, user.progress, db, total_questions, user)
 
+    platform_last_sync = user.platform_last_sync or {}
+    last_sync = user.last_sync
+
     return render_template(
         "profile.html",
         user=user,
@@ -557,4 +560,6 @@ def profile():
         profile_leaderboard_rank=profile_leaderboard_rank,
         current_streak=current_streak,
         longest_streak=longest_streak,
+        platform_last_sync=platform_last_sync,
+        last_sync=last_sync,
     )

@@ -171,12 +171,19 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
                 platform_totals.pop(total_key, None)
 
     platform_status = {}
+    platform_last_sync = dict(getattr(user, "platform_last_sync", {}) or {})
 
     def _mark(platform_key: str, status: str, error: str = None):
         payload = {"status": status}
         if error:
             payload["error"] = error
         platform_status[platform_key] = payload
+        if status in ("synced", "failed"):
+            platform_last_sync[platform_key] = {
+                "synced_at": now.isoformat(),
+                "status": status,
+                "error": error or None,
+            }
 
     # Preserve existing per-platform calendar data across partial syncs
     existing_calendars = getattr(user, "platform_calendars", {})
@@ -353,6 +360,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
 
     update_fields["platform_calendars"] = platform_calendars
     update_fields["external_totals"] = platform_totals
+    update_fields["platform_last_sync"] = platform_last_sync
     db_handle.user.update_one({"_id": user_id}, {"$set": update_fields})
     user.reload()
 
