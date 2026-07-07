@@ -94,3 +94,29 @@ def test_profile_page_displays_real_local_leaderboard_rank(monkeypatch):
     assert response.status_code == 200
     assert "Current User" in html
     assert '<span class="rank-num">2</span>' in html
+
+
+def test_profile_page_logs_badge_parse_failures_instead_of_printing(monkeypatch, caplog):
+    flask_app, test_db = build_test_app(
+        monkeypatch,
+        extra_db_targets=(profile_routes, leaderboard_service),
+    )
+
+    user_id = test_db.user.insert_one(
+        {
+            "name": "Badge Parser",
+            "email": "badge@example.com",
+            "progress": {},
+            "lc_badges_json": "{not-json",
+            "hr_badges_json": "[{\"name\": \"Problem Solving\", \"stars\": \"bad\"}]",
+        }
+    ).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        caplog.set_level("WARNING")
+        response = client.get("/profile")
+
+    assert response.status_code == 200
+    assert "Unable to handle leetcode badges" in caplog.text
+    assert "Unable to handle hackerrank badges" in caplog.text
