@@ -70,6 +70,7 @@ CSV_EXPORT_QUESTION_PROJECTION = {
 ALL_NOTES_QUESTION_PROJECTION = {"problem": 1, "topic": 1}
 
 @tracker_bp.route("/")
+@login_required
 def index():
     pre = current_app.config.get("_PRECOMPUTED")
     if pre:
@@ -112,6 +113,7 @@ def index():
 
 
 @tracker_bp.route("/topic/<topic_id>")
+@login_required
 def topic(topic_id):
     try:
         topic_id_obj = ObjectId(topic_id)
