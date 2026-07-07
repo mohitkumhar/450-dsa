@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% from "macros/modals.html" import notes_modal, code_modal %}
+{% block content %}
+<style>
+  .page-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 6px; }
+  .page-sub { color: var(--text-secondary); font-size: .88rem; margin-bottom: 24px; }
+  .empty-state { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 60px 24px; text-align: center; }
+  .empty-state i { font-size: 3rem; color: var(--text-muted); margin-bottom: 16px; display: block; }
+  .empty-state p { color: var(--text-secondary); margin-bottom: 20px; }
+  .empty-state a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; background: var(--accent); border-radius: 10px; color: #fff; text-decoration: none; font-weight: 700; font-size: .88rem; }
+  .empty-state a:hover { background: var(--accent-hover); color: #fff; }
+  .topic-tag { display: inline-flex; align-items: center; padding: 2px 10px; background: rgba(99, 102, 241, .12); border: 1px solid rgba(99, 102, 241, .2); color: #818cf8; border-radius: 20px; font-size: .73rem; font-weight: 700; text-decoration: none; }
+  .revision-section { margin-bottom: 32px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .section-header h3 { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--text-primary); }
+  .section-header h3 i { margin-right: 6px; }
+  .section-header .count-badge { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 20px; padding: 2px 12px; font-size: .78rem; font-weight: 600; color: var(--text-secondary); }
+</style>
+
+<a href="{{ url_for('tracker.index') }}" class="back-btn"><i class="bi bi-arrow-left"></i> Back to Topics</a>
+<div class="page-title">Revision Queue</div>
+<div class="page-sub">Review questions that need your attention</div>
+
+{% set total = due_qs|length + bookmarked_qs|length + skipped_qs|length %}
+
+{% if total > 0 %}
+
+{% if due_qs %}
+<div class="revision-section">
+  <div class="section-header">
+    <h3><i class="bi bi-clock" style="color: var(--accent)"></i> Due for Review</h3>
+    <span class="count-badge">{{ due_qs|length }}</span>
+  </div>
+  <div class="questions-table-wrap">
+    <table class="q-table">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Topic</th>
+          <th scope="col">Problem</th>
+          <th scope="col">Difficulty</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in due_qs %}
+        {% set q_id_str = q._id | string %}
+        {% set p = progress_dict.get(q_id_str) %}
+        {% set difficulty = q.get('difficulty', 'Medium') %}
+        <tr>
+          <td class="q-num">{{ loop.index }}</td>
+          <td><span class="topic-tag">{{ q.topic_name }}</span></td>
+          <td>
+            <div class="q-name">{{ q.problem }}</div>
+            <div class="q-links">
+              {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
+              {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer" class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url2|platform_name }}</a>{% endif %}
+            </div>
+          </td>
+          <td><span class="difficulty-badge difficulty-{{ difficulty|lower }}">{{ difficulty }}</span></td>
+          <td><span class="status-indicator" title="Due for review"><i class="bi bi-clock" style="color: var(--accent)"></i></span></td>
+          <td>
+            <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn" data-id="{{ q_id_str }}"
+              data-notes="{{ p.notes if p and p.notes else '' }}"
+              aria-label="{% if p and p.notes %}Edit notes for {{ q.problem }}{% else %}Add notes for {{ q.problem }}{% endif %}">
+              <i class="bi bi-journal-text" aria-hidden="true"></i> {% if p and p.notes %}Edit{% else %}Add{% endif %}
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if bookmarked_qs %}
+<div class="revision-section">
+  <div class="section-header">
+    <h3><i class="bi bi-bookmark-fill" style="color: var(--warning)"></i> Bookmarked</h3>
+    <span class="count-badge">{{ bookmarked_qs|length }}</span>
+  </div>
+  <div class="questions-table-wrap">
+    <table class="q-table">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Topic</th>
+          <th scope="col">Problem</th>
+          <th scope="col">Difficulty</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in bookmarked_qs %}
+        {% set q_id_str = q._id | string %}
+        {% set p = progress_dict.get(q_id_str) %}
+        {% set difficulty = q.get('difficulty', 'Medium') %}
+        <tr>
+          <td class="q-num">{{ loop.index }}</td>
+          <td><span class="topic-tag">{{ q.topic_name }}</span></td>
+          <td>
+            <div class="q-name">{{ q.problem }}</div>
+            <div class="q-links">
+              {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
+              {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer" class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url2|platform_name }}</a>{% endif %}
+            </div>
+          </td>
+          <td><span class="difficulty-badge difficulty-{{ difficulty|lower }}">{{ difficulty }}</span></td>
+          <td><span class="status-indicator" title="Bookmarked"><i class="bi bi-bookmark-fill" style="color: var(--warning)"></i></span></td>
+          <td>
+            <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn" data-id="{{ q_id_str }}"
+              data-notes="{{ p.notes if p and p.notes else '' }}"
+              aria-label="{% if p and p.notes %}Edit notes for {{ q.problem }}{% else %}Add notes for {{ q.problem }}{% endif %}">
+              <i class="bi bi-journal-text" aria-hidden="true"></i> {% if p and p.notes %}Edit{% else %}Add{% endif %}
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if skipped_qs %}
+<div class="revision-section">
+  <div class="section-header">
+    <h3><i class="bi bi-skip-forward-fill" style="color: var(--warning)"></i> Skipped</h3>
+    <span class="count-badge">{{ skipped_qs|length }}</span>
+  </div>
+  <div class="questions-table-wrap">
+    <table class="q-table">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">Topic</th>
+          <th scope="col">Problem</th>
+          <th scope="col">Difficulty</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in skipped_qs %}
+        {% set q_id_str = q._id | string %}
+        {% set p = progress_dict.get(q_id_str) %}
+        {% set difficulty = q.get('difficulty', 'Medium') %}
+        <tr>
+          <td class="q-num">{{ loop.index }}</td>
+          <td><span class="topic-tag">{{ q.topic_name }}</span></td>
+          <td>
+            <div class="q-name">{{ q.problem }}</div>
+            <div class="q-links">
+              {% if q.url %}<a href="{{ q.url }}" target="_blank" rel="noopener noreferrer" class="q-badge {% if 'leetcode' in q.url %}badge-lc{% elif 'geeksforgeeks' in q.url %}badge-gfg{% else %}badge-link{% endif %}"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url|platform_name }}</a>{% endif %}
+              {% if q.url2 %}<a href="{{ q.url2 }}" target="_blank" rel="noopener noreferrer" class="q-badge badge-link"><i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i> {{ q.url2|platform_name }}</a>{% endif %}
+            </div>
+          </td>
+          <td><span class="difficulty-badge difficulty-{{ difficulty|lower }}">{{ difficulty }}</span></td>
+          <td><span class="status-indicator" title="Skipped"><i class="bi bi-skip-forward-fill" style="color: var(--warning)"></i></span></td>
+          <td>
+            <button class="notes-btn-sm {% if p and p.notes %}has-notes{% endif %} notes-btn" data-id="{{ q_id_str }}"
+              data-notes="{{ p.notes if p and p.notes else '' }}"
+              aria-label="{% if p and p.notes %}Edit notes for {{ q.problem }}{% else %}Add notes for {{ q.problem }}{% endif %}">
+              <i class="bi bi-journal-text" aria-hidden="true"></i> {% if p and p.notes %}Edit{% else %}Add{% endif %}
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-arrow-repeat"></i>
+  <p>Nothing needs your attention right now.<br>Mark questions as done, bookmark them, or skip them to build your revision queue.</p>
+  <a href="{{ url_for('tracker.index') }}"><i class="bi bi-arrow-right-circle"></i> Browse Topics</a>
+</div>
+{% endif %}
+
+{{ notes_modal(textarea_label='Notes') }}
+{{ code_modal() }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const endpointConfig = {{ {
+    "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
+  }|tojson }};
+  const csrfToken = {{ csrf_token()|tojson }};
+  const FOCUSABLE = 'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])';
+  const modal = document.getElementById('notesModal');
+
+  function openModal(triggerEl) {
+    modal.classList.add('open');
+    modal._trigger = triggerEl;
+    const focusable = modal.querySelectorAll(FOCUSABLE);
+    if (focusable.length) focusable[0].focus();
+    modal.addEventListener('keydown', trapFocus);
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.removeEventListener('keydown', trapFocus);
+    if (modal._trigger) modal._trigger.focus();
+  }
+
+  function trapFocus(e) {
+    const focusable = Array.from(modal.querySelectorAll(FOCUSABLE));
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.key === 'Tab') {
+      if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+      else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+    }
+    if (e.key === 'Escape') closeModal();
+  }
+
+  function updateQuestion(id, data, callback) {
+    fetch(endpointConfig.updateQuestionBase.replace('__QUESTION_ID__', encodeURIComponent(id)), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }, body: JSON.stringify(data) })
+      .then(r => r.json()).then(res => { if (res.success) { if (callback) callback(); } })
+      .catch(() => alert('Error updating.'));
+  }
+
+  document.querySelectorAll('.notes-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.getElementById('currentQuestionId').value = this.dataset.id;
+      document.getElementById('notesTextarea').value = this.dataset.notes || '';
+      openModal(this);
+    });
+  });
+
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+  document.getElementById('saveNotesBtn').addEventListener('click', function () {
+    const qId = document.getElementById('currentQuestionId').value;
+    const notes = document.getElementById('notesTextarea').value;
+    updateQuestion(qId, { notes: notes }, () => {
+      closeModal();
+      const btn = document.querySelector(`.notes-btn[data-id="${qId}"]`);
+      if (btn) {
+        btn.dataset.notes = notes;
+        btn.classList.toggle('has-notes', notes.trim() !== '');
+        const label = notes.trim() ? 'Edit' : 'Add';
+        btn.innerHTML = `<i class="bi bi-journal-text" aria-hidden="true"></i> ${label}`;
+        btn.setAttribute('aria-label', `${label} notes for this question`);
+      }
+    });
+  });
+</script>
+{% endblock %}
