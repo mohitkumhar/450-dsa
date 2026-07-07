@@ -49,7 +49,49 @@
     <script src="{{ url_for('static', filename='js/pwa-install.js') }}" defer></script>
     {% block head %}{% endblock %}
     <script>
-        if (localStorage.getItem('theme') === 'light') {
+        const themeSettings = {
+            isAuthenticated: {{ 'true' if current_user.is_authenticated else 'false' }},
+            uiTheme: {{ (current_user.ui_theme or 'dark')|tojson }},
+            accentColor: {{ (current_user.accent_color or '#ff6b00')|tojson }},
+            compactMode: {{ 'true' if current_user.compact_mode else 'false' }},
+            chartPalette: {{ (current_user.chart_palette or 'default')|tojson }},
+            csrfToken: {{ csrf_token()|tojson }},
+        };
+
+        function hexToRgb(hex) {
+            const normalized = hex.replace('#', '');
+            const bigint = parseInt(normalized, 16);
+            return {
+                r: (bigint >> 16) & 255,
+                g: (bigint >> 8) & 255,
+                b: bigint & 255,
+            };
+        }
+
+        function toRgba(hex, alpha) {
+            const { r, g, b } = hexToRgb(hex);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function applyAccentColor(accent) {
+            document.documentElement.style.setProperty('--accent', accent);
+            document.documentElement.style.setProperty('--accent-hover', toRgba(accent, 0.7));
+            document.documentElement.style.setProperty('--accent-dim', toRgba(accent, 0.15));
+        }
+
+        function applyCompactMode(compact) {
+            document.documentElement.classList.toggle('compact', compact === true || compact === 'true');
+        }
+
+        const localTheme = localStorage.getItem('theme');
+        const localAccent = localStorage.getItem('accent_color');
+        const localCompact = localStorage.getItem('compact_mode') === 'true';
+
+        const activeTheme = themeSettings.isAuthenticated ? themeSettings.uiTheme : (localTheme || 'dark');
+        const activeAccent = themeSettings.isAuthenticated ? themeSettings.accentColor : (localAccent || '#ff6b00');
+        const activeCompact = themeSettings.isAuthenticated ? themeSettings.compactMode : localCompact;
+
+        if (activeTheme === 'light') {
             document.documentElement.style.setProperty('--bg-primary', '#f0f2f5');
             document.documentElement.style.setProperty('--bg-secondary', '#ffffff');
             document.documentElement.style.setProperty('--bg-card', '#ffffff');
@@ -57,6 +99,9 @@
             document.documentElement.style.setProperty('--text-secondary', '#555555');
             document.documentElement.style.setProperty('--border-color', '#e0e0e0');
         }
+
+        applyAccentColor(activeAccent);
+        applyCompactMode(activeCompact);
     </script>
 </head>
 
@@ -192,6 +237,9 @@
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
         const root = document.documentElement;
+        const csrfToken = themeSettings.csrfToken;
+        const isAuthenticated = themeSettings.isAuthenticated;
+        let currentTheme = themeSettings.isAuthenticated ? themeSettings.uiTheme : (localStorage.getItem('theme') || 'dark');
 
         const toastConfig = {
             success: { title: 'Success', icon: 'bi-check-circle-fill' },
@@ -296,6 +344,7 @@
                 root.style.setProperty('--text-secondary', '#555555');
                 root.style.setProperty('--text-muted', '#6b7280');
                 themeIcon.className = 'bi bi-sun-fill';
+                document.documentElement.style.colorScheme = 'light';
             } else {
                 root.style.setProperty('--bg-primary', '#111111');
                 root.style.setProperty('--bg-secondary', '#1a1a1a');
@@ -307,16 +356,38 @@
                 root.style.setProperty('--text-secondary', '#a0a0a0');
                 root.style.setProperty('--text-muted', '#8a8a8a');
                 themeIcon.className = 'bi bi-moon-fill';
+                document.documentElement.style.colorScheme = 'dark';
             }
         }
 
-        const saved = localStorage.getItem('theme') || 'dark';
-        applyTheme(saved);
+        applyTheme(currentTheme);
+
+        function persistPreference(storageKey, serverKey, value) {
+            localStorage.setItem(storageKey, String(value));
+            if (!isAuthenticated) {
+                return;
+            }
+            fetch('{{ url_for('profile.edit_profile') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ [serverKey]: value }),
+            }).then(async (response) => {
+                if (!response.ok) {
+                    const json = await response.json().catch(() => null);
+                    throw new Error(json?.error || 'Unable to save preference.');
+                }
+            }).catch((error) => {
+                showToast(`Failed to save preference: ${error.message}`, 'warning');
+            });
+        }
 
         themeToggle.addEventListener('click', () => {
-            const curr = localStorage.getItem('theme') || 'dark';
-            const next = curr === 'dark' ? 'light' : 'dark';
-            localStorage.setItem('theme', next);
+            const next = currentTheme === 'dark' ? 'light' : 'dark';
+            currentTheme = next;
+            persistPreference('theme', 'ui_theme', next);
             applyTheme(next);
             showToast(`Switched to ${next} mode`, 'info');
         });

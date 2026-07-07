@@ -64,6 +64,35 @@ def test_profile_updates_reject_invalid_profile_visibility():
     assert error == "profile_visibility must be one of: public, private, stats_only"
 
 
+def test_profile_updates_accepts_new_display_preferences():
+    updates, error = build_profile_updates({
+        "accent_color": "#123abc",
+        "compact_mode": True,
+        "chart_palette": "cool",
+    })
+
+    assert error is None
+    assert updates == {
+        "accent_color": "#123abc",
+        "compact_mode": True,
+        "chart_palette": "cool",
+    }
+
+
+def test_profile_updates_rejects_invalid_accent_color():
+    updates, error = build_profile_updates({"accent_color": "blue"})
+
+    assert updates is None
+    assert error == "accent_color must be a valid hex color"
+
+
+def test_profile_updates_rejects_invalid_chart_palette():
+    updates, error = build_profile_updates({"chart_palette": "rainbow"})
+
+    assert updates is None
+    assert error == "chart_palette must be one of: default, cool, warm, monochrome"
+
+
 def test_edit_profile_rejects_missing_json_body(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch)
     user_id = test_db.user.insert_one({"email": "user@example.com", "progress": {}}).inserted_id
@@ -106,3 +135,27 @@ def test_edit_profile_rejects_json_array(monkeypatch):
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "Request body must be a JSON object."
+
+
+def test_edit_profile_updates_display_preferences(monkeypatch):
+    flask_app, test_db = build_test_app(monkeypatch)
+    user_id = test_db.user.insert_one({"email": "user@example.com", "progress": {}, "profile_visibility": "public"}).inserted_id
+
+    with flask_app.test_client() as client:
+        login_test_user(client, user_id)
+        response = client.post(
+            "/edit_profile",
+            json={
+                "accent_color": "#1a2b3c",
+                "compact_mode": True,
+                "chart_palette": "warm",
+            },
+            headers=csrf_headers(client),
+        )
+
+    assert response.status_code == 200
+    assert response.get_json()["success"] is True
+    updated_user = test_db.user.find_one({"_id": user_id})
+    assert updated_user["accent_color"] == "#1a2b3c"
+    assert updated_user["compact_mode"] is True
+    assert updated_user["chart_palette"] == "warm"

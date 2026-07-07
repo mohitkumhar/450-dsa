@@ -471,6 +471,30 @@
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-twitter-x"></i> Twitter / X URL</label><input class="m-inp" id="ep_twitter" placeholder="https://twitter.com/username" value="{{ user.twitter_url or '' }}"></div>
     <div style="margin-bottom:10px"><label class="m-lbl"><i class="bi bi-globe" style="color:var(--info)"></i> Website / Portfolio</label><input class="m-inp" id="ep_website" placeholder="https://yoursite.com" value="{{ user.website_url or '' }}"></div>
     <div style="margin-bottom:16px"><label class="m-lbl"><i class="bi bi-file-earmark-person" style="color:var(--accent)"></i> Resume URL</label><input class="m-inp" id="ep_resume" placeholder="https://drive.google.com/... or LinkedIn resume link" value="{{ user.resume_url or '' }}"><div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Paste a Google Drive, Dropbox, or any public resume link</div></div>
+    <div style="font-size:.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;margin-top:10px">Interface Preferences</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div>
+        <label class="m-lbl">Accent Color</label>
+        <input class="m-inp" type="color" id="ep_accent_color" value="{{ user.accent_color or '#ff6b00' }}" style="width:100%;height:46px;padding:0;border-radius:10px;border:1px solid var(--border-color);">
+      </div>
+      <div>
+        <label class="m-lbl">Compact Mode</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="ep_compact_mode" style="width:18px;height:18px;" {% if user.compact_mode %}checked{% endif %}>
+          <span style="font-size:.9rem;color:var(--text-secondary);line-height:1.3">Reduce spacing and density for more content on screen</span>
+        </label>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="m-lbl">Chart Palette</label>
+      <select class="m-inp" id="ep_chart_palette">
+        <option value="default" {% if (user.chart_palette or 'default') == 'default' %}selected{% endif %}>Default</option>
+        <option value="cool" {% if user.chart_palette == 'cool' %}selected{% endif %}>Cool Blues</option>
+        <option value="warm" {% if user.chart_palette == 'warm' %}selected{% endif %}>Warm Ember</option>
+        <option value="monochrome" {% if user.chart_palette == 'monochrome' %}selected{% endif %}>Monochrome</option>
+      </select>
+      <div style="font-size:.7rem;color:var(--text-muted);margin-top:3px">Choose how charts are colored across your profile analytics.</div>
+    </div>
     <div style="margin-bottom:16px">
   <label class="m-lbl"><i class="bi bi-shield-lock" style="color:var(--accent)"></i> Profile Visibility</label>
   <select class="m-inp" id="ep_profile_visibility">
@@ -598,6 +622,9 @@ window.handleSaveProfile = function(btn){
   twitter_url: document.getElementById('ep_twitter').value,
   website_url: document.getElementById('ep_website').value,
   resume_url: document.getElementById('ep_resume').value,
+  accent_color: document.getElementById('ep_accent_color').value,
+  compact_mode: document.getElementById('ep_compact_mode').checked,
+  chart_palette: document.getElementById('ep_chart_palette').value,
   profile_visibility: document.getElementById('ep_profile_visibility').value,
 };
   window.setButtonBusyState(btn, contentEl, { busy: true, busyLabel: 'Saving...' });
@@ -774,9 +801,39 @@ for(let i=0;i<days;i++){
 const ratingHistory = {{ rating_history | tojson }};
 const cumData = {{ cumulative_data | tojson }};
 const pData = {{ platforms | tojson }};
+const userChartPalette = {{ (user.chart_palette or 'default')|tojson }};
+function resolveChartPalette(name){
+  const palettes = {
+    default: {
+      line: '#f68b24',
+      area: 'rgba(246,139,36,.15)',
+      platformColors: ['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d'],
+      difficultyColors: ['#00b8a3','#ffc01e','#ff375f'],
+    },
+    cool: {
+      line: '#3b82f6',
+      area: 'rgba(59,130,246,.15)',
+      platformColors: ['#3b82f6','#60a5fa','#38bdf8','#22d3ee','#94a3b8'],
+      difficultyColors: ['#60a5fa','#38bdf8','#6366f1'],
+    },
+    warm: {
+      line: '#f97316',
+      area: 'rgba(249,115,22,.15)',
+      platformColors: ['#f97316','#fb7185','#facc15','#f97316','#fb7185'],
+      difficultyColors: ['#f59e0b','#f87171','#ef4444'],
+    },
+    monochrome: {
+      line: '#9ca3af',
+      area: 'rgba(156,163,175,.15)',
+      platformColors: ['#d1d5db','#9ca3af','#6b7280','#4b5563','#374151'],
+      difficultyColors: ['#d1d5db','#9ca3af','#6b7280'],
+    },
+  };
+  return palettes[name] || palettes.default;
+}
 const chartShells=['progressChartShell','platformsChartShell','difficultyChartShell'].map(i=>document.getElementById(i)).filter(Boolean);let chartJsPromise;
 function loadChartJs(){return window.Chart?Promise.resolve(window.Chart):chartJsPromise||(chartJsPromise=new Promise((ok,bad)=>{let add=(src,err)=>{let s=document.createElement('script');s.src=src;s.async=true;s.onload=()=>ok(window.Chart);s.onerror=err||bad;document.head.appendChild(s)};add('https://cdn.jsdelivr.net/npm/chart.js',()=>add('https://unpkg.com/chart.js@4/dist/chart.umd.js'))}))}
-function renderProfileCharts(){loadChartJs().then(()=>{let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:'#f68b24',backgroundColor:'rgba(246,139,36,.15)',borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:'#f68b24'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],['{{ PLATFORM_META["LeetCode"].brand_color }}','{{ PLATFORM_META["GFG"].brand_color }}','{{ PLATFORM_META["Coding Ninjas"].brand_color }}','{{ PLATFORM_META["HackerRank"].brand_color }}','#6c757d']],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],['#00b8a3','#ffc01e','#ff375f']]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
+function renderProfileCharts(){loadChartJs().then(()=>{const palette=resolveChartPalette(userChartPalette);let c=document.getElementById('progressChart'),d=ratingHistory.length?ratingHistory:cumData;if(d.length&&c)new Chart(c,{type:'line',data:{labels:d.map(x=>x.x),datasets:[{data:d.map(x=>x.y),borderColor:palette.line,backgroundColor:palette.area,borderWidth:2,fill:true,tension:.4,pointRadius:ratingHistory.length?3:0,pointHoverRadius:5,pointBackgroundColor:palette.line} ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#888',maxTicksLimit:5,font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',font:{size:10}}}}}});else if(c){let x=c.getContext('2d');x.fillStyle='#555';x.font='13px Inter, sans-serif';x.textAlign='center';x.fillText('Sync LeetCode to see rating chart',c.width/2,c.height/2-8)}markChartReady('progressChartShell');[['platformsChart','platformsChartShell',['LeetCode','GFG','Coding Ninjas','HackerRank','Other'],[pData.LeetCode,pData.GFG,pData['Coding Ninjas'],pData.HackerRank,pData.Other],palette.platformColors],['difficultyChart','difficultyChartShell',['Easy','Medium','Hard'],[{{lc_easy}},{{lc_medium}},{{lc_hard}}],palette.difficultyColors]].forEach(a=>{try{new Chart(document.getElementById(a[0]),{type:'doughnut',data:{labels:a[2],datasets:[{data:a[3],backgroundColor:a[4],borderWidth:0,cutout:'78%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}})}catch(e){}markChartReady(a[1])})}).catch(()=>chartShells.forEach(s=>s.classList.add('is-ready')))}
 if('IntersectionObserver'in window&&chartShells.length){const io=new IntersectionObserver((e,o)=>{if(e.some(x=>x.isIntersecting)){o.disconnect();renderProfileCharts()}},{rootMargin:'160px'});chartShells.forEach(s=>io.observe(s))}else renderProfileCharts();
 
 function openSyncModal(){document.getElementById('syncModal').classList.add('open')}
