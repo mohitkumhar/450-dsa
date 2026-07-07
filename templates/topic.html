@@ -54,6 +54,12 @@
     .q-table { font-size: 0.82rem; }
     .q-table tbody td { padding: 10px 10px; }
 }
+.personal-diff { display: inline-flex; gap: 4px; margin-top: 6px; }
+.pd-btn { border: 1px solid var(--border-color); background: transparent; border-radius: 99px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; cursor: pointer; color: var(--text-secondary); transition: all 0.15s; line-height: 1.6; }
+.pd-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pd-btn.active-easy { background: #22c55e22; border-color: #22c55e; color: #22c55e; }
+.pd-btn.active-medium { background: #f59e0b22; border-color: #f59e0b; color: #f59e0b; }
+.pd-btn.active-hard { background: #ef444422; border-color: #ef4444; color: #ef4444; }
 </style>
 
 <div class="page-load-skeleton topic-skeleton-shell">
@@ -213,6 +219,13 @@
                         <span aria-hidden="true">{% if difficulty == 'Basic' %}⚪{% elif difficulty == 'Easy' %}🟢{% elif difficulty == 'Medium' %}🟡{% else %}🔴{% endif %}</span>
                         {{ difficulty }}
                     </span>
+                    {% if current_user and current_user.is_authenticated %}
+                    <div class="personal-diff">
+                        <button class="pd-btn {% if p and p.get('personal_difficulty') == 'Easy' %}active-easy{% endif %}" data-id="{{ q_id_str }}" data-val="Easy">Easy</button>
+                        <button class="pd-btn {% if p and p.get('personal_difficulty') == 'Medium' %}active-medium{% endif %}" data-id="{{ q_id_str }}" data-val="Medium">Med</button>
+                        <button class="pd-btn {% if p and p.get('personal_difficulty') == 'Hard' %}active-hard{% endif %}" data-id="{{ q_id_str }}" data-val="Hard">Hard</button>
+                    </div>
+                    {% endif %}
                 </td>
                 <td>
                     <span class="marks-badge" aria-label="{{ q.get('marks', 0) }} marks">{{ q.get('marks', 0) }}</span>
@@ -302,8 +315,8 @@
 {{ notes_modal(textarea_label='Notes for this question') }}
 {% endblock %}
 
-{% block scripts %}
 <script src="{{ url_for('static', filename='js/topic.js') }}"></script>
+{% block scripts %}
 <script>
 const endpointConfig = {{ {
   "updateQuestionBase": url_for('tracker.update_question', question_id='__QUESTION_ID__'),
@@ -703,6 +716,24 @@ document.getElementById('practiceRandomBtn').addEventListener('click', function(
     }, 2000);
 });
 
+
+document.querySelectorAll('.pd-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const val = this.dataset.val;
+        const siblings = document.querySelectorAll(`.pd-btn[data-id="${id}"]`);
+        const isActive = this.classList.contains('active-easy') || this.classList.contains('active-medium') || this.classList.contains('active-hard');
+        const newVal = isActive ? null : val;
+        fetch(`/update_question/${id}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+            body: JSON.stringify({personal_difficulty: newVal})
+        }).then(r => r.json()).then(data => {
+            if (!data.success) return;
+            siblings.forEach(b => b.classList.remove('active-easy','active-medium','active-hard'));
+            if (newVal) this.classList.add(`active-${newVal.toLowerCase()}`);
+        });
+    });
 document.querySelectorAll('.revision-select').forEach(select => {
 
     select.addEventListener('change', function() {
