@@ -183,7 +183,6 @@
         <span>Created: {{ cohort.created_at.strftime('%Y-%m-%d') if cohort.created_at else 'N/A' }}</span>
       </div>
     </div>
-    
     <div class="cohort-join-badge" id="copyCodeBtn" data-code="{{ cohort.join_code }}" title="Click to copy join code">
       <i class="bi bi-copy"></i>
       <span>Join Code: <span class="cohort-join-badge-code">{{ cohort.join_code }}</span></span>

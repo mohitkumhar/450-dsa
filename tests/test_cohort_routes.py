@@ -61,7 +61,6 @@ def test_create_cohort_empty_name(monkeypatch):
 
 def test_join_cohort_success(monkeypatch):
     flask_app, test_db = build_test_app(monkeypatch, extra_db_targets=(cohort_routes,))
-    
     # Create cohort by another user
     other_user_id = ObjectId()
     cohort_id = test_db.cohort.insert_one({
@@ -135,8 +134,8 @@ def test_cohort_detail_access_denied(monkeypatch):
     with flask_app.test_client() as client:
         login_test_user(client, test_db)
         response = client.get(f"/cohorts/{cohort_id}")
-    
-    assert response.status_code == 302  # redirects to cohorts index
+
+    assert response.status_code == 302# redirects to cohorts index
     # Check flash message redirect
     assert "cohorts" in response.headers["Location"]
 
