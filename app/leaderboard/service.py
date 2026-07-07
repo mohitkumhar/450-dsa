@@ -1,5 +1,6 @@
 from flask import current_app
-from app.extensions import db
+from app.extensions import cache, db
+from app.leaderboard.cache import LEADERBOARD_CACHE_TIMEOUT, leaderboard_snapshot_cache_key
 from app.utils import compute_c_score
 
 
@@ -138,3 +139,47 @@ def build_college_leaderboard_data(entries=None):
         key=lambda item: (item["c_score"], item["total_solved"], item["member_count"]),
         reverse=True,
     )
+
+
+def _assign_ranks(entries, key):
+    for index, entry in enumerate(entries, start=1):
+        entry[f"rank_{key}"] = index
+    return entries
+
+
+def build_leaderboard_snapshots(entries=None):
+    entries = entries if entries is not None else build_leaderboard_data()
+    by_cscore = _assign_ranks(sort_leaderboard_entries_by_c_score([dict(entry) for entry in entries]), "cscore")
+    by_questions = _assign_ranks(
+        sorted((dict(entry) for entry in entries), key=lambda item: item["total_solved"], reverse=True),
+        "questions",
+    )
+    by_rating = _assign_ranks(
+        sorted((dict(entry) for entry in entries), key=lambda item: item["lc_rating"], reverse=True),
+        "rating",
+    )
+    by_college = _assign_ranks(build_college_leaderboard_data([dict(entry) for entry in entries]), "college")
+    return {
+        "entries": entries,
+        "by_cscore": by_cscore,
+        "by_questions": by_questions,
+        "by_rating": by_rating,
+        "by_college": by_college,
+    }
+
+
+def get_leaderboard_snapshots():
+    key = leaderboard_snapshot_cache_key()
+    try:
+        cached = cache.get(key)
+    except KeyError:
+        cached = None
+    if cached is not None:
+        return cached
+
+    snapshot = build_leaderboard_snapshots()
+    try:
+        cache.set(key, snapshot, timeout=LEADERBOARD_CACHE_TIMEOUT)
+    except KeyError:
+        pass
+    return snapshot
