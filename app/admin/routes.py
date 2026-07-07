@@ -16,6 +16,8 @@ from app.extensions import cache, db
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.profile.sync_service import clear_profile_caches
 
+from .import_service import apply_import, parse_import_data, preview_import, validate_import_data
+
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -188,6 +190,66 @@ def recent_logs():
             "page": log_page,
             "page_size": log_page_size,
         }
+    )
+
+
+@admin_bp.route("/import", methods=["GET", "POST"])
+@login_required
+@admin_required
+def import_sheet():
+    if request.method == "GET":
+        return render_template("admin/import.html")
+
+    confirm = request.form.get("confirm") == "yes"
+
+    if confirm:
+        raw_content = request.form.get("raw_content", "")
+        filename = request.form.get("file", "import.json")
+        if not raw_content:
+            flash("Session expired. Please re-upload the file.", "danger")
+            return render_template("admin/import.html")
+        try:
+            parsed = parse_import_data(raw_content, filename)
+        except (ValueError, json.JSONDecodeError) as exc:
+            flash(f"Parse error: {exc}", "danger")
+            return render_template("admin/import.html")
+    else:
+        file = request.files.get("file")
+        if not file or not file.filename:
+            flash("Please select a file to upload.", "danger")
+            return render_template("admin/import.html")
+        filename = file.filename
+        try:
+            content = file.read().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            flash("File must be UTF-8 encoded.", "danger")
+            return render_template("admin/import.html")
+        try:
+            parsed = parse_import_data(content, filename)
+        except (ValueError, json.JSONDecodeError) as exc:
+            flash(f"Parse error: {exc}", "danger")
+            return render_template("admin/import.html")
+
+    validation_errors = validate_import_data(parsed)
+    if validation_errors:
+        for err in validation_errors:
+            flash(err, "danger")
+        return render_template("admin/import.html")
+
+    if confirm:
+        apply_import(parsed)
+        total_q = sum(len(t.get("questions", [])) for t in parsed)
+        total_t = len(parsed)
+        flash(f"Imported {total_t} topics with {total_q} questions.", "success")
+        return redirect(url_for("admin.dashboard"))
+
+    preview = preview_import(parsed)
+    return render_template(
+        "admin/import.html",
+        preview=preview,
+        filename=filename,
+        raw_content=content,
+        topics=parsed,
     )
 
 
