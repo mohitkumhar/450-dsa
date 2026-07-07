@@ -19,12 +19,17 @@
 .link-out{color:var(--text-muted);font-size:0.85rem;text-decoration:none}
 .link-out:hover{color:var(--accent)}
 .add-btn{margin-top:4px}
-.rank-card{background:linear-gradient(135deg,rgba(255,107,0,.08),rgba(255,55,95,.06));border:1px solid var(--border-color);border-radius:14px;padding:14px}
+.rank-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:14px}
 .rank-num{font-size:2rem;font-weight:900;color:var(--text-primary)}
 .rank-label{font-size:0.75rem;color:var(--text-secondary)}
 .view-lb-btn{margin-top:10px}
 .meta-footer{font-size:0.72rem;color:var(--text-muted);display:flex;flex-direction:column;gap:4px;margin-top:8px}
 .meta-footer span{display:flex;justify-content:space-between}
+.profile-card-shell{background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:24px;text-align:center;color:var(--text-primary)}
+.profile-card-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.profile-card-stat{background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:10px}
+.profile-card-share-btn{width:100%;margin-top:14px;padding:10px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit;transition:background .2s}
+.profile-card-share-btn:hover{background:var(--accent-hover)}
 /* stat cards */
 .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:12px;min-width:0}
 .stat-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:16px;color:var(--text-primary)}
@@ -39,12 +44,12 @@
 .contest-grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;min-height:160px}
 .empty-chart{display:flex;flex-direction:column;align-items:center;justify-content:center;height:110px;color:var(--text-muted);font-size:.8rem;gap:6px}
 .chart-shell{position:relative;min-height:130px}
-.chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden}
+.chart-shell .chart-skeleton{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:12px;background:var(--bg-card-hover);overflow:hidden}
 .chart-shell .chart-skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);animation:skeleton-shimmer 1.15s linear infinite}
 .chart-shell canvas{position:relative;z-index:1}
 .chart-shell.is-ready .chart-skeleton{display:none}
 .awards-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
-.award-badge{width:64px;height:74px;background:linear-gradient(135deg,rgba(255,107,0,.15),rgba(255,55,95,.1));border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
+.award-badge{width:64px;height:74px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;padding:4px}
 .award-badge:hover{border-color:var(--accent);transform:translateY(-2px)}
 .award-badge .a-lbl{font-size:.58rem;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:58px;text-align:center}
 .hr-stars{display:flex;gap:1px;align-items:center;justify-content:center;flex-wrap:nowrap;line-height:1}
@@ -189,6 +194,8 @@
   .award-badge{width:44px;height:52px;font-size:1rem;border-radius:8px;padding:2px}
   .award-badge .a-lbl{font-size:.44rem;max-width:40px;margin-top:2px}
   .award-badge:hover{transform:translateY(-1px)}
+  .profile-card-stats{grid-template-columns:1fr;gap:8px}
+  .profile-card-shell{padding:18px;border-radius:12px}
   .donut-wrap{width:80px;height:80px;margin-bottom:8px}
   .donut-inner{font-size:.9rem}
   .shield-icon{font-size:2rem}
