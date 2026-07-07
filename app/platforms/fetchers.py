@@ -237,48 +237,44 @@ def fetch_github(username):
         if token:
             auth_headers["Authorization"] = f"token {token}"
 
-        def github_search_json(url, extra_headers=None):
-            headers = {**auth_headers, **(extra_headers or {})}
-            search_response = _get_http_session().get(
-                url,
-                headers=headers,
-                timeout=GITHUB_REQUEST_TIMEOUT_SECONDS,
-            )
-            if search_response.status_code in (403, 429):
-                return "rate_limited", None
-            if search_response.status_code != 200:
-                return "api_error", None
-            return None, search_response.json()
+        graphql_query = """
+        query GitHubStats($username: String!) {
+          issues: search(query: "type:issue author:$username", type: ISSUE, first: 1) {
+            totalCount
+          }
+          prs: search(query: "type:pr author:$username", type: ISSUE, first: 1) {
+            totalCount
+          }
+          mergedPrs: search(query: "type:pr is:merged author:$username", type: ISSUE, first: 1) {
+            totalCount
+          }
+          commits: search(query: "author:$username", type: COMMIT, first: 1) {
+            totalCount
+          }
+        }
+        """
+        search_response = _get_http_session().post(
+            "https://api.github.com/graphql",
+            headers={**auth_headers, "Content-Type": "application/json"},
+            json={"query": graphql_query, "variables": {"username": username}},
+            timeout=GITHUB_REQUEST_TIMEOUT_SECONDS,
+        )
+        if search_response.status_code in (403, 429):
+            return {"error": "rate_limited", "calendar": result_calendar, "stats": None}
+        if search_response.status_code != 200:
+            return {"error": "api_error", "calendar": result_calendar, "stats": None}
 
-        searches = [
-            (
-                "issues",
-                f"https://api.github.com/search/issues?q=type:issue+author:{username}",
-                None,
-            ),
-            (
-                "prs",
-                f"https://api.github.com/search/issues?q=type:pr+author:{username}",
-                None,
-            ),
-            (
-                "merged_prs",
-                f"https://api.github.com/search/issues?q=type:pr+is:merged+author:{username}",
-                None,
-            ),
-            (
-                "commits",
-                f"https://api.github.com/search/commits?q=author:{username}",
-                {"Accept": "application/vnd.github.cloak-preview+json"},
-            ),
-        ]
+        payload = search_response.json()
+        if payload.get("errors"):
+            return {"error": "api_error", "calendar": result_calendar, "stats": None}
 
-        stats = {}
-        for key, url, extra_headers in searches:
-            error, payload = github_search_json(url, extra_headers)
-            if error:
-                return {"error": error, "calendar": result_calendar, "stats": None}
-            stats[key] = payload.get("total_count", 0)
+        stats_data = payload.get("data", {})
+        stats = {
+            "issues": stats_data.get("issues", {}).get("totalCount", 0),
+            "prs": stats_data.get("prs", {}).get("totalCount", 0),
+            "merged_prs": stats_data.get("mergedPrs", {}).get("totalCount", 0),
+            "commits": stats_data.get("commits", {}).get("totalCount", 0),
+        }
 
         return {"calendar": result_calendar, "stats": stats}
     except requests.exceptions.RequestException as exc:
