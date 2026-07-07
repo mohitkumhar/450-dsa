@@ -110,6 +110,41 @@ def test_card_generator_returns_bytesio():
     assert png_header == b'\x89PNG\r\n\x1a\n', "BytesIO should contain valid PNG data"
 
 
+def test_progress_card_reuses_loaded_fonts(monkeypatch):
+    """Test that card font loading is cached across renders."""
+    import card_generator
+
+    card_generator._load_font_set.cache_clear()
+
+    original_truetype = card_generator.ImageFont.truetype
+    call_count = {"count": 0}
+
+    def counting_truetype(*args, **kwargs):
+        call_count["count"] += 1
+        return original_truetype(*args, **kwargs)
+
+    monkeypatch.setattr(card_generator.ImageFont, "truetype", counting_truetype)
+
+    card_generator.generate_progress_card(
+        name="Test User",
+        c_score=100,
+        dsa_progress=75,
+        current_streak=10,
+        platforms={"LeetCode": 50}
+    )
+    first_pass_calls = call_count["count"]
+
+    card_generator.generate_progress_card(
+        name="Test User",
+        c_score=100,
+        dsa_progress=75,
+        current_streak=10,
+        platforms={"LeetCode": 50}
+    )
+
+    assert call_count["count"] == first_pass_calls
+
+
 def test_public_card_valid_user(client, app):
     """Test that /u/<user_id>/card.png returns 200 with valid user."""
     user_id = ObjectId()
