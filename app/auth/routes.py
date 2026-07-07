@@ -24,6 +24,29 @@ COMMON_WEAK_PASSWORDS = {
     "letmein",
     "welcome1",
 }
+USER_SESSION_PROJECTION = {
+    "name": 1,
+    "email": 1,
+    "is_admin": 1,
+    "progress": 1,
+    "profile_visibility": 1,
+    "profile_photo": 1,
+    "avatar_url": 1,
+    "college": 1,
+    "streak": 1,
+    "current_streak": 1,
+    "c_score": 1,
+    "total_solved": 1,
+    "google_id": 1,
+    "github_id": 1,
+    "leetcode_id": 1,
+    "codeforces_id": 1,
+    "codechef_id": 1,
+    "hackerrank_id": 1,
+    "in_sheet_platform_counts": 1,
+    "created_at": 1,
+    "updated_at": 1,
+}
 
 
 def resolve_oauth_user(provider_field, provider_id, name, email=None):
@@ -150,7 +173,7 @@ def reactivate_user_if_needed(user_doc):
 @login_manager.user_loader
 def load_user(user_id):
     try:
-        doc = db.user.find_one({"_id": ObjectId(user_id)})
+        doc = db.user.find_one({"_id": ObjectId(user_id)}, USER_SESSION_PROJECTION)
         return UserWrapper(doc) if doc else None
     except Exception:
         return None
