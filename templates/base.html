@@ -327,6 +327,12 @@
             if (fc) fc.style.opacity = '0', fc.style.transition = '0.5s', setTimeout(() => fc.remove(), 500);
         }, 4000);
 
+        window.escapeHtml = function(value) {
+            return String(value || '').replace(/[&<>"']/g, function(ch) {
+                return ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[ch];
+            });
+        };
+
     </script>
     {% block scripts %}{% endblock %}
 </body>

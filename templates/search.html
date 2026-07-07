@@ -405,12 +405,6 @@ function updateUrl(query) {
   history.replaceState(null, '', nextUrl);
 }
 
-function escapeHtml(value) {
-  return String(value || '').replace(/[&<>"']/g, ch => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[ch]));
-}
-
 function badgeClass(color) {
   if (color === 'lc') return 'badge-lc';
   if (color === 'gfg') return 'badge-gfg';
