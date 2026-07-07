@@ -405,8 +405,8 @@ def profile():
         topic_question_count = pre["topic_question_count"]
         total_questions = pre["total_questions"]
     else:
-        topics = list(db.topic.find().sort("position", 1))
-        all_questions = list(db.question.find())
+        topics = list(db.topic.find({}, {"name": 1}).sort("position", 1))
+        all_questions = list(db.question.find({}, {"topic": 1, "difficulty": 1, "url": 1}))
         difficulty_map = {str(q["_id"]): q.get("difficulty", "Medium") for q in all_questions}
         topic_question_count = {}
         for question in all_questions:
