@@ -8,26 +8,32 @@ def faq():
     return render_template("faq.html")
 
 @faq_bp.route("/contact")
+@cache.cached(timeout=900)
 def contact():
     return render_template("placeholder.html", title="Contact Us")
 
 @faq_bp.route("/privacy")
+@cache.cached(timeout=900)
 def privacy():
     return render_template("placeholder.html", title="Privacy Policy")
 
 @faq_bp.route("/timeline")
+@cache.cached(timeout=900)
 def timeline():
     return render_template("placeholder.html", title="Timeline")
 
 @faq_bp.route("/terms")
+@cache.cached(timeout=900)
 def terms():
     return render_template("placeholder.html", title="Terms of Service")
 
 @faq_bp.route("/refund")
+@cache.cached(timeout=900)
 def refund():
     return render_template("placeholder.html", title="Refund Policy")
 
 @faq_bp.route("/monthly-rewind")
+@cache.cached(timeout=900)
 def monthly_rewind():
     return render_template("placeholder.html", title="Monthly Rewind")
 
