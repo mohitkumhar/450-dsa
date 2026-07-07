@@ -79,7 +79,7 @@ def get_public_card_image(user_id, object_id=None, db_handle=None):
     if user.get("in_sheet_platform_counts"):
         platforms = merge_platform_counts(user.get("in_sheet_platform_counts"), user.get("external_totals", {}))
     else:
-        all_questions = list(db_handle.question.find())
+        all_questions = list(db_handle.question.find({}, {"_id": 1, "url": 1}))
         solved_items = {qid: progress for qid, progress in progress_data.items() if progress.get("done")}
         platforms = compute_user_platforms(solved_items, user.get("external_totals", {}), all_questions)
     etag = _build_card_etag(name, c_score, dsa_progress, current_streak, platforms)
