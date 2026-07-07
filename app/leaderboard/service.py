@@ -36,7 +36,13 @@ def build_leaderboard_data():
         name = user.get("name", "Anonymous")
         if not name or name.strip() == "":
             continue
-        stats = compute_c_score(user, all_questions=all_questions)
+        try:
+            stats = compute_c_score(user, all_questions=all_questions)
+            stats = stats or {}
+            c_score = stats.get("c_score", 0)
+        except Exception:
+            stats = {}
+            c_score = 0
         entries.append(
             {
                 "user_id": str(user["_id"]),
@@ -45,6 +51,7 @@ def build_leaderboard_data():
                 "college": user.get("college", ""),
                 "leetcode_username": user.get("leetcode_username", ""),
                 "codingninjas_username": user.get("codingninjas_username", ""),
+                "c_score": c_score,
                 **stats,
             }
         )
@@ -55,7 +62,7 @@ def build_leaderboard_data():
 def sort_leaderboard_entries_by_c_score(entries=None):
     """Return entries sorted by the same C-Score ordering used on the leaderboard."""
     entries = entries if entries is not None else build_leaderboard_data()
-    return sorted(entries, key=lambda item: item["c_score"], reverse=True)
+    return sorted(entries, key=lambda item: item.get("c_score", 0), reverse=True)
 
 
 def get_user_rank_by_c_score(user_id, entries=None):
