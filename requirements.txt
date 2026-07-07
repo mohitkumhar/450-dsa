@@ -16,6 +16,7 @@ redis==5.0.4
 cachetools==5.3.3
 Flask-Caching==2.0.2
 flasgger==0.9.7.1
+Flask-Compress==1.17
 gunicorn==22.0.0
 playwright>=1.44.0
 beautifulsoup4>=4.12.0
