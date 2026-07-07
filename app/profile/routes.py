@@ -8,7 +8,7 @@ from flask_login import current_user, login_required
 from app.extensions import cache, db, limiter
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.leaderboard.service import build_leaderboard_data, get_user_rank_by_c_score
-from app.profile.card_service import CACHE_TTL, get_public_card_image, warm_public_card_cache
+from app.profile.card_service import CARD_HTTP_MAX_AGE, CACHE_TTL, get_public_card_image, warm_public_card_cache
 from app.profile.certificate_service import generate_milestone_certificate
 from app.profile.sync_service import (
     build_sync_platforms_response,
@@ -252,7 +252,7 @@ def public_card(user_id):
     try:
         img_io.seek(0)
         response = send_file(img_io, mimetype="image/png")
-        response.headers["Cache-Control"] = f"public, max-age={CACHE_TTL}"
+        response.headers["Cache-Control"] = f"public, max-age={CARD_HTTP_MAX_AGE}, stale-while-revalidate=86400"
         response.set_etag(etag)
         if last_modified is not None:
             response.last_modified = last_modified
