@@ -12,6 +12,9 @@
 .q-table tbody tr:last-child { border-bottom: none; }
 .q-table tbody tr:hover { background: var(--bg-secondary); }
 .q-table tbody tr.row-done { background: rgba(34,197,94,0.04); }
+.q-table tbody tr.row-skipped { background: rgba(234,179,8,0.08); }
+.question-filter { display: flex; align-items: center; gap: .6rem; margin: 1rem 0; }
+.question-filter select { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: .45rem .7rem; }
 .q-table tbody td { padding: 12px 16px; font-size: 0.88rem; vertical-align: middle; }
 .q-num { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; min-width: 32px; }
 .q-checkbox { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
@@ -58,12 +61,23 @@
 <div class="topic-title">{{ topic.name }}</div>
 <div class="topic-subtitle">{{ questions | list | length }} questions in this topic</div>
 
+<label class="question-filter" for="statusFilter">
+    <span>Show</span>
+    <select id="statusFilter">
+        <option value="all">All questions</option>
+        <option value="remaining">Remaining</option>
+        <option value="done">Completed</option>
+        <option value="skipped">Skipped</option>
+    </select>
+</label>
+
 <div class="questions-table-wrap">
     <table class="q-table">
         <thead>
             <tr>
                 <th>#</th>
                 <th>Done</th>
+                <th>Skipped</th>
                 <th>Problem</th>
                 <th>Save</th>
                 <th>Notes</th>
@@ -73,13 +87,20 @@
             {% for q in questions %}
             {% set q_id_str = q._id | string %}
             {% set p = progress_dict.get(q_id_str) %}
-            <tr class="{% if p and p.done %}row-done{% endif %}" id="row-{{ q_id_str }}">
+            <tr class="{% if p and p.done %}row-done{% endif %}{% if p and p.skipped %} row-skipped{% endif %}" id="row-{{ q_id_str }}"
+                data-done="{{ 'true' if p and p.done else 'false' }}" data-skipped="{{ 'true' if p and p.skipped else 'false' }}">
                 <td class="q-num">{{ loop.index }}</td>
                 <td>
                     <input type="checkbox" class="q-checkbox status-checkbox"
                         id="check_{{ q_id_str }}"
                         data-id="{{ q_id_str }}"
                         {% if p and p.done %}checked{% endif %}>
+                </td>
+                <td>
+                    <input type="checkbox" class="q-checkbox skipped-checkbox"
+                        id="skip_{{ q_id_str }}"
+                        data-id="{{ q_id_str }}"
+                        {% if p and p.skipped %}checked{% endif %}>
                 </td>
                 <td>
                     <div class="q-name">{{ q.problem }}</div>
@@ -155,7 +176,29 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
         if (!isAuthenticated) { this.checked = !this.checked; window.location.href = "{{ url_for('login') }}"; return; }
         const row = document.getElementById('row-' + this.dataset.id);
         if (this.checked) row.classList.add('row-done'); else row.classList.remove('row-done');
+        row.dataset.done = this.checked ? 'true' : 'false';
         updateQuestion(this.dataset.id, {done: this.checked}, () => {});
+    });
+});
+
+document.querySelectorAll('.skipped-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        if (!isAuthenticated) { this.checked = !this.checked; window.location.href = "{{ url_for('login') }}"; return; }
+        const row = document.getElementById('row-' + this.dataset.id);
+        if (this.checked) row.classList.add('row-skipped'); else row.classList.remove('row-skipped');
+        row.dataset.skipped = this.checked ? 'true' : 'false';
+        updateQuestion(this.dataset.id, {skipped: this.checked}, () => {});
+    });
+});
+
+document.getElementById('statusFilter').addEventListener('change', function() {
+    document.querySelectorAll('tbody tr[id^="row-"]').forEach(row => {
+        const done = row.dataset.done === 'true';
+        const skipped = row.dataset.skipped === 'true';
+        row.hidden = !(this.value === 'all'
+            || (this.value === 'done' && done)
+            || (this.value === 'skipped' && skipped)
+            || (this.value === 'remaining' && !done && !skipped));
     });
 });
 

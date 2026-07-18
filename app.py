@@ -740,6 +740,8 @@ def update_question(question_id):
         if data['done'] and not existing.get('done'):
             update_fields[f'progress.{question_id}.timestamp'] = datetime.utcnow()
         update_fields[f'progress.{question_id}.done'] = data['done']
+    if 'skipped' in data:
+        update_fields[f'progress.{question_id}.skipped'] = bool(data['skipped'])
     if 'bookmark' in data:
         update_fields[f'progress.{question_id}.bookmark'] = data['bookmark']
     if 'notes' in data:
