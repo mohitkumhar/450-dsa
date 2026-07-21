@@ -51,8 +51,10 @@ def build_profile_updates(data):
                 if parsed_raw.scheme not in {'http', 'https'}:
                     return None, f'Invalid URL for {field}'
             else:
-                if '//' in url_val:
-                    url_val = 'https:' + url_val if url_val.startswith('//') else 'https://' + url_val.split('//', 1)[1]
+                if url_val.startswith('//'):
+                    url_val = 'https:' + url_val
+                elif '//' in url_val:
+                    return None, f'Invalid URL for {field}'
                 else:
                     url_val = 'https://' + url_val
 
