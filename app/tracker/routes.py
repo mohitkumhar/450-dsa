@@ -130,8 +130,10 @@ def topic(topic_id):
     for question in questions:
         question["editorial_links"] = question_editorial_links(question)
     progress_dict = current_user.progress if current_user.is_authenticated else {}
-    for progress_item in progress_dict.values():
-        progress_item["last_reviewed_display"] = format_last_reviewed(progress_item.get("last_reviewed"))
+    progress_dict_with_display = {
+        qid: {**item, "last_reviewed_display": format_last_reviewed(item.get("last_reviewed"))}
+        for qid, item in progress_dict.items()
+    }
 
     # Calculate counts based on the unfiltered list of questions
     total_count = len(questions)
@@ -170,7 +172,7 @@ def topic(topic_id):
         "topic.html",
         topic=topic_doc,
         questions=questions,
-        progress_dict=progress_dict,
+        progress_dict=progress_dict_with_display,
         difficulty_filter=difficulty_filter,
         status_filter=status_filter,
         active_filters=", ".join(active_filters),
