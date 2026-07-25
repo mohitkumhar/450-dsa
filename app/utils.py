@@ -225,7 +225,7 @@ def compute_total_solved(progress, external_totals, all_questions=None):
         for key, value in (external_totals or {}).items()
         if key in EXTERNAL_SOLVED_TOTAL_KEYS
     )
-    return max(dsa_done, external_total)
+    return dsa_done + external_total
 
 
 def _get_field(user_doc, name, default=None):
@@ -362,7 +362,7 @@ def compute_c_score(user_doc, all_questions=None):
     c_score = int(round(s_dsa + s_lc_total + s_lc_diff + s_lc_rating + s_other + s_consistency))
     c_score = min(c_score, 999)
 
-    global_total = compute_total_solved(progress, ext, all_questions) if all_questions is not None else max(dsa_done, external_total)
+    global_total = compute_total_solved(progress, ext, all_questions) if all_questions is not None else dsa_done + external_total
 
     return {
         "c_score": c_score,
