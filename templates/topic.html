@@ -464,7 +464,13 @@ document.querySelectorAll('.status-checkbox').forEach(cb => {
         this.setAttribute('aria-label', nextChecked ? `Mark '${problemName}' as incomplete` : `Mark '${problemName}' as complete`);
 
         row.classList.toggle('row-done', nextChecked);
-        updateQuestion(this.dataset.id, {done: nextChecked})
+        if (nextChecked) {
+            const skipBtn = row.querySelector('.skip-btn');
+            if (skipBtn && skipBtn.dataset.skipped === 'true') {
+                setSkippedState(skipBtn, false);
+            }
+        }
+        updateQuestion(this.dataset.id, {done: nextChecked, skipped: nextChecked ? false : undefined})
             .catch(() => {
                 this.checked = previousChecked;
                 row.classList.toggle('row-done', previousChecked);
@@ -527,7 +533,7 @@ document.querySelectorAll('.skip-btn').forEach(btn => {
             checkbox.checked = false;
             row.classList.remove('row-done');
         }
-        updateQuestion(this.dataset.id, {skipped: nextSkipped})
+        updateQuestion(this.dataset.id, {skipped: nextSkipped, done: nextSkipped ? false : undefined})
             .catch(() => {
                 setSkippedState(this, isSkipped);
                 checkbox.checked = previousChecked;
