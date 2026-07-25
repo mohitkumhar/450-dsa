@@ -285,12 +285,14 @@ document.getElementById('font-increase-btn').addEventListener('click', () => {
 });
 
 // ── fullscreen ─────────────────────────────────────────────────
-document.getElementById('fullscreen-btn').addEventListener('click', () => {
-  if (!document.fullscreenElement) {
-    document.getElementById('active-workspace')?.requestFullscreen?.();
-  } else {
-    document.exitFullscreen?.();
-  }
+document.getElementById('fullscreen-btn').addEventListener('click', async () => {
+  try {
+    if (!document.fullscreenElement) {
+      await document.getElementById('active-workspace')?.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  } catch (_) { /* fullscreen may be denied */ }
   const icon = document.querySelector('#fullscreen-btn i');
   if (icon) icon.className = document.fullscreenElement ? 'fas fa-compress-alt' : 'fas fa-expand-alt';
 });
@@ -380,7 +382,7 @@ async function loadInitData() {
       sel.appendChild(opt);
     }
     sel.addEventListener('change', populateSidebar);
-    if (Object.keys(data.sheets).length) populateSidebar();
+    if (data.sheets && Object.keys(data.sheets).length) populateSidebar();
   } catch (err) {
     console.error('init failed', err);
     document.getElementById('patterns-container').innerHTML =
