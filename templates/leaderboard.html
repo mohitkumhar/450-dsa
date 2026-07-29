@@ -426,7 +426,9 @@ function renderTable(entries, mode) {
       ? `${e.member_count} coder${e.member_count === 1 ? '' : 's'} · Top: ${escapeHTML(e.top_user?.name || 'N/A')}`
       : (escapeHTML(e.college) || '—');
 
-    const dsaHTML = `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`;
+    const dsaHTML = isCollegeMode
+  ? `<span class="stat-badge dsa">${e.dsa_done} / 450</span>`
+  : `<span class="stat-badge dsa" title="Questions Solved">${e.dsa_done} / 450</span> <span class="stat-badge dsa" title="Marks Earned">⭐ ${e.dsa_marks_earned !== undefined ? e.dsa_marks_earned : 0}</span>`;
 
     const compareHTML = (CURRENT_USER_ID && !isMe && e.user_id)
       ? `<a class="pagination-btn" style="margin-left:8px" href="${endpointConfig.compareBase.replace('__USER_ID__', encodeURIComponent(e.user_id))}" aria-label="Compare with ${escapeHTML(e.name)}">Compare</a>`
@@ -461,8 +463,8 @@ function renderTable(entries, mode) {
     const targetPage = Math.ceil(currentUserRank / 20);
     html += `<tr class="current-user-pinned me-row">
       <td colspan="5" style="text-align: center; padding: 12px;">
-        <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i> 
-        You are ranked #${escapeHTML(currentUserRank)} in this category. 
+        <i class="bi bi-pin-angle-fill" style="color: var(--accent);" aria-hidden="true"></i>
+        You are ranked #${escapeHTML(currentUserRank)} in this category.
         <a href="?page=${targetPage}&mode=${encodeURIComponent(activeMode)}" aria-label="Go to page ${targetPage} where your rank appears">Go to your rank →</a>
       </td>
     </tr>`;
@@ -495,7 +497,7 @@ function switchTab(mode) {
   const activeTab = document.querySelector(`.lb-tab[data-mode="${mode}"]`);
   activeTab.classList.add('active');
   activeTab.setAttribute('aria-selected', 'true');
-  
+
   const url = new URL(window.location);
   url.searchParams.set('mode', mode);
   url.searchParams.delete('page');
