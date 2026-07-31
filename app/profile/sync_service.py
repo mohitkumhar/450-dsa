@@ -22,8 +22,7 @@ logger = logging.getLogger("flask.app")
 
 SYNC_COOLDOWN_SECONDS = 600
 
-PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
-                 "codingninjas", "atcoder", "codewars"}
+PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank", "codingninjas", "atcoder", "codewars"}
 
 PLATFORM_TOTAL_KEYS = {
     "leetcode": {"LeetCode", "LeetCode_Easy", "LeetCode_Medium", "LeetCode_Hard",
@@ -106,6 +105,15 @@ def build_platform_sync_jobs(
     return jobs
 
 
+def _get_str_field(data, key):
+    value = data.get(key)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError(f"Field '{key}' must be a string, got {type(value).__name__}")
+    return value.strip()
+
+
 def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     now = now or utc_now()
     user_id = user.id
@@ -133,38 +141,44 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     atcoder_username = user.atcoder_username or ""
     codewars_username = getattr(user, "codewars_username", "") or ""
 
-    try:
-        if "leetcode" in data:
-            leetcode_username = str(data.get("leetcode", "") or "").strip()
-            update_fields["leetcode_username"] = validate_username(leetcode_username)
-        if "github" in data:
-            github_username = str(data.get("github", "") or "").strip()
-            update_fields["github_username"] = validate_username(github_username)
-        if "gfg" in data:
-            gfg_username = str(data.get("gfg", "") or "").strip()
-            update_fields["gfg_username"] = validate_username(gfg_username)
-        if "hackerrank" in data:
-            hackerrank_username = str(data.get("hackerrank", "") or "").strip()
-            update_fields["hackerrank_username"] = validate_username(hackerrank_username)
-        if "codingninjas" in data:
-            codingninjas_username = normalize_coding_ninjas_profile_id(str(data.get("codingninjas", "") or ""))
-            update_fields["codingninjas_username"] = validate_username(codingninjas_username)
-        if "atcoder" in data:
-            atcoder_username = str(data.get("atcoder", "") or "").strip()
-            update_fields["atcoder_username"] = validate_username(atcoder_username)
-        if "codewars" in data:
-            codewars_username = str(data.get("codewars", "") or "").strip()
-            update_fields["codewars_username"] = validate_username(codewars_username)
-    except ValueError as e:
-        return {"success": False, "error": str(e)}, 400
+    if "leetcode" in data:
+        leetcode_username = _get_str_field(data, "leetcode")
+        if leetcode_username:
+            validate_username(leetcode_username, "leetcode")
+        update_fields["leetcode_username"] = leetcode_username
+    if "github" in data:
+        github_username = _get_str_field(data, "github")
+        if github_username:
+            validate_username(github_username, "github")
+        update_fields["github_username"] = github_username
+    if "gfg" in data:
+        gfg_username = _get_str_field(data, "gfg")
+        if gfg_username:
+            validate_username(gfg_username, "gfg")
+        update_fields["gfg_username"] = gfg_username
+    if "hackerrank" in data:
+        hackerrank_username = _get_str_field(data, "hackerrank")
+        if hackerrank_username:
+            validate_username(hackerrank_username, "hackerrank")
+        update_fields["hackerrank_username"] = hackerrank_username
+    if "codingninjas" in data:
+        codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
+        update_fields["codingninjas_username"] = codingninjas_username
+    if "atcoder" in data:
+        atcoder_username = _get_str_field(data, "atcoder")
+        if atcoder_username:
+            validate_username(atcoder_username, "atcoder")
+        update_fields["atcoder_username"] = atcoder_username
+    if "codewars" in data:
+        codewars_username = _get_str_field(data, "codewars")
+        if codewars_username:
+            validate_username(codewars_username, "codewars")
+        update_fields["codewars_username"] = codewars_username
 
     existing_totals = getattr(user, "external_totals", {}) or {}
-    if not isinstance(existing_totals, dict):
-        existing_totals = {}
-    platform_totals = dict(existing_totals)
+    platform_totals = dict(existing_totals) if isinstance(existing_totals, dict) else {}
 
-    # Clear totals for platforms included in this sync so stale data
-    # does not persist when a sync fails or a username is cleared.
+    # Clear stale totals for platforms included in current sync
     for platform_key in data:
         if platform_key in PLATFORM_TOTAL_KEYS:
             for total_key in PLATFORM_TOTAL_KEYS[platform_key]:
@@ -331,6 +345,8 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     # covered every platform the user has configured.  During the migration
     # from the old flat ``external_daily_counts`` format to per-platform
     # calendars, ``_legacy`` preserves dates from platforms not yet re-synced.
+    PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
+                     "codingninjas", "atcoder", "codewars"}
     requested_platforms = {k for k in data if k in PLATFORM_KEYS}
     legacy_counts = getattr(user, "external_daily_counts", {})
     has_legacy = isinstance(legacy_counts, dict) and bool(legacy_counts)
