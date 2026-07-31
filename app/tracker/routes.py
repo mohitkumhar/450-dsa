@@ -818,3 +818,33 @@ def import_commit():
     update_computed_stats(user_id, new_progress, db, total_questions)
 
     return jsonify({"success": True, "message": "Progress imported successfully!"})
+
+
+
+@tracker_bp.route("/question/<question_id>/tags", methods=["POST"])
+@login_required
+def update_question_tags(question_id):
+    """Update custom personal organizational labels for an individual question tracking item for Issue #267."""
+    data = request.get_json() or {}
+    tags = data.get("tags", [])
+
+    if not isinstance(tags, list):
+        return jsonify({"success": False, "error": "Tags must be a valid array list."}), 400
+
+    # Sanitize tags array list data elements
+    cleaned_tags = [str(t).strip() for t in tags if str(t).strip()]
+
+    # Limit maximum tags per problem defensively to prevent payload flooding
+    if len(cleaned_tags) > 10:
+        return jsonify({"success": False, "error": "You can add a maximum of 10 tags per question."}), 400
+
+    # Ensure targeted question entry exists in progress map
+    progress_key = f"progress.{question_id}.tags"
+    db.user.update_one(
+        {"_id": current_user.id},
+        {"$set": {progress_key: cleaned_tags}}
+    )
+    current_user.reload()
+
+    return jsonify({"success": True, "tags": cleaned_tags})
+
