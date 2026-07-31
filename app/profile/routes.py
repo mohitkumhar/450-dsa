@@ -200,6 +200,18 @@ def edit_profile():
     update_fields, error = build_profile_updates(data)
     if error:
         return json_error(error, status_code=400)
+
+    if "slug" in data:
+        slug = data["slug"].strip().lower()
+        if slug:
+            import re
+            if not re.match(r"^[a-z0-9\-]+$", slug):
+                return json_error("Slug can only contain lowercase letters, numbers, and hyphens.", status_code=400)
+            existing_slug_owner = db.user.find_one({"slug": slug, "_id": {"$ne": current_user.id}})
+            if existing_slug_owner:
+                return json_error("This unique profile slug is already claimed by another user.", status_code=400)
+            update_fields["slug"] = slug
+
     if update_fields:
         db.user.update_one({"_id": current_user.id}, {"$set": update_fields})
         current_user.reload()
@@ -207,6 +219,7 @@ def edit_profile():
         clear_profile_caches(cache, current_user.id)
         warm_public_card_cache(current_user.id, db_handle=db)
     return json_success()
+
 
 
 @profile_bp.route("/u/<user_id>/card.png")

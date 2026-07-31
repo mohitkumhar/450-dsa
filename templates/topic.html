@@ -39,13 +39,7 @@
 .topic-skeleton-shell { grid-template-columns: 1fr; }
 .topic-skeleton-toolbar { display: grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap: 10px; }
 .topic-skeleton-card { min-height: 420px; }
-.btn-busy { pointer-events: none; opacity: 0.75; }
-.btn-busy::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; animation: topic-spin 0.7s linear infinite; }
-.row-updating { opacity: 0.55; }
 
-@keyframes topic-spin {
-    to { transform: rotate(360deg); }
-}
 
 @media (max-width: 640px) {
     .topic-header { flex-direction: column; align-items: stretch; }
@@ -313,12 +307,11 @@ const isAuthenticated = {{ 'true' if current_user.is_authenticated else 'false' 
 const topicStatus = document.getElementById('topicStatus');
 
 function showUpdateError(message = 'Unable to save your change. Please try again.') {
-    topicStatus.textContent = message;
-    window.clearTimeout(topicStatus._hideTimer);
-    topicStatus._hideTimer = window.setTimeout(() => {
-        topicStatus.textContent = '';
-    }, 5000);
+    // Uses the new shared helper from base.html to show a danger alert toast
+    showToast(message, 'danger');
 }
+
+
 
 function setBookmarkState(btn, isBookmarked) {
     const icon = btn.querySelector('i');
