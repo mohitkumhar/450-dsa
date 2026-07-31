@@ -36,10 +36,10 @@
         const input = document.getElementById('progress-card-copy-url');
         if (!fallback || !input) return;
 
-        input.value = url;
-        fallback.style.display = 'block';
-        input.focus();
-        input.select();
+  <!-- MIDDLE COLUMN -->
+  <div class="prof-main">
+    <!-- Stat cards & Heatmap -->
+    {% include 'partials/profile_stats.html' %}
 
         if (typeof showToast === 'function') {
           showToast('Could not copy automatically. The URL is selected below.', 'warning');
