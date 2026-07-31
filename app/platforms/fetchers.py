@@ -438,3 +438,54 @@ def fetch_codewars(username):
     except Exception as exc:
         logger.error(f"Codewars stats fetch failed: {exc}")
         return {}
+
+
+CODECHEF_REQUEST_TIMEOUT_SECONDS = 8
+
+
+def fetch_codechef(username):
+    """Fetch CodeChef solved count and contest stats from public API."""
+    try:
+        response = _get_http_session().get(
+            f"https://www.codechef.com/users/{username}",
+            timeout=CODECHEF_REQUEST_TIMEOUT_SECONDS,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+        )
+        if response.status_code != 200:
+            return {}
+
+        text = response.text
+
+        # Extract fully solved problems count
+        total = 0
+        total_match = re.search(r"fully\s+solved[^\d]*(\d+)", text, re.IGNORECASE)
+        if total_match:
+            total = int(total_match.group(1))
+
+        # Extract contest rating
+        rating = None
+        rating_match = re.search(r'"currentRating"\s*:\s*(\d+)', text)
+        if rating_match:
+            rating = int(rating_match.group(1))
+
+        # Extract highest rating
+        highest_rating = None
+        highest_match = re.search(r'"highestRating"\s*:\s*(\d+)', text)
+        if highest_match:
+            highest_rating = int(highest_match.group(1))
+
+        # Extract contests attended
+        contests = 0
+        contests_match = re.search(r'"contestsAttended"\s*:\s*(\d+)', text)
+        if contests_match:
+            contests = int(contests_match.group(1))
+
+        return {
+            "total": total,
+            "rating": rating,
+            "highest_rating": highest_rating,
+            "contests": contests,
+        }
+    except Exception as exc:
+        print("CodeChef Error", exc)
+        return {}

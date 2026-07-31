@@ -150,6 +150,9 @@
       </span>
     </div>
     <div class="platform-row">
+      <span><i class="bi bi-bar-chart-fill" style="color:#f97316;margin-right:6px" aria-hidden="true"></i>CodeChef</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        {% if user.codechef_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codechef_username | platform_url('codechef') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="CodeChef profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect CodeChef account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
       <span><i class="bi bi-fire" style="color:#b1361e;margin-right:6px" aria-hidden="true"></i>Codewars</span>
       <span style="display:flex;align-items:center;gap:6px">
         {% if user.codewars_username %}<i class="bi bi-check-circle-fill check-ok" aria-hidden="true"></i><a href="{{ user.codewars_username | platform_url('codewars') }}" target="_blank" rel="noopener noreferrer" class="link-out" aria-label="Codewars profile (opens in new tab)"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% else %}<a href="#" class="link-out" onclick="openSyncModal();return false;" aria-label="Connect Codewars account"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i></a>{% endif %}
@@ -410,6 +413,8 @@
     <input class="m-inp" id="hr_username" placeholder="e.g. hacker" value="{{ user.hackerrank_username or '' }}">
     <label class="m-lbl"><i class="bi bi-trophy" style="color:#f97316;margin-right:4px"></i>AtCoder Username</label>
     <input class="m-inp" id="ac_username" placeholder="e.g. tourist" value="{{ user.atcoder_username or '' }}">
+    <label class="m-lbl"><i class="bi bi-bar-chart-fill" style="color:#f97316;margin-right:4px"></i>CodeChef Username</label>
+    <input class="m-inp" id="cc_username" placeholder="e.g. tourist" value="{{ user.codechef_username or '' }}">
     <label class="m-lbl"><i class="bi bi-fire" style="color:#b1361e;margin-right:4px"></i>Codewars Username</label>
     <input class="m-inp" id="cw_username" placeholder="e.g. g964" value="{{ user.codewars_username or '' }}">
     <div class="m-note">GFG and Coding Ninjas sync are experimental and may take a few seconds.</div>
@@ -622,27 +627,25 @@ window.handleQuickSync = function(btn) {
   const icon = document.getElementById('quickSyncIcon');
   if (btn.disabled) return;
   
-  const lc = {{ (user.leetcode_username or "")|tojson }};
-  const gh = {{ (user.github_username or "")|tojson }};
-  const gfg = {{ (user.gfg_username or "")|tojson }};
-  const hr = {{ (user.hackerrank_username or "")|tojson }};
-  const cn = {{ (user.codingninjas_username or "")|tojson }};
-  const ac = {{ (user.atcoder_username or "")|tojson }};
-  const cw = {{ (user.codewars_username or "")|tojson }};
-  
-  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){
+  const lc = '{{ user.leetcode_username or "" }}';
+  const gh = '{{ user.github_username or "" }}';
+  const gfg = '{{ user.gfg_username or "" }}';
+  const hr = '{{ user.hackerrank_username or "" }}';
+  const cn = '{{ user.codingninjas_username or "" }}';
+  const ac = '{{ user.atcoder_username or "" }}';
+  const cc = '{{ user.codechef_username or "" }}';
+  const cw = '{{ user.codewars_username or "" }}';
+  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cc && !cw){
     showToast('⚠️ No platforms connected to sync!');
     return;
   }
-
   btn.disabled = true;
   window.setIconBusyState(icon, { busy: true, idleClassName: 'bi bi-arrow-clockwise' });
   showToast('⏳ Syncing profiles...');
-  
   fetch(endpointConfig.syncPlatforms, {
     method:'POST',
     headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken},
-    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codewars:cw})
+    body:JSON.stringify({leetcode:lc,github:gh,gfg:gfg,hackerrank:hr,codingninjas:cn,atcoder:ac,codechef:cc,codewars:cw})
   })
   .then(r => r.json())
   .then(res => {
@@ -670,6 +673,8 @@ window.handleSyncProfile = function(btn){
   const hr=document.getElementById('hr_username').value.trim();
   const cn=document.getElementById('cn_username').value.trim();
   const ac=document.getElementById('ac_username').value.trim();
+  const cc=document.getElementById('cc_username').value.trim();
+  if(!lc && !gh && !gfg && !hr && !cn && !ac && !cc){showToast('⚠️ Enter at least one username');return;}
   const cw=document.getElementById('cw_username').value.trim();
   if(!lc && !gh && !gfg && !hr && !cn && !ac && !cw){showToast('\u26a0\ufe0f Enter at least one username');return;}
 
@@ -908,3 +913,5 @@ function handlePhotoUpload(e){
 </style>
 
 {% endblock %}
+
+

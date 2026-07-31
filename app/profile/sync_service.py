@@ -4,6 +4,7 @@ import logging
 from app.leaderboard.cache import invalidate_leaderboard_cache
 from app.platforms.fetchers import (
     fetch_atcoder,
+    fetch_codechef,
     fetch_coding_ninjas,
     fetch_codewars,
     fetch_gfg,
@@ -15,15 +16,13 @@ from app.platforms.fetchers import (
     run_fetch_jobs,
 )
 from app.utils import ensure_utc_datetime, normalize_coding_ninjas_profile_id, utc_now
-from profile_validation import validate_username
 
 logger = logging.getLogger("flask.app")
-
 
 SYNC_COOLDOWN_SECONDS = 600
 
 PLATFORM_KEYS = {"leetcode", "github", "gfg", "hackerrank",
-                 "codingninjas", "atcoder", "codewars"}
+                 "codingninjas", "atcoder", "codewars", "codechef"}
 
 PLATFORM_TOTAL_KEYS = {
     "leetcode": {"LeetCode", "LeetCode_Easy", "LeetCode_Medium", "LeetCode_Hard",
@@ -34,6 +33,7 @@ PLATFORM_TOTAL_KEYS = {
     "hackerrank": {"HackerRank"},
     "atcoder": {"AtCoder"},
     "codewars": {"Codewars"},
+    "codechef": {"CodeChef", "CodeChef_Rating", "CodeChef_HighestRating", "CodeChef_Contests"},
 }
 
 
@@ -63,6 +63,7 @@ def build_platform_sync_jobs(
     codingninjas_username="",
     hackerrank_username="",
     atcoder_username="",
+    codechef_username="",
     codewars_username="",
 ):
     jobs = {}
@@ -100,9 +101,10 @@ def build_platform_sync_jobs(
     if atcoder_username:
         jobs["atcoder"] = lambda: fetch_atcoder(atcoder_username)
 
+    if codechef_username:
+        jobs["codechef"] = lambda: fetch_codechef(codechef_username)
     if codewars_username:
         jobs["codewars"] = lambda: fetch_codewars(codewars_username)
-
     return jobs
 
 
@@ -131,45 +133,36 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     hackerrank_username = user.hackerrank_username or ""
     codingninjas_username = user.codingninjas_username or ""
     atcoder_username = user.atcoder_username or ""
+    codechef_username = user.codechef_username or ""
     codewars_username = getattr(user, "codewars_username", "") or ""
 
-    try:
-        if "leetcode" in data:
-            leetcode_username = str(data.get("leetcode", "") or "").strip()
-            update_fields["leetcode_username"] = validate_username(leetcode_username)
-        if "github" in data:
-            github_username = str(data.get("github", "") or "").strip()
-            update_fields["github_username"] = validate_username(github_username)
-        if "gfg" in data:
-            gfg_username = str(data.get("gfg", "") or "").strip()
-            update_fields["gfg_username"] = validate_username(gfg_username)
-        if "hackerrank" in data:
-            hackerrank_username = str(data.get("hackerrank", "") or "").strip()
-            update_fields["hackerrank_username"] = validate_username(hackerrank_username)
-        if "codingninjas" in data:
-            codingninjas_username = normalize_coding_ninjas_profile_id(str(data.get("codingninjas", "") or ""))
-            update_fields["codingninjas_username"] = validate_username(codingninjas_username)
-        if "atcoder" in data:
-            atcoder_username = str(data.get("atcoder", "") or "").strip()
-            update_fields["atcoder_username"] = validate_username(atcoder_username)
-        if "codewars" in data:
-            codewars_username = str(data.get("codewars", "") or "").strip()
-            update_fields["codewars_username"] = validate_username(codewars_username)
-    except ValueError as e:
-        return {"success": False, "error": str(e)}, 400
+    if "leetcode" in data:
+        leetcode_username = data.get("leetcode", "").strip()
+        update_fields["leetcode_username"] = leetcode_username
+    if "github" in data:
+        github_username = data.get("github", "").strip()
+        update_fields["github_username"] = github_username
+    if "gfg" in data:
+        gfg_username = data.get("gfg", "").strip()
+        update_fields["gfg_username"] = gfg_username
+    if "hackerrank" in data:
+        hackerrank_username = data.get("hackerrank", "").strip()
+        update_fields["hackerrank_username"] = hackerrank_username
+    if "codingninjas" in data:
+        codingninjas_username = normalize_coding_ninjas_profile_id(data.get("codingninjas", ""))
+        update_fields["codingninjas_username"] = codingninjas_username
+    if "atcoder" in data:
+        atcoder_username = data.get("atcoder", "").strip()
+        update_fields["atcoder_username"] = atcoder_username
+    if "codechef" in data:
+        codechef_username = str(data.get("codechef") or "").strip()
+        update_fields["codechef_username"] = codechef_username
+    if "codewars" in data:
+        codewars_username = str(data.get("codewars") or "").strip()
+        update_fields["codewars_username"] = codewars_username
 
-    existing_totals = getattr(user, "external_totals", {}) or {}
-    if not isinstance(existing_totals, dict):
-        existing_totals = {}
-    platform_totals = dict(existing_totals)
-
-    # Clear totals for platforms included in this sync so stale data
-    # does not persist when a sync fails or a username is cleared.
-    for platform_key in data:
-        if platform_key in PLATFORM_TOTAL_KEYS:
-            for total_key in PLATFORM_TOTAL_KEYS[platform_key]:
-                platform_totals.pop(total_key, None)
-
+    combined_daily_counts = {}
+    platform_totals = {}
     platform_status = {}
 
     def _mark(platform_key: str, status: str, error: str = None):
@@ -191,6 +184,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         codingninjas_username=codingninjas_username,
         hackerrank_username=hackerrank_username,
         atcoder_username=atcoder_username,
+        codechef_username=codechef_username,
         codewars_username=codewars_username,
     )
     platform_results, platform_errors = run_fetch_jobs(platform_jobs, max_workers=4)
@@ -310,6 +304,24 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
                 _mark("atcoder", "failed", "No solved problems found (handle may be invalid).")
     else:
         _mark("atcoder", "skipped")
+    if codechef_username:
+        codechef_data = platform_results.get("codechef")
+        if platform_errors.get("codechef"):
+            _mark("codechef", "failed", "Failed to fetch CodeChef stats.")
+        elif not codechef_data:
+            _mark("codechef", "failed", "No data returned (username may be invalid or rate-limited).")
+        else:
+            _mark("codechef", "synced")
+            if codechef_data.get("total") is not None:
+                platform_totals["CodeChef"] = int(codechef_data.get("total", 0))
+            if codechef_data.get("rating") is not None:
+                platform_totals["CodeChef_Rating"] = codechef_data.get("rating")
+            if codechef_data.get("highest_rating") is not None:
+                platform_totals["CodeChef_HighestRating"] = codechef_data.get("highest_rating")
+            if codechef_data.get("contests") is not None:
+                platform_totals["CodeChef_Contests"] = codechef_data.get("contests")
+    else:
+        _mark("codechef", "skipped")
 
     if codewars_username:
         codewars_data = platform_results.get("codewars")
@@ -339,7 +351,7 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
         user_platforms = set()
         for attr in ("leetcode_username", "github_username", "gfg_username",
                      "hackerrank_username", "codingninjas_username",
-                     "atcoder_username", "codewars_username"):
+                     "atcoder_username", "codewars_username", "codechef_username"):
             if getattr(user, attr, ""):
                 platform_name = attr.replace("_username", "")
                 user_platforms.add(platform_name)
@@ -359,3 +371,10 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     invalidate_leaderboard_cache()
     clear_profile_caches(cache_backend, user_id)
     return build_sync_platforms_response(platform_status), 200
+
+
+
+
+
+
+

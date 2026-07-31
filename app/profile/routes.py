@@ -491,7 +491,9 @@ def profile():
     gh_prs = ext_platform_totals.get("GitHub_PRs", 0)
     gh_merged = ext_platform_totals.get("GitHub_Merged_PRs", 0)
     gh_commits = ext_platform_totals.get("GitHub_Commits", 0)
-
+    codechef_rating = ext_platform_totals.get("CodeChef_Rating", 0)
+    codechef_highest = ext_platform_totals.get("CodeChef_HighestRating", 0)
+    codechef_contests = ext_platform_totals.get("CodeChef_Contests", 0)
     global_total_solved = sum(platforms.values())
 
     for topic_doc in topics:
@@ -548,6 +550,9 @@ def profile():
         gh_prs=gh_prs,
         gh_merged=gh_merged,
         gh_commits=gh_commits,
+        codechef_rating=codechef_rating,
+        codechef_highest=codechef_highest,
+        codechef_contests=codechef_contests,
         daily_counts=heatmap_daily_counts,
         cumulative_data=cumulative_data,
         total_active_days=total_active_days,
