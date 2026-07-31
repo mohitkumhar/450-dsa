@@ -354,6 +354,14 @@ def sync_user_platforms(user, data, db_handle, cache_backend, now=None):
     update_fields["platform_calendars"] = platform_calendars
     update_fields["external_totals"] = platform_totals
     db_handle.user.update_one({"_id": user_id}, {"$set": update_fields})
+
+    if leetcode_username and platform_status.get("leetcode", {}).get("status") == "synced":
+        from leetcode_sync import sync_leetcode_progress
+        try:
+            sync_leetcode_progress(leetcode_username, db_handle=db_handle, persist=True, user_id=user_id)
+        except Exception as exc:
+            logger.error(f"LeetCode progress sync failed during platform sync: {exc}")
+
     user.reload()
 
     invalidate_leaderboard_cache()
