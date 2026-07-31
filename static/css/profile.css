@@ -234,3 +234,6 @@ body.modal-open {
     overflow: hidden;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* Onboarding checklist */
+.onboarding-checklist{max-width:400px}.och-list li:last-child{border-bottom:none!important}.och-checkbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

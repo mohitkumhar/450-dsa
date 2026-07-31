@@ -4,6 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 {% endblock %}
 {% block content %}
+
 <div class="prof-layout">
 
 <!-- ── LEFT SIDEBAR ── -->
@@ -179,6 +180,10 @@
     </div>
   </div>
 </div>
+
+{% if not onboarding_hidden %}
+  {% include 'partials/onboarding_checklist.html' %}
+{% endif %}
 
 <!-- ── MIDDLE / MAIN ── -->
 <div class="prof-main">

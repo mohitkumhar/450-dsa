@@ -56,6 +56,41 @@ def filter_heatmap_counts(daily_counts, today=None, days=HEATMAP_DAYS):
     }
 
 
+
+
+@profile_bp.route("/api/profile/onboarding/check", methods=["POST"])
+@login_required
+def onboarding_check():
+    data = request.get_json(silent=True) or {}
+    key = data.get("key")
+    done = bool(data.get("done", True))
+    valid = ("connect_platform", "first_topic", "bookmark_question", "export_progress")
+    if key not in valid:
+        return jsonify({"ok": False, "error": "Invalid key"}), 400
+    path = "onboarding." + key
+    db.user.update_one({"_id": current_user.id}, {"$set": {path: done}})
+    current_user.reload()
+    onboarding = current_user._doc.get("onboarding", {})
+    all_keys = list(valid)
+    done_count = sum(1 for k in all_keys if onboarding.get(k))
+    total_count = len(all_keys)
+    all_done = done_count >= total_count
+    if all_done:
+        db.user.update_one({"_id": current_user.id}, {"$set": {"onboarding.hidden": True}})
+    pct = int(done_count / total_count * 100) if total_count > 0 else 0
+    return jsonify({"ok": True, "done_count": done_count, "total_count": total_count, "percent": pct, "all_done": all_done})
+
+
+@profile_bp.route("/api/profile/onboarding/state", methods=["GET"])
+@login_required
+def onboarding_state():
+    onboarding = current_user._doc.get("onboarding", {})
+    all_keys = ("connect_platform", "first_topic", "bookmark_question", "export_progress")
+    labels = {"connect_platform": "Connect a coding platform", "first_topic": "Choose your first topic", "bookmark_question": "Bookmark a question", "export_progress": "Export your progress"}
+    items = [{"key": k, "label": labels[k], "done": bool(onboarding.get(k))} for k in all_keys]
+    done_count = sum(1 for i in items if i["done"])
+    return jsonify({"ok": True, "items": items, "done_count": done_count, "total_count": len(items), "hidden": bool(onboarding.get("hidden"))})
+
 @profile_bp.route("/sync_platforms", methods=["POST"])
 @login_required
 @limiter.limit("5 per minute")
@@ -529,6 +564,15 @@ def profile():
 
     update_computed_stats(user.id, user.progress, db, total_questions, user)
 
+    # Onboarding checklist context
+    onboarding = current_user._doc.get("onboarding", {})
+    all_keys = ("connect_platform", "first_topic", "bookmark_question", "export_progress")
+    labels = {"connect_platform": "Connect a coding platform", "first_topic": "Choose your first topic", "bookmark_question": "Bookmark a question", "export_progress": "Export your progress"}
+    checklist_items = [{"key": k, "label": labels[k], "done": bool(onboarding.get(k))} for k in all_keys]
+    done_count = sum(1 for i in checklist_items if i["done"])
+    total_count = len(all_keys)
+    onboarding_hidden = bool(onboarding.get("hidden"))
+
     return render_template(
         "profile.html",
         user=user,
@@ -557,4 +601,8 @@ def profile():
         profile_leaderboard_rank=profile_leaderboard_rank,
         current_streak=current_streak,
         longest_streak=longest_streak,
+        checklist_items=checklist_items,
+        done_count=done_count,
+        total_count=total_count,
+        onboarding_hidden=onboarding_hidden,
     )
