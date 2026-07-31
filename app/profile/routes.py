@@ -385,7 +385,7 @@ def upload_photo():
               type: string
               example: Photo upload disabled (Cloudinary not configured)
     """
-    return json_error("Photo upload disabled (Cloudinary not configured)", status_code=500)
+    return json_error("Photo upload disabled (Cloudinary not configured)", status_code=501)
 
 
 @profile_bp.route("/profile")
