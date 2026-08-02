@@ -613,7 +613,7 @@ async function loadQuestion(category, q_id, q_name) {
               <i class="bi bi-tag" style="color:var(--lc-t2);"></i> Topics <i class="bi bi-chevron-down" style="margin-left:auto;font-size:12px;color:var(--lc-t3);"></i>
             </summary>
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-              ${qInfoData.topics.map(t => `<span style="background:#333;padding:4px 12px;border-radius:12px;font-size:12px;color:var(--lc-t2);">${t}</span>`).join('')}
+              ${qInfoData.(topics ?? []).map(t => `<span style="background:#333;padding:4px 12px;border-radius:12px;font-size:12px;color:var(--lc-t2);">${t}</span>`).join('')}
             </div>
           </details>
         </div>
