@@ -6,7 +6,7 @@
     function setFieldState(input, iconEl, errorEl, valid, empty) {
         if (empty) {
             input.classList.remove('is-valid', 'is-invalid');
-            if (iconEl) iconEl.innerHTML = '';
+            if (iconEl) iconEl.textContent = '';
             if (errorEl) errorEl.classList.remove('show');
             return;
         }
