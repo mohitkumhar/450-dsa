@@ -6,7 +6,7 @@
     function setFieldState(input, iconEl, errorEl, valid, empty) {
         if (empty) {
             input.classList.remove('is-valid', 'is-invalid');
-            if (iconEl) iconEl.innerHTML = '';
+            if (iconEl) iconEl.textContent = '';
             if (errorEl) errorEl.classList.remove('show');
             return;
         }
@@ -15,7 +15,7 @@
         input.classList.toggle('is-invalid', !valid);
 
         if (iconEl) {
-            iconEl.innerHTML = valid
+            iconEl.textContent = valid
                 ? '<i class="bi bi-check-circle-fill" style="color:#22c55e"></i>'
                 : '<i class="bi bi-x-circle-fill" style="color:#ef4444"></i>';
         }
@@ -35,7 +35,7 @@
 
     function setSubmitLoading(button, label) {
         button.disabled = true;
-        button.innerHTML = '<i class="bi bi-arrow-repeat"></i> ' + label;
+        button.textContent = '<i class="bi bi-arrow-repeat"></i> ' + label;
     }
 
     window.AuthForms = {
