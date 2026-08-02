@@ -314,7 +314,7 @@ document.getElementById('sync-btn').addEventListener('click', async () => {
   try {
     const r = await fetch('/practice/api/code');
     const d = await r.json();
-    if (d.code == null) return;
+    if (d.code === null) return;
     if (document.getElementById('editor-mode').value === 'interview') {
       document.getElementById('plain-editor').value = d.code;
     } else {
