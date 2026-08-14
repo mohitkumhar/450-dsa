@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <div class="auth-logo">D</div>
+        <h2>Resend Verification</h2>
+        <p class="subtitle">Enter your email to resend the verification link.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-inline {{ category }}">
+                <i class="bi bi-{% if category == 'danger' %}x-circle{% else %}check-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.resend_verification') }}" id="resendForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <div class="input-wrap">
+                    <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+                    <span class="field-icon" id="emailIcon"></span>
+                </div>
+                <div class="field-error" id="emailError">Please enter a valid email address.</div>
+            </div>
+            <button type="submit" class="btn-primary-full">
+                <i class="bi bi-envelope"></i> Resend Verification Email
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Already verified? <a href="{{ url_for('auth.login') }}">Sign in</a>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/auth_forms.js') }}"></script>
+{% endblock %}

@@ -47,7 +47,7 @@ def build_test_app(monkeypatch, *, extra_db_targets=(), oauth_clients=None):
     monkeypatch.setattr(app_module.oauth, "register", lambda *args, **kwargs: None)
 
     flask_app = app_module.create_app()
-    flask_app.config.update(TESTING=True)
+    flask_app.config.update(TESTING=True, MAIL_SUPPRESS_SEND=True)
     flask_app._db_initialized = True
     return flask_app, test_db
 

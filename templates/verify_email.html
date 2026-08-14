@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Verify Your Account</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <h2>Welcome to 450 DSA Tracker!</h2>
+    <p>Hi,</p>
+    <p>Thank you for registering. You used the email address: <strong>{{ email }}</strong>.</p>
+    <p>Please click the link below to verify your email address and activate your account:</p>
+    <p style="margin: 30px 0;">
+        <a href="{{ verify_url }}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Verify Email Address
+        </a>
+    </p>
+    <p>Or alternatively, copy and paste this link into your browser:</p>
+    <p><a href="{{ verify_url }}">{{ verify_url }}</a></p>
+    <p>If you didn't create an account, you can safely ignore this email.</p>
+    <br>
+    <p>Best regards,<br>The 450 DSA Tracker Team</p>
+</body>
+</html>

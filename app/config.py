@@ -48,6 +48,12 @@ class BaseConfig:
         "title": "450 DSA Tracker API",
         "uiversion": 3,
     }
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = env_int('MAIL_PORT', 587)
+    MAIL_USE_TLS = True
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_USERNAME')
     RATELIMIT_STORAGE_URI = "memory://"
     INSECURE_SECRET_KEYS = {
         None,

@@ -6,11 +6,13 @@ from flask_login import LoginManager
 from flask_pymongo import PyMongo
 from werkzeug.local import LocalProxy
 from flask_caching import Cache
+from flask_mail import Mail
 
 mongo = PyMongo()
 db = LocalProxy(lambda: mongo.db)
 bcrypt = Bcrypt()
 login_manager = LoginManager()
+mail = Mail()
 oauth = OAuth()
 limiter = Limiter(key_func=get_remote_address, default_limits=[], headers_enabled=True)
 github = LocalProxy(lambda: oauth.create_client("github"))

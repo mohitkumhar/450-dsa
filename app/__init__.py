@@ -12,7 +12,7 @@ from flask import Flask, abort, g, jsonify, request
 from app.admin import admin_bp
 from app.auth import auth_bp
 from app.faq import faq_bp
-from app.extensions import bcrypt, cache, db, limiter, login_manager, mongo, oauth
+from app.extensions import bcrypt, cache, db, limiter, login_manager, mongo, oauth, mail
 from app.leaderboard import leaderboard_bp
 from app.web.routes import public_bp
 from app.profile import profile_bp
@@ -125,6 +125,7 @@ def create_app(config_class=None):
     )
 
     mongo.init_app(app, **_mongo_client_options(app))
+    mail.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
     oauth.init_app(app)
